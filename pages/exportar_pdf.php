@@ -56,13 +56,13 @@ define('PDF_COL_R',    round(PDF_INNER_W * 0.42));   // ≈  79 mm  asignaciones
 define('PDF_COL_R_X',  PDF_MARGIN_L + PDF_COL_L);    // X inicio columna derecha
 
 // Alturas de fila
-define('ROW_H',        5.2);   // fila normal
-define('ROW_H_SM',     4.5);   // fila compacta (segunda asignación)
+define('ROW_H',        4.8);   // fix #4: reduce interlineado en MultiCell largos
+define('ROW_H_SM',     4.2);   // fila compacta
 define('SEC_H',        6.2);   // encabezado de sección
 
 // Tamaños de fuente
 define('FS_MONTH',     18);
-define('FS_HEADER',    10);
+define('FS_HEADER',    13);   // fix #1: congregación más grande
 define('FS_WEEK',      12);
 define('FS_LABEL',      9);
 define('FS_BODY',       8.5);
@@ -76,7 +76,7 @@ $COLOR_VIDA     = [139,  21,  56];
 $COLOR_GRAY_LBL = [130, 130, 130];   // gris etiquetas
 $COLOR_BLACK    = [  0,   0,   0];
 $COLOR_WHITE    = [255, 255, 255];
-$COLOR_SONG     = [ 90,  90,  90];   // gris canciones
+$COLOR_SONG     = [ 34, 139,  34];   // fix #3: verde para canciones
 $COLOR_DIVIDER  = [210, 210, 210];   // línea separadora
 
 $MESES = [
@@ -214,9 +214,10 @@ function drawParte(VMC_PDF $pdf, array $seccion,
                    string $fntReg, string $fntBold, string $fntIcon,
                    array $colorGray, array $colorBlack): void {
 
-    // Anchos columna derecha
-    $LBL_W = 32;
-    $NOM_W = PDF_COL_R - $LBL_W - 1;
+    // Anchos columna derecha — fix #5: LBL más ancho, NOM más estrecho
+    // para que "Conductor / Lector:" + "Nombre1 / Nombre2" quepan en 1 línea
+    $LBL_W = 36;
+    $NOM_W = PDF_COL_R - $LBL_W - 2;
 
     // Asignaciones de la BD
     $asignaciones = fetchAll("
@@ -322,9 +323,9 @@ function drawSemana(VMC_PDF $pdf, array $programa, array $rolesAsignados,
         $tituloSemana .= '  |  ' . strtoupper($programa['referencia_biblica']);
     }
 
-    // Ancho fijo etiqueta de roles (igual que en drawParte)
-    $LBL_W = 32;
-    $NOM_W = PDF_COL_R - $LBL_W - 1;
+    // Ancho fijo etiqueta de roles — mismo que drawParte (fix #5)
+    $LBL_W = 36;
+    $NOM_W = PDF_COL_R - $LBL_W - 2;
     $xRight = PDF_COL_R_X;
 
     // Helper local para dibujar una fila de rol (etiqueta R + nombre L)
@@ -373,7 +374,7 @@ function drawSemana(VMC_PDF $pdf, array $programa, array $rolesAsignados,
     $pdf->Ln(1.5);
 
     // ── SEAMOS MEJORES MAESTROS ────────────────────────────────────
-    drawSeccionHeader($pdf, $fntBold, 'SEAMOS MEJORES MAESTROS', $colorMaestros, $colorBlack);
+    drawSeccionHeader($pdf, $fntBold, 'SEAMOS MEJORES MAESTROS', $colorMaestros, $colorWhite);
     foreach ($seccionesPorTipo['SEAMOS MEJORES MAESTROS'] as $s) {
         drawParte($pdf, $s, $fntReg, $fntBold, $fntIcon, $colorGray, $colorBlack);
     }
