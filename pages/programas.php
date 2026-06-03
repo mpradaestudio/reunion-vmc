@@ -2,11 +2,15 @@
 $pageTitle = 'Programas';
 require_once __DIR__ . '/../includes/header.php';
 
-// Obtener programas
+// Obtener programas con presidente asignado
 $programas = fetchAll("
     SELECT ps.*,
            (SELECT COUNT(*) FROM programa_secciones WHERE programa_id = ps.id) as total_secciones,
-           (SELECT COUNT(*) FROM asignaciones_roles WHERE programa_id = ps.id) as roles_asignados
+           (SELECT CONCAT(p.nombre, ' ', p.apellido)
+            FROM asignaciones_roles ar
+            INNER JOIN personas p ON p.id = ar.persona_id
+            WHERE ar.programa_id = ps.id AND ar.rol = 'Presidente'
+            LIMIT 1) as presidente_nombre
     FROM programas_semanales ps
     ORDER BY ps.fecha_inicio DESC
 ");
@@ -87,10 +91,10 @@ $mesNombre = [
 <?php if (count($programas) > 0): ?>
 
 <!-- Barra de acciones en lote (visible al seleccionar al menos 1) -->
-<div class="batch-actions mb-4" id="batchActions" style="display:none;">
+<div class="batch-actions mb-4 d-none" id="batchActions">
     <span class="batch-count" id="batchCount">0 seleccionados</span>
     <button class="btn btn-sm btn-outline-secondary" id="btnDeselAll">
-        <i class="bi bi-x-circle"></i> Deseleccionar
+        <i class="bi bi-x-circle"></i> Deseleccionar todo
     </button>
     <button class="btn btn-sm btn-danger" id="btnEliminarLote">
         <i class="bi bi-trash"></i> Eliminar seleccionados
@@ -114,15 +118,17 @@ $mesNombre = [
             $badgeHtml   = '<span class="badge bg-primary">Próximo</span>';
         }
 
-        // Fecha legible
-        $fi  = new DateTime($programa['fecha_inicio']);
-        $ff  = new DateTime($programa['fecha_fin']);
-        $mes = $mesNombre[(int)$fi->format('n')];
+        // Fecha legible — días sin cero inicial
+        $fi     = new DateTime($programa['fecha_inicio']);
+        $ff     = new DateTime($programa['fecha_fin']);
+        $mes    = $mesNombre[(int)$fi->format('n')];
         $mesFin = $mesNombre[(int)$ff->format('n')];
+        $diaIni = (int)$fi->format('d');   // (int) elimina el cero inicial
+        $diaFin = (int)$ff->format('d');
         if ($mes === $mesFin) {
-            $fechaFormato = $fi->format('d') . '-' . $ff->format('d') . ' de ' . $mes . ' ' . $fi->format('Y');
+            $fechaFormato = $diaIni . '-' . $diaFin . ' de ' . $mes . ' ' . $fi->format('Y');
         } else {
-            $fechaFormato = $fi->format('d') . ' de ' . $mes . ' – ' . $ff->format('d') . ' de ' . $mesFin . ' ' . $ff->format('Y');
+            $fechaFormato = $diaIni . ' de ' . $mes . ' – ' . $diaFin . ' de ' . $mesFin . ' ' . $ff->format('Y');
         }
     ?>
     <div class="col-md-6 col-lg-4 programa-item"
@@ -150,8 +156,8 @@ $mesNombre = [
                     <?php echo $badgeHtml; ?>
                 </div>
 
-                <!-- Fecha -->
-                <p class="text-muted mb-2">
+                <!-- Fecha (oculta — título ya la incluye; se conserva para PDF) -->
+                <p class="text-muted mb-2 d-none" data-fecha="<?php echo htmlspecialchars($fechaFormato); ?>">
                     <i class="bi bi-calendar3"></i>
                     <small><?php echo $fechaFormato; ?></small>
                 </p>
@@ -174,13 +180,16 @@ $mesNombre = [
                     </small>
                 </div>
 
-                <!-- Partes / roles -->
+                <!-- Partes + Presidente -->
                 <div class="mb-3">
                     <small>
                         <i class="bi bi-list-check"></i>
-                        <?php echo $programa['total_secciones']; ?> partes |
-                        <i class="bi bi-person-check"></i>
-                        <?php echo $programa['roles_asignados']; ?> roles asignados
+                        <?php echo $programa['total_secciones']; ?> partes
+                        &nbsp;|&nbsp;
+                        <i class="bi bi-person"></i>
+                        <?php echo $programa['presidente_nombre']
+                            ? htmlspecialchars($programa['presidente_nombre'])
+                            : '<span class="text-muted">Sin presidente</span>'; ?>
                     </small>
                 </div>
 
@@ -351,9 +360,11 @@ function updateBatchBar() {
     const checked = getChecked();
     if (checked.length > 0) {
         batchCountEl.textContent = checked.length + ' seleccionado' + (checked.length > 1 ? 's' : '');
-        batchActions.style.display = 'flex';
+        batchActions.classList.remove('d-none');
+        batchActions.style.display = 'flex';   // garantizar flex aunque Bootstrap ponga d-none
     } else {
-        batchActions.style.display = 'none';
+        batchActions.classList.add('d-none');
+        batchActions.style.display = '';
     }
 }
 
