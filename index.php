@@ -122,6 +122,9 @@ $proximosProgramas = fetchAll("
                         foreach ($proximosProgramas as $programa):
                             $claseEstado = ($programa['fecha_inicio'] <= $hoy && $programa['fecha_fin'] >= $hoy)
                                            ? 'actual' : 'futuro';
+                            $badgeHtml   = $claseEstado === 'actual'
+                                           ? '<span class="badge bg-success">Esta semana</span>'
+                                           : '<span class="badge bg-primary">Próximo</span>';
                             // Días sin cero inicial
                             $fi     = new DateTime($programa['fecha_inicio']);
                             $ff     = new DateTime($programa['fecha_fin']);
@@ -133,10 +136,23 @@ $proximosProgramas = fetchAll("
                         <div class="col-md-4 col-sm-6">
                             <div class="card programa-card <?php echo $claseEstado; ?> h-100 no-hover">
                                 <div class="card-body">
-                                    <!-- Título (ya incluye el rango de fechas) -->
-                                    <h6 class="card-title fw-bold mb-3">
-                                        <?php echo htmlspecialchars($programa['titulo_semana']); ?>
-                                    </h6>
+                                    <!-- Título + badge estado + enlace jw.org -->
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <h6 class="card-title fw-bold mb-0 pe-2">
+                                            <?php echo htmlspecialchars($programa['titulo_semana']); ?>
+                                        </h6>
+                                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                            <?php echo $badgeHtml; ?>
+                                            <?php if (!empty($programa['url_fuente'])): ?>
+                                            <a href="<?php echo htmlspecialchars($programa['url_fuente']); ?>"
+                                               target="_blank" rel="noopener noreferrer"
+                                               class="btn btn-sm btn-outline-secondary p-1 lh-1"
+                                               title="Ver en jw.org">
+                                                <i class="bi bi-box-arrow-up-right" style="font-size:.85rem;"></i>
+                                            </a>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
 
                                     <!-- Canciones -->
                                     <p class="mb-0">
