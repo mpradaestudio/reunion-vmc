@@ -1069,3 +1069,14 @@ hr {
         justify-content: space-between;
     }
 }
+
+
+/* ============================================================
+   32. CARDS SIN HOVER — Próximos Programas en index.php
+   ============================================================ */
+.card.no-hover,
+.card.no-hover:hover {
+    transform: none !important;
+    box-shadow: var(--vmc-shadow) !important;
+    cursor: default;
+}
