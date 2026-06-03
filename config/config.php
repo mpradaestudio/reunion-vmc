@@ -8,7 +8,19 @@ date_default_timezone_set('America/Mexico_City');
 
 // Rutas
 define('BASE_PATH', dirname(__DIR__));
-define('BASE_URL', '/');
+
+// Calcular BASE_URL dinámicamente según la carpeta de instalación.
+// Si la app está en C:\xampp\htdocs\reunion-vmc -> BASE_URL = "/reunion-vmc/"
+// Así los enlaces del menú y los recursos (css/js) funcionan aunque
+// la app viva en un subdirectorio de htdocs.
+$docRoot = str_replace('\\', '/', rtrim($_SERVER['DOCUMENT_ROOT'] ?? '', "/\\"));
+$appRoot = str_replace('\\', '/', BASE_PATH);
+$baseUrl = '/';
+if ($docRoot !== '' && stripos($appRoot, $docRoot) === 0) {
+    $sub = trim(substr($appRoot, strlen($docRoot)), '/');
+    $baseUrl = ($sub === '') ? '/' : '/' . $sub . '/';
+}
+define('BASE_URL', $baseUrl);
 
 // Configuración de la aplicación
 define('APP_NAME', 'Programador de Reuniones');
@@ -24,7 +36,9 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Funciones auxiliares globales
 function redirect($page) {
-    header("Location: " . BASE_URL . $page);
+    // Redirección relativa: las páginas que llaman a redirect() están en
+    // /pages/, igual que sus destinos, así funciona en cualquier subcarpeta.
+    header("Location: $page");
     exit;
 }
 

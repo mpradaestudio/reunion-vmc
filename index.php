@@ -185,7 +185,7 @@ $proximosProgramas = fetchAll("
                         </a>
                     </div>
                     <div class="col-md-3 col-sm-6 mb-3">
-                        <a href="pages/programa_detalle.php" class="text-decoration-none">
+                        <a href="pages/programas.php" class="text-decoration-none">
                             <div class="p-4 border rounded hover-shadow">
                                 <i class="bi bi-person-check" style="font-size: 3rem; color: #fbbc04;"></i>
                                 <p class="mt-2 mb-0 fw-bold">Asignar Partes</p>

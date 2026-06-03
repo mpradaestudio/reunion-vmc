@@ -171,178 +171,83 @@ if (isset($_GET['msg'])) {
             <div class="modal-body">
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle"></i>
-                    <small>Elige un período y carga las semanas. Luego extrae <strong>semana por semana</strong> con un clic. También puedes pegar la URL de una semana específica.</small>
+                    <small>Pega la <strong>URL de la semana</strong> que quieres importar desde jw.org y haz clic en <strong>Extraer</strong>. Así construyes tu calendario semana por semana.</small>
                 </div>
 
-                <div class="row g-2 align-items-end mb-3">
-                    <div class="col-md-8">
-                        <label for="periodo" class="form-label">Seleccionar Período</label>
-                        <select class="form-select" id="periodo" name="periodo">
-                            <option value="">Seleccionar...</option>
-                            <option value="mayo-junio-2026">Mayo - Junio 2026</option>
-                            <option value="julio-agosto-2026">Julio - Agosto 2026</option>
-                            <option value="septiembre-octubre-2026">Septiembre - Octubre 2026</option>
-                            <option value="noviembre-diciembre-2026">Noviembre - Diciembre 2026</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <button type="button" class="btn btn-primary w-100" id="btnCargarSemanas">
-                            <i class="bi bi-list-ul"></i> Cargar semanas
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Lista de semanas del período -->
-                <div id="listaSemanas"></div>
-
-                <hr>
-
-                <!-- Extraer por URL específica -->
-                <label for="urlSemana" class="form-label">
-                    <i class="bi bi-link-45deg"></i> O pega la URL de una semana específica
+                <label for="urlSemana" class="form-label fw-bold">
+                    <i class="bi bi-link-45deg"></i> URL de la semana
                 </label>
-                <div class="input-group">
-                    <input type="text" class="form-control" id="urlSemana"
-                           placeholder="https://www.jw.org/es/biblioteca/guia-actividades-reunion-testigos-jehova/...">
-                    <button type="button" class="btn btn-success" id="btnExtraerUrl">
-                        <i class="bi bi-cloud-download"></i> Extraer
-                    </button>
-                </div>
+                <input type="text" class="form-control" id="urlSemana"
+                       placeholder="https://www.jw.org/es/biblioteca/guia-actividades-reunion-testigos-jehova/...">
+                <small class="text-muted d-block mt-1">
+                    Ejemplo: …/julio-agosto-2026-mwb/Vida-y-Ministerio-Cristianos-6-a-12-de-julio-de-2026/
+                </small>
+
+                <div id="extraerEstado" class="mt-3"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                <a href="programas.php" class="btn btn-outline-primary">
-                    <i class="bi bi-arrow-clockwise"></i> Actualizar lista
-                </a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnExtraerUrl">
+                    <i class="bi bi-cloud-download"></i> Extraer
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-let huboExtraccion = false;
-
-// Cargar la lista de semanas del período seleccionado
-$('#btnCargarSemanas').on('click', function() {
-    const periodo = $('#periodo').val();
-    if (!periodo) {
-        APP.showNotification('Debe seleccionar un período', 'warning');
-        return;
-    }
-
-    const btn = $(this);
-    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Cargando...');
-    $('#listaSemanas').html('<div class="text-center text-muted py-3"><span class="spinner-border spinner-border-sm me-2"></span>Buscando semanas en jw.org...</div>');
-
-    $.ajax({
-        url: '../api/scraper.php',
-        method: 'POST',
-        data: { action: 'listar_semanas', periodo: periodo },
-        dataType: 'json',
-        success: function(response) {
-            btn.prop('disabled', false).html('<i class="bi bi-list-ul"></i> Cargar semanas');
-
-            if (!response.success) {
-                $('#listaSemanas').html('<div class="alert alert-danger mb-0">' + response.message + '</div>');
-                return;
-            }
-
-            renderSemanas(response.semanas);
-        },
-        error: function() {
-            btn.prop('disabled', false).html('<i class="bi bi-list-ul"></i> Cargar semanas');
-            $('#listaSemanas').html('<div class="alert alert-danger mb-0">Error al conectar con el servidor</div>');
-        }
-    });
-});
-
-// Dibujar la lista de semanas con botón individual
-function renderSemanas(semanas) {
-    if (!semanas || semanas.length === 0) {
-        $('#listaSemanas').html('<div class="alert alert-warning mb-0">No se encontraron semanas.</div>');
-        return;
-    }
-
-    let html = '<div class="list-group mb-2">';
-    semanas.forEach(function(s, i) {
-        const badge = s.ya_existe
-            ? '<span class="badge bg-success ms-2">Ya extraída</span>'
-            : '';
-        html += `
-            <div class="list-group-item d-flex justify-content-between align-items-center" id="semana-${i}">
-                <div>
-                    <i class="bi bi-calendar-week text-primary"></i>
-                    <strong class="text-capitalize">${s.label}</strong>
-                    ${badge}
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-primary btn-extraer-semana"
-                        data-url="${s.url}" data-idx="${i}">
-                    <i class="bi bi-cloud-download"></i> ${s.ya_existe ? 'Re-extraer' : 'Extraer'}
-                </button>
-            </div>`;
-    });
-    html += '</div>';
-    $('#listaSemanas').html(html);
-}
-
-// Extraer una semana individual (desde la lista)
-$(document).on('click', '.btn-extraer-semana', function() {
-    const btn = $(this);
-    const url = btn.data('url');
-    const idx = btn.data('idx');
-    extraerSemana(url, btn, '#semana-' + idx);
-});
-
-// Extraer una semana desde URL pegada
+// Extraer una semana desde la URL pegada
 $('#btnExtraerUrl').on('click', function() {
     const url = $('#urlSemana').val().trim();
     if (!url) {
-        APP.showNotification('Pega la URL de una semana', 'warning');
+        $('#extraerEstado').html('<div class="alert alert-warning mb-0">Pega la URL de una semana de jw.org</div>');
         return;
     }
-    extraerSemana(url, $(this), null);
-});
 
-// Función común de extracción de una semana
-function extraerSemana(url, btn, contenedor) {
-    const htmlOriginal = btn.html();
-    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+    const btn = $(this);
+    btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Extrayendo...');
+    $('#extraerEstado').html('<div class="text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Descargando y procesando la semana desde jw.org...</div>');
 
     $.ajax({
         url: '../api/scraper.php',
         method: 'POST',
         data: { action: 'scrape_semana', url: url },
         dataType: 'json',
+        timeout: 60000,
         success: function(response) {
             if (response.success) {
-                huboExtraccion = true;
-                APP.showNotification(response.message + ' (' + response.partes + ' partes)', 'success');
-                if (contenedor) {
-                    $(contenedor).find('.btn-extraer-semana')
-                        .removeClass('btn-outline-primary').addClass('btn-success')
-                        .html('<i class="bi bi-check-lg"></i> Listo')
-                        .prop('disabled', false);
-                } else {
-                    btn.prop('disabled', false).html(htmlOriginal);
-                    $('#urlSemana').val('');
-                }
+                $('#extraerEstado').html(
+                    '<div class="alert alert-success mb-0">' +
+                    '<i class="bi bi-check-circle"></i> ' + response.message +
+                    ' (' + response.partes + ' partes). Actualizando...</div>'
+                );
+                // Cerrar y recargar para mostrar la semana importada
+                setTimeout(function() {
+                    window.location.href = 'programas.php?msg=extraido';
+                }, 1200);
             } else {
-                APP.showNotification(response.message, 'danger');
-                btn.prop('disabled', false).html(htmlOriginal);
+                $('#extraerEstado').html(
+                    '<div class="alert alert-danger mb-0">' +
+                    '<i class="bi bi-exclamation-circle"></i> ' + response.message + '</div>'
+                );
+                btn.prop('disabled', false).html('<i class="bi bi-cloud-download"></i> Extraer');
             }
         },
-        error: function() {
-            APP.showNotification('Error al conectar con el servidor', 'danger');
-            btn.prop('disabled', false).html(htmlOriginal);
+        error: function(xhr, status) {
+            const msg = (status === 'timeout')
+                ? 'La descarga tardó demasiado. Intenta de nuevo.'
+                : 'Error al conectar con el servidor';
+            $('#extraerEstado').html('<div class="alert alert-danger mb-0">' + msg + '</div>');
+            btn.prop('disabled', false).html('<i class="bi bi-cloud-download"></i> Extraer');
         }
     });
-}
+});
 
-// Al cerrar el modal, si hubo extracciones, recargar para ver los programas
+// Limpiar estado al cerrar el modal
 $('#modalExtraer').on('hidden.bs.modal', function() {
-    if (huboExtraccion) {
-        window.location.href = 'programas.php?msg=extraido';
-    }
+    $('#extraerEstado').empty();
+    $('#urlSemana').val('');
+    $('#btnExtraerUrl').prop('disabled', false).html('<i class="bi bi-cloud-download"></i> Extraer');
 });
 
 // Eliminar programa
