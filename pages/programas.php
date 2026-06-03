@@ -137,13 +137,24 @@ $mesNombre = [
             </label>
 
             <div class="card-body">
-                <!-- Título + badge estado -->
+                <!-- Título + badge estado + enlace jw.org -->
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <h5 class="card-title mb-0 pe-2">
                         <?php echo htmlspecialchars($programa['titulo_semana']); ?>
                     </h5>
-                    <?php echo $badgeHtml; ?>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <?php echo $badgeHtml; ?>
+                        <?php if (!empty($programa['url_fuente'])): ?>
+                        <a href="<?php echo htmlspecialchars($programa['url_fuente']); ?>"
+                        target="_blank" rel="noopener noreferrer"
+                        class="btn btn-sm btn-outline-secondary p-1 lh-1"
+                        title="Ver en jw.org">
+                            <i class="bi bi-box-arrow-up-right" style="font-size:.85rem;"></i>
+                        </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
+
 
                 <!-- Fecha (oculta — título ya la incluye; se conserva para PDF) -->
                 <p class="text-muted mb-2 d-none" data-fecha="<?php echo htmlspecialchars($fechaFormato); ?>">
