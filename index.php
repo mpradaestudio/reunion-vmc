@@ -39,52 +39,52 @@ $proximosProgramas = fetchAll("
     </div>
 </div>
 
-<!-- Tarjetas de estadísticas -->
-<div class="row mb-4">
-    <div class="col-md-3 col-sm-6 mb-3">
-        <div class="dashboard-card blue">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h3><?php echo $totalPersonas; ?></h3>
-                    <p>Personas Activas</p>
-                </div>
-                <i class="bi bi-people" style="font-size: 3rem; opacity: 0.5;"></i>
+<!-- Tarjetas de estadísticas (KPI) -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-card-icon stat-accent-primary">
+                <i class="bi bi-people"></i>
+            </div>
+            <div>
+                <div class="stat-card-value"><?php echo $totalPersonas; ?></div>
+                <p class="stat-card-label">Personas Activas</p>
             </div>
         </div>
     </div>
-    
-    <div class="col-md-3 col-sm-6 mb-3">
-        <div class="dashboard-card green">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h3><?php echo $totalProgramas; ?></h3>
-                    <p>Programas Totales</p>
-                </div>
-                <i class="bi bi-calendar-check" style="font-size: 3rem; opacity: 0.5;"></i>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-card-icon stat-accent-success">
+                <i class="bi bi-calendar-check"></i>
+            </div>
+            <div>
+                <div class="stat-card-value"><?php echo $totalProgramas; ?></div>
+                <p class="stat-card-label">Programas Totales</p>
             </div>
         </div>
     </div>
-    
-    <div class="col-md-3 col-sm-6 mb-3">
-        <div class="dashboard-card orange">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h3><?php echo $programasProximos; ?></h3>
-                    <p>Próximos Programas</p>
-                </div>
-                <i class="bi bi-calendar-event" style="font-size: 3rem; opacity: 0.5;"></i>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-card-icon stat-accent-warning">
+                <i class="bi bi-calendar-event"></i>
+            </div>
+            <div>
+                <div class="stat-card-value"><?php echo $programasProximos; ?></div>
+                <p class="stat-card-label">Próximos Programas</p>
             </div>
         </div>
     </div>
-    
-    <div class="col-md-3 col-sm-6 mb-3">
-        <div class="dashboard-card red">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h3><?php echo $asignacionesPendientes; ?></h3>
-                    <p>Asignaciones Pendientes</p>
-                </div>
-                <i class="bi bi-exclamation-triangle" style="font-size: 3rem; opacity: 0.5;"></i>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-card-icon stat-accent-danger">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div>
+                <div class="stat-card-value"><?php echo $asignacionesPendientes; ?></div>
+                <p class="stat-card-label">Asignaciones Pendientes</p>
             </div>
         </div>
     </div>
@@ -124,8 +124,14 @@ $proximosProgramas = fetchAll("
                                         <?php 
                                             $fecha_inicio = new DateTime($programa['fecha_inicio']);
                                             $fecha_fin = new DateTime($programa['fecha_fin']);
+                                            $mesesNombre = [
+                                                1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril',
+                                                5 => 'mayo', 6 => 'junio', 7 => 'julio', 8 => 'agosto',
+                                                9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre'
+                                            ];
+                                            $mesIdx = (int)$fecha_inicio->format('n');
                                             echo $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' de ' . 
-                                                 strftime('%B %Y', $fecha_inicio->getTimestamp());
+                                                 $mesesNombre[$mesIdx] . ' ' . $fecha_inicio->format('Y');
                                         ?>
                                     </p>
                                     <?php if ($programa['referencia_biblica']): ?>
@@ -167,37 +173,29 @@ $proximosProgramas = fetchAll("
                 </h5>
             </div>
             <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <a href="pages/personas.php" class="text-decoration-none">
-                            <div class="p-4 border rounded hover-shadow">
-                                <i class="bi bi-person-plus" style="font-size: 3rem; color: #1a73e8;"></i>
-                                <p class="mt-2 mb-0 fw-bold">Agregar Persona</p>
-                            </div>
+                <div class="row g-3 text-center">
+                    <div class="col-md-3 col-sm-6">
+                        <a href="pages/personas.php" class="quick-tile">
+                            <i class="bi bi-person-plus icon-primary"></i>
+                            <span>Agregar Persona</span>
                         </a>
                     </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <a href="pages/programas.php" class="text-decoration-none">
-                            <div class="p-4 border rounded hover-shadow">
-                                <i class="bi bi-cloud-download" style="font-size: 3rem; color: #34a853;"></i>
-                                <p class="mt-2 mb-0 fw-bold">Extraer Programas</p>
-                            </div>
+                    <div class="col-md-3 col-sm-6">
+                        <a href="pages/programas.php" class="quick-tile">
+                            <i class="bi bi-cloud-download icon-success"></i>
+                            <span>Extraer Programas</span>
                         </a>
                     </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <a href="pages/programas.php" class="text-decoration-none">
-                            <div class="p-4 border rounded hover-shadow">
-                                <i class="bi bi-person-check" style="font-size: 3rem; color: #fbbc04;"></i>
-                                <p class="mt-2 mb-0 fw-bold">Asignar Partes</p>
-                            </div>
+                    <div class="col-md-3 col-sm-6">
+                        <a href="pages/programas.php" class="quick-tile">
+                            <i class="bi bi-person-check icon-warning"></i>
+                            <span>Asignar Partes</span>
                         </a>
                     </div>
-                    <div class="col-md-3 col-sm-6 mb-3">
-                        <a href="pages/seleccionar_exportar.php" class="text-decoration-none">
-                            <div class="p-4 border rounded hover-shadow">
-                                <i class="bi bi-file-pdf" style="font-size: 3rem; color: #ea4335;"></i>
-                                <p class="mt-2 mb-0 fw-bold">Exportar PDF</p>
-                            </div>
+                    <div class="col-md-3 col-sm-6">
+                        <a href="pages/seleccionar_exportar.php" class="quick-tile">
+                            <i class="bi bi-file-pdf icon-danger"></i>
+                            <span>Exportar PDF</span>
                         </a>
                     </div>
                 </div>

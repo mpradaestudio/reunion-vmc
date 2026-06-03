@@ -1,9 +1,9 @@
     </main>
     
     <!-- Footer -->
-    <footer class="bg-light text-center text-muted py-3 mt-5">
+    <footer class="text-center py-3 mt-5">
         <div class="container">
-            <small><?php echo APP_NAME; ?> v<?php echo APP_VERSION; ?> | &copy; <?php echo date('Y'); ?></small>
+            <small class="text-muted"><?php echo APP_NAME; ?> v<?php echo APP_VERSION; ?> | &copy; <?php echo date('Y'); ?></small>
         </div>
     </footer>
     

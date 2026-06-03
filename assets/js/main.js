@@ -278,3 +278,52 @@ const Scraper = {
         });
     }
 };
+
+
+/**
+ * Gestión del tema claro/oscuro.
+ * El atributo data-bs-theme ya se aplica en <head> (anti-FOUC).
+ * Aquí solo gestionamos el botón de alternancia y la persistencia.
+ */
+const Theme = {
+    KEY: 'vmc-theme',
+
+    get: function () {
+        return document.documentElement.getAttribute('data-bs-theme') || 'light';
+    },
+
+    set: function (theme) {
+        document.documentElement.setAttribute('data-bs-theme', theme);
+        try {
+            localStorage.setItem(this.KEY, theme);
+        } catch (e) {
+            /* localStorage no disponible: el tema seguirá aplicado en la sesión */
+        }
+    },
+
+    toggle: function () {
+        this.set(this.get() === 'dark' ? 'light' : 'dark');
+    },
+
+    init: function () {
+        const btn = document.getElementById('themeToggle');
+        if (btn) {
+            btn.addEventListener('click', () => Theme.toggle());
+        }
+
+        // Si el usuario no ha elegido un tema manualmente, seguir la preferencia del sistema
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                let stored = null;
+                try { stored = localStorage.getItem(Theme.KEY); } catch (err) {}
+                if (!stored) {
+                    document.documentElement.setAttribute('data-bs-theme', e.matches ? 'dark' : 'light');
+                }
+            });
+        }
+    }
+};
+
+document.addEventListener('DOMContentLoaded', function () {
+    Theme.init();
+});

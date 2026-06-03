@@ -50,9 +50,9 @@ $mesesNombres = [
                 <div class="row g-3">
                     <?php foreach ($mesesDisponibles as $mes): ?>
                     <div class="col-md-4">
-                        <div class="card h-100 border-primary">
+                        <div class="card h-100">
                             <div class="card-body text-center">
-                                <i class="bi bi-calendar3" style="font-size: 3rem; color: #1a73e8;"></i>
+                                <i class="bi bi-calendar3 text-primary" style="font-size: 3rem;"></i>
                                 <h5 class="card-title mt-3">
                                     <?php echo $mesesNombres[$mes['mes']] . ' ' . $mes['anio']; ?>
                                 </h5>
