@@ -216,15 +216,25 @@ $fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' d
                     </div>
                     <div class="col-md-6">
                         <?php
-                        // Determinar cuántas asignaciones se necesitan
-                        $numAsignaciones = ($seccion['tipo_asignacion'] === 'Estudiante/Ayudante') ? 2 : 1;
-                        
+                        // Determinar cuántas asignaciones se necesitan y las etiquetas
+                        $tipo = $seccion['tipo_asignacion'];
+                        $dosPersonas = in_array($tipo, ['Estudiante/Ayudante', 'Conductor/Lector']);
+                        $numAsignaciones = $dosPersonas ? 2 : 1;
+
+                        // Etiquetas según el tipo de asignación
+                        $etiquetas = ['Asignado:', 'Asignado:'];
+                        if ($tipo === 'Estudiante/Ayudante') {
+                            $etiquetas = ['Estudiante:', 'Ayudante:'];
+                        } elseif ($tipo === 'Conductor/Lector') {
+                            $etiquetas = ['Conductor:', 'Lector:'];
+                        }
+
                         for ($i = 1; $i <= $numAsignaciones; $i++):
                             $asignacionActual = $asignacionesPorOrden[$i] ?? null;
                         ?>
                         <div class="mb-2">
                             <label class="form-label small mb-1">
-                                <?php echo ($numAsignaciones > 1) ? ($i == 1 ? 'Estudiante:' : 'Ayudante:') : 'Asignado:'; ?>
+                                <?php echo $etiquetas[$i - 1]; ?>
                             </label>
                             <div class="input-group input-group-sm">
                                 <select class="form-select asignar-parte" 

@@ -268,39 +268,38 @@ function imprimirParte($pdf, $seccion) {
         $titulo .= ' (' . $seccion['duracion'] . ' min.)';
     }
     
-    // Determinar número de asignaciones
-    $numAsignaciones = ($seccion['tipo_asignacion'] === 'Estudiante/Ayudante') ? 2 : 1;
-    
+    // Determinar número de asignaciones y etiquetas según el tipo
+    $tipo = $seccion['tipo_asignacion'];
+    $dosPersonas = in_array($tipo, ['Estudiante/Ayudante', 'Conductor/Lector']);
+    $numAsignaciones = $dosPersonas ? 2 : 1;
+
+    $etiquetas = ['Asignado:', 'Asignado:'];
+    if ($tipo === 'Estudiante/Ayudante') {
+        $etiquetas = ['Estudiante:', 'Ayudante:'];
+    } elseif ($tipo === 'Conductor/Lector') {
+        $etiquetas = ['Conductor:', 'Lector:'];
+    }
+
     $y = $pdf->GetY();
-    $pdf->MultiCell(110, 5, $titulo, 0, 'L', false, 0);
-    
-    // Asignaciones
-    $pdf->SetXY(125, $y);
-    
+    $pdf->MultiCell(105, 5, $titulo, 0, 'L', false, 0);
+
+    // Asignaciones (etiqueta + nombre asignado)
+    $pdf->SetXY(120, $y);
+
     for ($i = 1; $i <= $numAsignaciones; $i++) {
-        $label = '';
-        if ($seccion['tipo_asignacion'] === 'Estudiante/Ayudante') {
-            $label = 'Estudiante / Ayudante:';
-        } elseif ($seccion['tipo_asignacion'] === 'Conductor/Lector') {
-            $label = 'Conductor / Lector:';
-        } else {
-            $label = 'Asignado:';
-        }
-        
-        if ($i == 2) {
-            $label = 'Estudiante / Ayudante:';
-        }
-        
+        $label  = $etiquetas[$i - 1];
+        $nombre = $asignacionesPorOrden[$i] ?? '';
+
         $pdf->SetFont('helvetica', 'B', 8);
-        $pdf->Cell(30, 5, $label, 0, 0, 'R');
-        $pdf->SetFont('helvetica', '', 8);
-        $pdf->Cell(0, 5, '', 0, 1, 'L');
-        
+        $pdf->Cell(28, 5, $label, 0, 0, 'R');
+        $pdf->SetFont('helvetica', '', 9);
+        $pdf->Cell(0, 5, ' ' . $nombre, 0, 1, 'L');
+
         if ($i < $numAsignaciones) {
-            $pdf->SetX(125);
+            $pdf->SetX(120);
         }
     }
-    
+
     $pdf->Ln(1);
 }
 
