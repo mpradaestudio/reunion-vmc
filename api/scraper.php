@@ -513,21 +513,25 @@ class JWOrgScraper {
 
 /* ================================================================
  *  ENRUTAMIENTO DE LA PETICIÓN
+ *  Solo se ejecuta cuando se accede DIRECTAMENTE a este archivo,
+ *  no cuando se incluye desde otro (p. ej. test_scraper.php).
  * ================================================================ */
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+if (realpath(__FILE__) === realpath($_SERVER['SCRIPT_FILENAME'] ?? '')) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $action = $_POST['action'] ?? '';
 
-    if ($action === 'scrape') {
-        $periodo = $_POST['periodo'] ?? '';
-        if (empty($periodo)) {
-            jsonResponse(['success' => false, 'message' => 'Debe especificar un período']);
+        if ($action === 'scrape') {
+            $periodo = $_POST['periodo'] ?? '';
+            if (empty($periodo)) {
+                jsonResponse(['success' => false, 'message' => 'Debe especificar un período']);
+            }
+            $scraper = new JWOrgScraper();
+            jsonResponse($scraper->extraerProgramas($periodo));
         }
-        $scraper = new JWOrgScraper();
-        jsonResponse($scraper->extraerProgramas($periodo));
-    }
 
-    jsonResponse(['success' => false, 'message' => 'Acción no válida']);
-} else {
-    jsonResponse(['success' => false, 'message' => 'Método no permitido'], 405);
+        jsonResponse(['success' => false, 'message' => 'Acción no válida']);
+    } else {
+        jsonResponse(['success' => false, 'message' => 'Método no permitido'], 405);
+    }
 }
