@@ -140,7 +140,7 @@ $proximosProgramas = fetchAll("
 
                                     <!-- Canciones -->
                                     <p class="mb-0">
-                                        <small class="text-muted">
+                                        <small class="">
                                             <i class="bi bi-music-note"></i>
                                             Canciones: <?php echo $programa['cancion_inicial']; ?>,
                                             <?php echo $programa['cancion_media']; ?>,
@@ -150,11 +150,11 @@ $proximosProgramas = fetchAll("
 
                                     <!-- Presidente -->
                                     <p class="mb-3">
-                                        <small class="text-muted">
+                                        <small class="">
                                             <i class="bi bi-person"></i>
                                             Presidente: <?php echo $programa['presidente_nombre']
                                                 ? htmlspecialchars($programa['presidente_nombre'])
-                                                : '<span class="text-muted">Sin asignar</span>'; ?>
+                                                : '<span>Sin asignar</span>'; ?>
                                         </small>
                                     </p>
 
