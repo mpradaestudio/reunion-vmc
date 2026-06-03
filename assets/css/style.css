@@ -864,3 +864,191 @@ hr {
         page-break-inside: avoid;
     }
 }
+
+
+/* ============================================================
+   29. FILTRO PILL-TABS (programas.php)
+   ============================================================ */
+.programs-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.filter-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    background-color: var(--vmc-surface-3);
+    border: 1px solid var(--vmc-border);
+    border-radius: 999px;
+    padding: 0.3rem;
+}
+
+.filter-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 1rem;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--vmc-text-muted);
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color var(--vmc-transition), color var(--vmc-transition),
+                box-shadow var(--vmc-transition);
+    white-space: nowrap;
+}
+
+.filter-tab:hover {
+    color: var(--vmc-text);
+    background-color: var(--vmc-surface);
+}
+
+.filter-tab.active {
+    background-color: var(--vmc-primary);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(var(--vmc-primary-rgb), 0.35);
+}
+
+.filter-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.4em;
+    height: 1.4em;
+    padding: 0 0.3em;
+    border-radius: 999px;
+    font-size: 0.75em;
+    font-weight: 700;
+    background-color: rgba(0, 0, 0, 0.12);
+    line-height: 1;
+}
+
+.filter-tab.active .filter-count {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Animación de show/hide por filtro */
+.programa-item {
+    transition: opacity 250ms ease, transform 250ms ease;
+}
+
+.programa-item.item-hidden {
+    display: none;
+}
+
+.programa-item.item-visible {
+    display: block;
+    animation: fadeInUp 220ms ease both;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   30. CHECKBOX DE SELECCIÓN EN CADA TARJETA
+   ============================================================ */
+
+/* Área de clic (esquina superior izquierda de la card) */
+.programa-select-wrap {
+    position: absolute;
+    top: 0.65rem;
+    left: 0.65rem;
+    z-index: 2;
+    cursor: pointer;
+    /* Oculto hasta hover/selección */
+    opacity: 0;
+    transition: opacity var(--vmc-transition);
+}
+
+/* Mostrar checkbox al hacer hover sobre la card o cuando está marcado */
+.programa-item .card:hover .programa-select-wrap,
+.programa-item .card.card-selected .programa-select-wrap {
+    opacity: 1;
+}
+
+/* Ocultar el input nativo */
+.programa-select-wrap input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* Caja visual del checkbox */
+.programa-select-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    border: 2px solid var(--vmc-border-strong);
+    background-color: var(--vmc-surface);
+    color: transparent;
+    font-size: 0.85rem;
+    transition: background-color var(--vmc-transition), border-color var(--vmc-transition),
+                color var(--vmc-transition), box-shadow var(--vmc-transition);
+    box-shadow: var(--vmc-shadow-sm);
+}
+
+/* Estado marcado */
+.programa-select-wrap input:checked + .programa-select-box {
+    background-color: var(--vmc-primary);
+    border-color: var(--vmc-primary);
+    color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(var(--vmc-primary-rgb), 0.20);
+}
+
+/* Card resaltada cuando está seleccionada */
+.card.card-selected {
+    border-color: var(--vmc-primary) !important;
+    box-shadow: 0 0 0 3px rgba(var(--vmc-primary-rgb), 0.18), var(--vmc-shadow-md) !important;
+}
+
+/* ============================================================
+   31. BARRA DE ACCIONES EN LOTE
+   ============================================================ */
+.batch-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    padding: 0.45rem 1rem;
+    border-radius: 999px;
+    background-color: var(--vmc-surface);
+    border: 1px solid var(--vmc-border);
+    box-shadow: var(--vmc-shadow);
+    animation: fadeInUp 180ms ease both;
+}
+
+.batch-count {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--vmc-text);
+    white-space: nowrap;
+}
+
+/* Responsive: en móvil apilar toolbar */
+@media (max-width: 576px) {
+    .programs-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .filter-tabs {
+        border-radius: var(--vmc-radius);
+        padding: 0.4rem;
+    }
+
+    .batch-actions {
+        border-radius: var(--vmc-radius);
+        width: 100%;
+    }
+}

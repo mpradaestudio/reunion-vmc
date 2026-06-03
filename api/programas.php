@@ -116,6 +116,36 @@ class ProgramasAPI {
             return ['success' => false, 'message' => 'Error al eliminar programa: ' . $e->getMessage()];
         }
     }
+
+    /**
+     * Eliminar múltiples programas en lote
+     */
+    public function eliminarLote(array $ids) {
+        if (empty($ids)) {
+            return ['success' => false, 'message' => 'No se proporcionaron IDs'];
+        }
+
+        // Validar que todos sean enteros
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if (empty($ids)) {
+            return ['success' => false, 'message' => 'IDs no válidos'];
+        }
+
+        try {
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $stmt = $this->pdo->prepare("DELETE FROM programas_semanales WHERE id IN ($placeholders)");
+            $stmt->execute($ids);
+            $eliminados = $stmt->rowCount();
+
+            return [
+                'success'    => true,
+                'eliminados' => $eliminados,
+                'message'    => "$eliminados programa(s) eliminado(s) exitosamente",
+            ];
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => 'Error al eliminar: ' . $e->getMessage()];
+        }
+    }
     
     /**
      * Obtener programas de un mes específico
@@ -177,7 +207,11 @@ if ($method === 'GET') {
     
     if ($action === 'delete' && isset($datos['id'])) {
         $resultado = $api->eliminar($datos['id']);
-        
+
+    } elseif ($action === 'delete_batch' && !empty($datos['ids'])) {
+        $ids = is_array($datos['ids']) ? $datos['ids'] : explode(',', $datos['ids']);
+        $resultado = $api->eliminarLote($ids);
+
     } else {
         $resultado = ['success' => false, 'message' => 'Acción no válida'];
     }
