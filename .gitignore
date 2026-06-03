@@ -16,3 +16,7 @@ Thumbs.db
 # Ignorar carpetas IDE
 .vscode/
 .idea/
+
+# Ignorar cache de Python (skill UI/UX Pro Max)
+__pycache__/
+*.pyc
