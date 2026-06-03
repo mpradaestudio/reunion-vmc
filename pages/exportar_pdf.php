@@ -50,9 +50,9 @@ define('PDF_MARGIN_B',  12);
 define('PDF_PAGE_W',   215.9);
 define('PDF_INNER_W',  PDF_PAGE_W - PDF_MARGIN_L - PDF_MARGIN_R);  // ≈ 187.9 mm
 
-// Columnas (proporción izq 58% / der 42% del ancho útil)
-define('PDF_COL_L',    round(PDF_INNER_W * 0.58));   // ≈ 109 mm  contenido
-define('PDF_COL_R',    round(PDF_INNER_W * 0.42));   // ≈  79 mm  asignaciones
+// Columnas — izq 54% / der 46% para dar más espacio a nombres largos
+define('PDF_COL_L',    round(PDF_INNER_W * 0.54));   // ≈ 101 mm  contenido
+define('PDF_COL_R',    round(PDF_INNER_W * 0.46));   // ≈  86 mm  asignaciones
 define('PDF_COL_R_X',  PDF_MARGIN_L + PDF_COL_L);    // X inicio columna derecha
 
 // Alturas de fila
@@ -255,7 +255,7 @@ function drawParte(VMC_PDF $pdf, array $seccion,
     }
 
     // ── Columna izquierda: bullet + título ────────────────────────
-    // El bullet '•' (U+2022) está garantizado en DejaVu
+    // Guardamos Y de inicio para alinear la columna derecha al mismo nivel.
     $yStart = $pdf->GetY();
     $pdf->SetX(PDF_MARGIN_L);
 
@@ -264,17 +264,18 @@ function drawParte(VMC_PDF $pdf, array $seccion,
     setTxt($pdf, $colorBlack);
     $pdf->Cell(4, ROW_H, "\xe2\x80\xa2", 0, 0, 'L');   // • U+2022
 
-    // Título en fuente principal
+    // Título en fuente principal — MultiCell con $ln=1 para que el cursor
+    // quede al FINAL del bloque (altura real calculada por TCPDF).
     fntReg($pdf, $fntReg, FS_BODY);
     $tituloStr = $seccion['titulo'];
     if ($seccion['duracion']) {
         $tituloStr .= '  (' . $seccion['duracion'] . ' min.)';
     }
-    // MultiCell para que los títulos largos hagan wrap sin salirse
-    $pdf->MultiCell(PDF_COL_L - 6, ROW_H, $tituloStr, 0, 'L', false, 0);
-    $yAfterLeft = $pdf->GetY();
+    $pdf->MultiCell(PDF_COL_L - 6, ROW_H, $tituloStr, 0, 'L', false, 1);
+    $yAfterLeft = $pdf->GetY();   // Y real después del bloque completo
 
     // ── Columna derecha: etiqueta (R) + nombre (L con wrap) ────────
+    // Volvemos al Y de inicio para que etiqueta y título arranquen a la misma altura.
     $pdf->SetXY(PDF_COL_R_X, $yStart);
 
     // Etiqueta alineada a la derecha dentro de LBL_W
@@ -282,16 +283,15 @@ function drawParte(VMC_PDF $pdf, array $seccion,
     setTxt($pdf, $colorGray);
     $pdf->Cell($LBL_W, ROW_H, $etiquetaStr, 0, 0, 'R');
 
-    // Nombre con MultiCell para wrap (no sale del margen derecho)
+    // Nombre con MultiCell — ancho suficiente para evitar wrap en nombres dobles
     fntReg($pdf, $fntReg, FS_ASSIGN);
     setTxt($pdf, $colorBlack);
-    $pdf->Cell(1, ROW_H, '', 0, 0);           // pequeño separador visual
+    $pdf->Cell(1, ROW_H, '', 0, 0);           // separador visual de 1 mm
     $pdf->MultiCell($NOM_W, ROW_H, $nombreStr, 0, 'L', false, 1);
     $yAfterRight = $pdf->GetY();
 
-    // Avanzar al mayor Y de ambas columnas + pequeño espacio entre partes
-    $yEnd = max($yAfterLeft, $yAfterRight);
-    $pdf->SetY($yEnd);
+    // Avanzar al mayor Y: garantiza que la siguiente parte nunca se monte
+    $pdf->SetY(max($yAfterLeft, $yAfterRight));
     $pdf->Ln(0.6);
 }
 
