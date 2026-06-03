@@ -952,7 +952,7 @@ hr {
 /* Área de clic (esquina superior izquierda de la card) */
 .programa-select-wrap {
     position: absolute;
-    top: 0.85rem;
+    top: 1.3rem;
     left: 0.85rem;
     z-index: 3;
     cursor: pointer;
