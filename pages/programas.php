@@ -40,17 +40,40 @@ $mesNombre = [
 ];
 ?>
 
-<!-- Cabecera -->
-<div class="row">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h2 mb-0">
-                <i class="bi bi-calendar-week me-2"></i>Programas Semanales
-            </h1>
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalExtraer">
-                <i class="bi bi-cloud-download"></i> Extraer Programa
+<!-- Cabecera: título + filtro + botón extraer (misma línea) -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <h1 class="h2 mb-0">
+        <i class="bi bi-calendar-week me-2"></i>Programas Semanales
+    </h1>
+
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <?php if (count($programas) > 0): ?>
+        <!-- Filtro pill-tabs -->
+        <div class="filter-tabs" role="tablist" aria-label="Filtrar programas">
+            <button class="filter-tab active" data-filter="todos" role="tab" aria-selected="true">
+                Todos <span class="filter-count"><?php echo $cntTodos; ?></span>
             </button>
+            <?php if ($cntActual > 0): ?>
+            <button class="filter-tab" data-filter="actual" role="tab" aria-selected="false">
+                Esta semana <span class="filter-count"><?php echo $cntActual; ?></span>
+            </button>
+            <?php endif; ?>
+            <?php if ($cntProximos > 0): ?>
+            <button class="filter-tab" data-filter="futuro" role="tab" aria-selected="false">
+                Próximos <span class="filter-count"><?php echo $cntProximos; ?></span>
+            </button>
+            <?php endif; ?>
+            <?php if ($cntPasados > 0): ?>
+            <button class="filter-tab" data-filter="pasado" role="tab" aria-selected="false">
+                Pasados <span class="filter-count"><?php echo $cntPasados; ?></span>
+            </button>
+            <?php endif; ?>
         </div>
+        <?php endif; ?>
+
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalExtraer">
+            <i class="bi bi-cloud-download"></i> Extraer Programa
+        </button>
     </div>
 </div>
 
@@ -63,41 +86,15 @@ $mesNombre = [
 
 <?php if (count($programas) > 0): ?>
 
-<!-- ── Barra de herramientas: filtro + acciones de lote ────────────── -->
-<div class="programs-toolbar mb-4">
-
-    <!-- Filtro pill-tabs -->
-    <div class="filter-tabs" role="tablist" aria-label="Filtrar programas">
-        <button class="filter-tab active" data-filter="todos"    role="tab" aria-selected="true">
-            Todos <span class="filter-count"><?php echo $cntTodos; ?></span>
-        </button>
-        <?php if ($cntActual > 0): ?>
-        <button class="filter-tab" data-filter="actual" role="tab" aria-selected="false">
-            Esta semana <span class="filter-count"><?php echo $cntActual; ?></span>
-        </button>
-        <?php endif; ?>
-        <?php if ($cntProximos > 0): ?>
-        <button class="filter-tab" data-filter="futuro" role="tab" aria-selected="false">
-            Próximos <span class="filter-count"><?php echo $cntProximos; ?></span>
-        </button>
-        <?php endif; ?>
-        <?php if ($cntPasados > 0): ?>
-        <button class="filter-tab" data-filter="pasado" role="tab" aria-selected="false">
-            Pasados <span class="filter-count"><?php echo $cntPasados; ?></span>
-        </button>
-        <?php endif; ?>
-    </div>
-
-    <!-- Acciones de lote (se muestran al seleccionar al menos 1) -->
-    <div class="batch-actions" id="batchActions" style="display:none;">
-        <span class="batch-count" id="batchCount">0 seleccionados</span>
-        <button class="btn btn-sm btn-outline-secondary" id="btnDeselAll">
-            <i class="bi bi-x-circle"></i> Deseleccionar
-        </button>
-        <button class="btn btn-sm btn-danger" id="btnEliminarLote">
-            <i class="bi bi-trash"></i> Eliminar seleccionados
-        </button>
-    </div>
+<!-- Barra de acciones en lote (visible al seleccionar al menos 1) -->
+<div class="batch-actions mb-4" id="batchActions" style="display:none;">
+    <span class="batch-count" id="batchCount">0 seleccionados</span>
+    <button class="btn btn-sm btn-outline-secondary" id="btnDeselAll">
+        <i class="bi bi-x-circle"></i> Deseleccionar
+    </button>
+    <button class="btn btn-sm btn-danger" id="btnEliminarLote">
+        <i class="bi bi-trash"></i> Eliminar seleccionados
+    </button>
 </div>
 
 <!-- ── Grid de tarjetas ─────────────────────────────────────────────── -->
@@ -302,18 +299,23 @@ $mesNombre = [
     function applyFilter(filter) {
         let visible = 0;
         items.forEach(item => {
-            const estado  = item.dataset.estado;
-            const matches = filter === 'todos' || estado === filter;
+            const matches = filter === 'todos' || item.dataset.estado === filter;
             if (matches) {
-                item.classList.remove('item-hidden');
-                item.classList.add('item-visible');
+                item.style.display = '';
+                // Reiniciar la animación de entrada en cada filtrado
+                item.classList.remove('animate-in');
+                void item.offsetWidth;        // forzar reflow para reproducir de nuevo
+                item.classList.add('animate-in');
                 visible++;
             } else {
-                item.classList.remove('item-visible');
-                item.classList.add('item-hidden');
-                // Desmarcar checkboxes ocultos
+                item.style.display = 'none';
+                // Desmarcar checkbox de tarjetas ocultas
                 const cb = item.querySelector('.programa-checkbox');
-                if (cb) cb.checked = false;
+                if (cb && cb.checked) {
+                    cb.checked = false;
+                    const card = item.querySelector('.card');
+                    if (card) card.classList.remove('card-selected');
+                }
             }
         });
         empty.style.display = visible === 0 ? 'block' : 'none';

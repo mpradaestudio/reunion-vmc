@@ -42,8 +42,9 @@ function navActive($page, $current) {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css">
+    <!-- Custom CSS (con cache-busting por fecha de modificación) -->
+    <?php $cssVer = @filemtime(BASE_PATH . '/assets/css/style.css') ?: APP_VERSION; ?>
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css?v=<?php echo $cssVer; ?>">
 
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
