@@ -291,12 +291,15 @@ class JWOrgScraper {
      */
     public function extraerPartesNumeradas($html) {
         $lineas = $this->htmlALineas($html);
+        $total  = count($lineas);
 
         $partes        = [];
         $seccionActual = null;
         $orden         = 0;
 
-        foreach ($lineas as $linea) {
+        for ($idx = 0; $idx < $total; $idx++) {
+            $linea = $lineas[$idx];
+
             // ¿Es un encabezado de sección?
             $seccionDetectada = $this->detectarSeccion($linea);
             if ($seccionDetectada !== null) {
@@ -313,10 +316,24 @@ class JWOrgScraper {
             if (preg_match('/^(\d{1,2})\.\s*(\S.*)$/u', $linea, $m)) {
                 $resto = trim($m[2]);
 
-                // Duración: "(10 mins.)" / "(4 min.)"
-                $duracion = null;
-                if (preg_match('/\((\d{1,3})\s*mins?\.?\)/iu', $resto, $md)) {
-                    $duracion = (int)$md[1];
+                // Duración: buscar primero en la misma línea
+                $duracion = $this->buscarDuracion($resto);
+
+                // Si no está, mirar las siguientes líneas (jw.org la pone aparte)
+                if ($duracion === null) {
+                    for ($k = 1; $k <= 3 && ($idx + $k) < $total; $k++) {
+                        $siguiente = $lineas[$idx + $k];
+                        // Detenerse si llega otra parte numerada o un encabezado de sección
+                        if (preg_match('/^\d{1,2}\.\s/u', $siguiente) ||
+                            $this->detectarSeccion($siguiente) !== null) {
+                            break;
+                        }
+                        $d = $this->buscarDuracion($siguiente);
+                        if ($d !== null) {
+                            $duracion = $d;
+                            break;
+                        }
+                    }
                 }
 
                 // El título es el texto antes del primer paréntesis
@@ -344,6 +361,22 @@ class JWOrgScraper {
         }
 
         return $partes;
+    }
+
+    /**
+     * Busca una duración en minutos dentro de un texto.
+     * Acepta formatos como "(10 mins.)", "(4 min.)", "(10 min)".
+     */
+    private function buscarDuracion($texto) {
+        // Con paréntesis (lo más común y seguro)
+        if (preg_match('/\((\d{1,3})\s*mins?\.?\)/iu', $texto, $m)) {
+            return (int)$m[1];
+        }
+        // Sin paréntesis, pero solo si la línea es corta (probable línea de duración)
+        if (mb_strlen($texto, 'UTF-8') <= 25 && preg_match('/\b(\d{1,3})\s*mins?\.?/iu', $texto, $m)) {
+            return (int)$m[1];
+        }
+        return null;
     }
 
     /**
