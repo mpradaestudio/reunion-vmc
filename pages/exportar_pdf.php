@@ -115,6 +115,21 @@ function registrarFuente(VMC_PDF $pdf, string $fontsDir, string $ttfFile, string
     return 'helvetica';
 }
 
+/**
+ * SetFont wrapper que aplica bold automáticamente cuando la fuente
+ * es el fallback 'helvetica' (que requiere estilo 'B' explícito).
+ * Para Google Sans cargada como TTF, el estilo se deja en '' porque
+ * ya está embebida como variante bold independiente.
+ */
+function fntBold(VMC_PDF $pdf, string $fntBold, float $size): void {
+    $style = ($fntBold === 'helvetica') ? 'B' : '';
+    $pdf->SetFont($fntBold, $style, $size);
+}
+
+function fntReg(VMC_PDF $pdf, string $fntReg, float $size): void {
+    $pdf->SetFont($fntReg, '', $size);
+}
+
 $pdf = new VMC_PDF('P', 'mm', 'LETTER', true, 'UTF-8', false);
 
 // Fuentes (devuelven el nombre TCPDF para usar con SetFont)
@@ -172,29 +187,36 @@ function drawSong(VMC_PDF $pdf, string $fntIcon, string $fntReg,
 }
 
 /**
- * Dibuja el encabezado de sección (banda de color con texto blanco).
+ * Dibuja el encabezado de sección (banda de color con texto blanco/negro).
  */
 function drawSeccionHeader(VMC_PDF $pdf, string $fntBold, string $nombre,
-                           array $color, array $colorWhite): void {
+                           array $color, array $colorTxt): void {
     setFill($pdf, $color);
-    setTxt($pdf, $colorWhite);
-    $pdf->SetFont($fntBold, '', FS_LABEL);
+    setTxt($pdf, $colorTxt);
+    fntBold($pdf, $fntBold, FS_LABEL);
     $pdf->SetX(PDF_MARGIN_L);
     $pdf->Cell(PDF_INNER_W, SEC_H, $nombre, 0, 1, 'L', true);
-    setTxt($pdf, [0,0,0]);
+    setTxt($pdf, [0, 0, 0]);
     $pdf->Ln(1);
 }
 
 /**
  * Dibuja una parte del programa en layout de dos columnas.
  *
- * Columna izquierda: ● Título (duración)
- * Columna derecha:   Etiqueta: [gris]  Nombre [negro]  (en 1 línea)
- *                    Si hay 2 personas: segunda fila debajo
+ * Columna izquierda : • Título (duración)   — bullet via DejaVu, texto en fuente principal
+ * Columna derecha   : [Etiqueta alineada R] [Nombre alineado L con wrap]
+ *
+ * Anchos fijos de la columna derecha (total ≈ PDF_COL_R mm):
+ *   LBL_W = 32 mm  → etiqueta alineada a la derecha
+ *   NOM_W = PDF_COL_R - LBL_W - 1 mm  → nombre con MultiCell para evitar overflow
  */
 function drawParte(VMC_PDF $pdf, array $seccion,
                    string $fntReg, string $fntBold, string $fntIcon,
                    array $colorGray, array $colorBlack): void {
+
+    // Anchos columna derecha
+    $LBL_W = 32;
+    $NOM_W = PDF_COL_R - $LBL_W - 1;
 
     // Asignaciones de la BD
     $asignaciones = fetchAll("
@@ -211,67 +233,65 @@ function drawParte(VMC_PDF $pdf, array $seccion,
         $porOrden[$a['orden_presentador']] = $a['nombre_completo'] ?? '';
     }
 
-    // Tipo y etiquetas
-    $tipo      = $seccion['tipo_asignacion'];
-    $doble     = in_array($tipo, ['Estudiante/Ayudante', 'Conductor/Lector']);
+    // Etiqueta y nombre(s)
+    $tipo  = $seccion['tipo_asignacion'];
+    $doble = in_array($tipo, ['Estudiante/Ayudante', 'Conductor/Lector']);
 
     if ($tipo === 'Estudiante/Ayudante') {
-        $etiquetas = ['Estudiante / Ayudante:'];  // etiqueta única combinada
+        $etiquetaStr = 'Estudiante / Ayudante:';
     } elseif ($tipo === 'Conductor/Lector') {
-        $etiquetas = ['Conductor / Lector:'];
+        $etiquetaStr = 'Conductor / Lector:';
     } else {
-        $etiquetas = ['Asignado:'];
+        $etiquetaStr = 'Asignado:';
     }
 
-    // Nombre(s): si hay 2, unir con " / "
     if ($doble) {
         $n1 = $porOrden[1] ?? '';
         $n2 = $porOrden[2] ?? '';
         $nombreStr = trim($n1 . ($n1 && $n2 ? ' / ' : '') . $n2);
-        $etiquetaStr = $etiquetas[0];
-        $filas = 1;
     } else {
-        $nombreStr   = $porOrden[1] ?? '';
-        $etiquetaStr = $etiquetas[0];
-        $filas = 1;
+        $nombreStr = $porOrden[1] ?? '';
     }
 
-    // Construir texto de la columna izquierda
-    $titulo = '●  ' . $seccion['titulo'];
-    if ($seccion['duracion']) {
-        $titulo .= '  (' . $seccion['duracion'] . ' min.)';
-    }
-
-    // Guardar Y antes de escribir columna izquierda
+    // ── Columna izquierda: bullet + título ────────────────────────
+    // El bullet '•' (U+2022) está garantizado en DejaVu
     $yStart = $pdf->GetY();
-
-    // ── Columna izquierda: título ──────────────────────────────────
-    $pdf->SetFont($fntReg, '', FS_BODY);
-    setTxt($pdf, $colorBlack);
     $pdf->SetX(PDF_MARGIN_L);
-    $pdf->MultiCell(PDF_COL_L - 2, ROW_H, $titulo, 0, 'L', false, 0);
+
+    // Bullet con DejaVu (unicode-safe)
+    $pdf->SetFont($fntIcon, '', FS_BODY);
+    setTxt($pdf, $colorBlack);
+    $pdf->Cell(4, ROW_H, "\xe2\x80\xa2", 0, 0, 'L');   // • U+2022
+
+    // Título en fuente principal
+    fntReg($pdf, $fntReg, FS_BODY);
+    $tituloStr = $seccion['titulo'];
+    if ($seccion['duracion']) {
+        $tituloStr .= '  (' . $seccion['duracion'] . ' min.)';
+    }
+    // MultiCell para que los títulos largos hagan wrap sin salirse
+    $pdf->MultiCell(PDF_COL_L - 6, ROW_H, $tituloStr, 0, 'L', false, 0);
     $yAfterLeft = $pdf->GetY();
 
-    // ── Columna derecha: etiqueta (gris) + nombre (negro) ──────────
+    // ── Columna derecha: etiqueta (R) + nombre (L con wrap) ────────
     $pdf->SetXY(PDF_COL_R_X, $yStart);
 
-    // Etiqueta en gris
-    $pdf->SetFont($fntBold, '', FS_ASSIGN - 0.5);
+    // Etiqueta alineada a la derecha dentro de LBL_W
+    fntBold($pdf, $fntBold, FS_ASSIGN - 0.5);
     setTxt($pdf, $colorGray);
-    $pdf->Cell(
-        min(strlen($etiquetaStr) * 2.1 + 2, 48),
-        ROW_H, $etiquetaStr, 0, 0, 'L'
-    );
+    $pdf->Cell($LBL_W, ROW_H, $etiquetaStr, 0, 0, 'R');
 
-    // Nombre en negro
-    $pdf->SetFont($fntReg, '', FS_ASSIGN);
+    // Nombre con MultiCell para wrap (no sale del margen derecho)
+    fntReg($pdf, $fntReg, FS_ASSIGN);
     setTxt($pdf, $colorBlack);
-    $pdf->Cell(0, ROW_H, $nombreStr, 0, 1, 'L');
+    $pdf->Cell(1, ROW_H, '', 0, 0);           // pequeño separador visual
+    $pdf->MultiCell($NOM_W, ROW_H, $nombreStr, 0, 'L', false, 1);
+    $yAfterRight = $pdf->GetY();
 
-    // Avanzar al mayor de los dos Y
-    $yEnd = max($yAfterLeft, $pdf->GetY());
+    // Avanzar al mayor Y de ambas columnas + pequeño espacio entre partes
+    $yEnd = max($yAfterLeft, $yAfterRight);
     $pdf->SetY($yEnd);
-    $pdf->Ln(0.8);
+    $pdf->Ln(0.6);
 }
 
 /**
@@ -286,15 +306,14 @@ function drawSemana(VMC_PDF $pdf, array $programa, array $rolesAsignados,
                     array $colorSong, string $congregacion): void {
 
     $mesP  = (int)date('n', strtotime($programa['fecha_inicio']));
-    $anioP = (int)date('Y', strtotime($programa['fecha_inicio']));
     $mesPF = (int)date('n', strtotime($programa['fecha_fin']));
 
-    $fi    = new DateTime($programa['fecha_inicio']);
-    $ff    = new DateTime($programa['fecha_fin']);
-    $dIni  = (int)$fi->format('d');
-    $dFin  = (int)$ff->format('d');
+    $fi   = new DateTime($programa['fecha_inicio']);
+    $ff   = new DateTime($programa['fecha_fin']);
+    $dIni = (int)$fi->format('d');
+    $dFin = (int)$ff->format('d');
 
-    // Título de la semana: "1-7 DE JUNIO | JEREMÍAS 1-3"
+    // Título de la semana
     $tituloSemana = $dIni . '-' . $dFin . ' DE ' . $MESES[$mesP];
     if ($mesP !== $mesPF) {
         $tituloSemana = $dIni . ' DE ' . $MESES[$mesP] . ' - ' . $dFin . ' DE ' . $MESES[$mesPF];
@@ -303,39 +322,47 @@ function drawSemana(VMC_PDF $pdf, array $programa, array $rolesAsignados,
         $tituloSemana .= '  |  ' . strtoupper($programa['referencia_biblica']);
     }
 
-    // ── Semana: título ─────────────────────────────────────────────
-    $pdf->SetFont($fntBold, '', FS_WEEK);
+    // Ancho fijo etiqueta de roles (igual que en drawParte)
+    $LBL_W = 32;
+    $NOM_W = PDF_COL_R - $LBL_W - 1;
+    $xRight = PDF_COL_R_X;
+
+    // Helper local para dibujar una fila de rol (etiqueta R + nombre L)
+    $drawRol = function(string $etiqueta, string $nombre, float $yPos)
+               use ($pdf, $fntReg, $fntBold, $fntIcon, $colorGray, $colorBlack,
+                    $xRight, $LBL_W, $NOM_W): void {
+        $pdf->SetXY($xRight, $yPos);
+        fntBold($pdf, $fntBold, FS_ASSIGN - 0.5);
+        setTxt($pdf, $colorGray);
+        $pdf->Cell($LBL_W, ROW_H, $etiqueta, 0, 0, 'R');
+        $pdf->Cell(1, ROW_H, '', 0, 0);
+        fntReg($pdf, $fntReg, FS_ASSIGN);
+        setTxt($pdf, $colorBlack);
+        $pdf->MultiCell($NOM_W, ROW_H, $nombre, 0, 'L', false, 1);
+    };
+
+    // ── Título semana + Presidente ─────────────────────────────────
+    $yRow = $pdf->GetY();
+    fntBold($pdf, $fntBold, FS_WEEK);
     setTxt($pdf, $colorBlack);
     $pdf->SetX(PDF_MARGIN_L);
-    // Columna izquierda: título semana
-    $pdf->Cell(PDF_COL_L, 7, $tituloSemana, 0, 0, 'L');
-    // Columna derecha: etiqueta Presidente
-    $xRight = PDF_COL_R_X;
-    $pdf->SetX($xRight);
-    $pdf->SetFont($fntBold, '', FS_ASSIGN - 0.5);
-    setTxt($pdf, $colorGray);
-    $pdf->Cell(22, 7, 'Presidente:', 0, 0, 'L');
-    $pdf->SetFont($fntReg, '', FS_ASSIGN);
-    setTxt($pdf, $colorBlack);
-    $pdf->Cell(0, 7, $rolesAsignados['Presidente'] ?? '', 0, 1, 'L');
+    $pdf->MultiCell(PDF_COL_L, 7, $tituloSemana, 0, 'L', false, 0);
+    $yAfterTitle = $pdf->GetY();
+    $drawRol('Presidente:', $rolesAsignados['Presidente'] ?? '', $yRow);
+    $pdf->SetY(max($yAfterTitle, $pdf->GetY()));
 
     // ── Canción inicial + Oración inicial ──────────────────────────
-    // Canción inicial (izquierda)
     $yRow = $pdf->GetY();
     $pdf->SetX(PDF_MARGIN_L + 2);
     setTxt($pdf, $colorSong);
     $pdf->SetFont($fntIcon, '', FS_SONG - 0.5);
     $pdf->Cell(4, ROW_H, "\xe2\x99\xaa", 0, 0, 'L');
-    $pdf->SetFont($fntReg, '', FS_SONG);
+    fntReg($pdf, $fntReg, FS_SONG);
     $pdf->Cell(PDF_COL_L - 6, ROW_H, 'Canción ' . $programa['cancion_inicial'], 0, 0, 'L');
-    // Oración inicial (derecha)
-    $pdf->SetXY($xRight, $yRow);
-    $pdf->SetFont($fntBold, '', FS_ASSIGN - 0.5);
-    setTxt($pdf, $colorGray);
-    $pdf->Cell(22, ROW_H, 'Oración:', 0, 0, 'L');
-    $pdf->SetFont($fntReg, '', FS_ASSIGN);
+    $yAfterSong = $pdf->GetY() + ROW_H;
+    $drawRol('Oración:', $rolesAsignados['Oración inicial'] ?? '', $yRow);
+    $pdf->SetY(max($yAfterSong, $pdf->GetY()));
     setTxt($pdf, $colorBlack);
-    $pdf->Cell(0, ROW_H, $rolesAsignados['Oración inicial'] ?? '', 0, 1, 'L');
     $pdf->Ln(2);
 
     // ── TESOROS DE LA BIBLIA ───────────────────────────────────────
@@ -360,7 +387,7 @@ function drawSemana(VMC_PDF $pdf, array $programa, array $rolesAsignados,
     setTxt($pdf, $colorSong);
     $pdf->SetFont($fntIcon, '', FS_SONG - 0.5);
     $pdf->Cell(4, ROW_H, "\xe2\x99\xaa", 0, 0, 'L');
-    $pdf->SetFont($fntReg, '', FS_SONG);
+    fntReg($pdf, $fntReg, FS_SONG);
     $pdf->Cell(0, ROW_H, 'Canción ' . $programa['cancion_media'], 0, 1, 'L');
     setTxt($pdf, $colorBlack);
     $pdf->Ln(1);
@@ -369,22 +396,19 @@ function drawSemana(VMC_PDF $pdf, array $programa, array $rolesAsignados,
         drawParte($pdf, $s, $fntReg, $fntBold, $fntIcon, $colorGray, $colorBlack);
     }
 
-    // Canción final + Oración final
+    // ── Canción final + Oración final ──────────────────────────────
     $pdf->Ln(1);
     $yRow = $pdf->GetY();
     $pdf->SetX(PDF_MARGIN_L + 2);
     setTxt($pdf, $colorSong);
     $pdf->SetFont($fntIcon, '', FS_SONG - 0.5);
     $pdf->Cell(4, ROW_H, "\xe2\x99\xaa", 0, 0, 'L');
-    $pdf->SetFont($fntReg, '', FS_SONG);
+    fntReg($pdf, $fntReg, FS_SONG);
     $pdf->Cell(PDF_COL_L - 6, ROW_H, 'Canción ' . $programa['cancion_final'], 0, 0, 'L');
-    $pdf->SetXY($xRight, $yRow);
-    $pdf->SetFont($fntBold, '', FS_ASSIGN - 0.5);
-    setTxt($pdf, $colorGray);
-    $pdf->Cell(22, ROW_H, 'Oración:', 0, 0, 'L');
-    $pdf->SetFont($fntReg, '', FS_ASSIGN);
+    $yAfterSong2 = $pdf->GetY() + ROW_H;
+    $drawRol('Oración:', $rolesAsignados['Oración final'] ?? '', $yRow);
+    $pdf->SetY(max($yAfterSong2, $pdf->GetY()));
     setTxt($pdf, $colorBlack);
-    $pdf->Cell(0, ROW_H, $rolesAsignados['Oración final'] ?? '', 0, 1, 'L');
 }
 
 /* ============================================================
@@ -401,15 +425,15 @@ foreach ($grupos as $grupo) {
     $mesEncabezado = (int)date('n', strtotime($grupo[0]['fecha_inicio']));
     $anioEncabezado = (int)date('Y', strtotime($grupo[0]['fecha_inicio']));
 
-    $pdf->SetFont($FNT_BOLD, '', FS_MONTH);
+    fntBold($pdf, $FNT_BOLD, FS_MONTH);
     setTxt($pdf, [0,0,0]);
     $pdf->Cell(0, 10, $MESES[$mesEncabezado] . ' ' . $anioEncabezado, 0, 1, 'R');
     $pdf->Ln(1);
 
     // Sub-encabezado: Congregación (izq, negrita) | "Programa para la reunión entre semana" (der)
-    $pdf->SetFont($FNT_BOLD, '', FS_HEADER);
+    fntBold($pdf, $FNT_BOLD, FS_HEADER);
     $pdf->Cell(round(PDF_INNER_W * 0.45), 6, $config['nombre_congregacion'], 0, 0, 'L');
-    $pdf->SetFont($FNT_REG, '', FS_HEADER);
+    fntReg($pdf, $FNT_REG, FS_HEADER);
     $pdf->Cell(0, 6, 'Programa para la reunión entre semana', 0, 1, 'R');
 
     // Línea decorativa bajo el encabezado
