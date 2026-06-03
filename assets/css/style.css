@@ -1024,9 +1024,9 @@ hr {
     box-shadow: 0 0 0 2px rgba(var(--vmc-primary-rgb), 0.25), var(--vmc-shadow-md) !important;
 }
 
-/* Empujar el contenido a la derecha del checkbox solo cuando es visible,
-   para que en hover/selección no se solape con el título */
-.programa-card:hover .card-title,
+/* Empujar el contenido a la derecha del checkbox solo cuando es visible.
+   Excluir las cards con .no-hover (ej. Próximos Programas en index.php) */
+.programa-card:not(.no-hover):hover .card-title,
 .programa-card.card-selected .card-title {
     padding-left: 2rem;
     transition: padding-left var(--vmc-transition);
@@ -1079,4 +1079,11 @@ hr {
     transform: none !important;
     box-shadow: var(--vmc-shadow) !important;
     cursor: default;
+}
+
+/* Anular cualquier animación en el título para estas cards */
+.card.no-hover .card-title,
+.card.no-hover:hover .card-title {
+    padding-left: 0 !important;
+    transition: none !important;
 }
