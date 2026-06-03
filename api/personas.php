@@ -63,6 +63,18 @@ class PersonasAPI {
             );
             
             $persona['partes_disponibles'] = $partes;
+
+            // Obtener perfiles múltiples (tabla persona_perfiles)
+            $perfilesRows = fetchAll(
+                "SELECT perfil_id FROM persona_perfiles WHERE persona_id = ?",
+                [$id]
+            );
+            $perfilIds = array_map(function ($r) { return (int)$r['perfil_id']; }, $perfilesRows);
+            // Respaldo: si no hay registros en persona_perfiles, usar el perfil_id principal
+            if (empty($perfilIds) && !empty($persona['perfil_id'])) {
+                $perfilIds = [(int)$persona['perfil_id']];
+            }
+            $persona['perfil_ids'] = $perfilIds;
             
             return ['success' => true, 'data' => $persona];
             
