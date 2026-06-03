@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS perfiles (
 INSERT INTO perfiles (nombre, descripcion) VALUES
 ('Anciano', 'Anciano de la congregación'),
 ('Siervo Ministerial', 'Siervo ministerial de la congregación'),
-('Precursor', 'Precursor regular');
+('Precursor', 'Precursor regular'),
+('Publicador', 'Publicador');
 
 -- Tabla de personas
 CREATE TABLE IF NOT EXISTS personas (
