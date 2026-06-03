@@ -90,17 +90,6 @@ $mesNombre = [
 
 <?php if (count($programas) > 0): ?>
 
-<!-- Barra de acciones en lote (visible al seleccionar al menos 1) -->
-<div class="batch-actions mb-4 d-none" id="batchActions">
-    <span class="batch-count" id="batchCount">0 seleccionados</span>
-    <button class="btn btn-sm btn-outline-secondary" id="btnDeselAll">
-        <i class="bi bi-x-circle"></i> Deseleccionar todo
-    </button>
-    <button class="btn btn-sm btn-danger" id="btnEliminarLote">
-        <i class="bi bi-trash"></i> Eliminar seleccionados
-    </button>
-</div>
-
 <!-- ── Grid de tarjetas ─────────────────────────────────────────────── -->
 <div class="row g-4" id="programasGrid">
     <?php foreach ($programas as $programa):
@@ -216,6 +205,19 @@ $mesNombre = [
 <div id="emptyFilter" class="text-center py-5" style="display:none;">
     <i class="bi bi-funnel" style="font-size:3rem; opacity:.4;"></i>
     <p class="mt-3 text-muted">No hay programas con ese filtro.</p>
+</div>
+
+<!-- Barra de acciones en lote — centrada, debajo de todos los boxes -->
+<div class="d-flex justify-content-center mt-4 d-none" id="batchActions">
+    <div class="batch-actions">
+        <span class="batch-count" id="batchCount">0 seleccionados</span>
+        <button class="btn btn-sm btn-outline-secondary" id="btnDeselAll">
+            <i class="bi bi-x-circle"></i> Deseleccionar todo
+        </button>
+        <button class="btn btn-sm btn-danger" id="btnEliminarLote">
+            <i class="bi bi-trash"></i> Eliminar seleccionados
+        </button>
+    </div>
 </div>
 
 <?php else: ?>
@@ -371,7 +373,6 @@ function updateBatchBar() {
     if (checked.length > 0) {
         batchCountEl.textContent = checked.length + ' seleccionado' + (checked.length > 1 ? 's' : '');
         batchActions.classList.remove('d-none');
-        batchActions.style.display = 'flex';   // garantizar flex aunque Bootstrap ponga d-none
     } else {
         batchActions.classList.add('d-none');
         batchActions.style.display = '';
