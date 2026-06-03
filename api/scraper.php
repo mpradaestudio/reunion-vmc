@@ -469,6 +469,90 @@ class JWOrgScraper {
      *  PERSISTENCIA
      * ============================================================ */
 
+    /* ============================================================
+     *  MODO SEMANA A SEMANA
+     * ============================================================ */
+
+    /**
+     * Devuelve la lista de semanas de un período SIN descargar cada una
+     * (rápido). El título y la fecha se deducen de la propia URL.
+     */
+    public function listarSemanas($periodo) {
+        $url = $this->construirUrl($periodo);
+        if (!$url) {
+            return ['success' => false, 'message' => 'Período no válido'];
+        }
+
+        $html = $this->obtenerContenidoWeb($url);
+        if (!$html) {
+            return ['success' => false, 'message' => 'No se pudo conectar a jw.org. Verifica tu conexión a internet.'];
+        }
+
+        $urls = $this->extraerUrlsSemanas($html);
+        if (empty($urls)) {
+            return ['success' => false, 'message' => 'No se encontraron semanas en la página del período.'];
+        }
+
+        $semanas = [];
+        foreach ($urls as $u) {
+            $fechas = $this->extraerFechas($u, '');
+            if (!$fechas) {
+                continue;
+            }
+            $existe = fetchOne(
+                "SELECT id FROM programas_semanales WHERE fecha_inicio = ?",
+                [$fechas['inicio']]
+            );
+            // Usar la fecha de inicio como clave para ordenar y evitar duplicados
+            $semanas[$fechas['inicio']] = [
+                'url'          => $u,
+                'fecha_inicio' => $fechas['inicio'],
+                'label'        => $this->construirTituloSemana($fechas) . ' ' . $fechas['anio'],
+                'ya_existe'    => $existe ? true : false,
+            ];
+        }
+
+        if (empty($semanas)) {
+            return ['success' => false, 'message' => 'No se pudieron interpretar las fechas de las semanas.'];
+        }
+
+        ksort($semanas);
+        return ['success' => true, 'semanas' => array_values($semanas)];
+    }
+
+    /**
+     * Extrae y guarda UNA sola semana a partir de su URL.
+     */
+    public function extraerUnaSemana($url) {
+        if (!$url || stripos($url, 'jw.org') === false) {
+            return ['success' => false, 'message' => 'La URL no es válida (debe ser de jw.org)'];
+        }
+
+        $html = $this->obtenerContenidoWeb($url);
+        if (!$html) {
+            return ['success' => false, 'message' => 'No se pudo descargar la semana desde jw.org'];
+        }
+
+        $datos = $this->parsearSemana($html, $url);
+        if (!$datos || !$datos['fecha_inicio']) {
+            return ['success' => false, 'message' => 'No se pudo identificar la fecha de la semana en la página'];
+        }
+
+        if (!$this->guardarPrograma($datos)) {
+            return ['success' => false, 'message' => 'Error al guardar la semana en la base de datos'];
+        }
+
+        $this->registrarHistorial($url, 1, 'exitoso');
+
+        return [
+            'success'      => true,
+            'message'      => 'Semana extraída: ' . $datos['titulo'],
+            'titulo'       => $datos['titulo'],
+            'fecha_inicio' => $datos['fecha_inicio'],
+            'partes'       => count($datos['secciones']),
+        ];
+    }
+
     private function guardarPrograma($datos) {
         try {
             $existe = fetchOne(
@@ -561,6 +645,24 @@ if (realpath(__FILE__) === realpath($_SERVER['SCRIPT_FILENAME'] ?? '')) {
             }
             $scraper = new JWOrgScraper();
             jsonResponse($scraper->extraerProgramas($periodo));
+        }
+
+        if ($action === 'listar_semanas') {
+            $periodo = $_POST['periodo'] ?? '';
+            if (empty($periodo)) {
+                jsonResponse(['success' => false, 'message' => 'Debe especificar un período']);
+            }
+            $scraper = new JWOrgScraper();
+            jsonResponse($scraper->listarSemanas($periodo));
+        }
+
+        if ($action === 'scrape_semana') {
+            $url = $_POST['url'] ?? '';
+            if (empty($url)) {
+                jsonResponse(['success' => false, 'message' => 'Debe especificar la URL de la semana']);
+            }
+            $scraper = new JWOrgScraper();
+            jsonResponse($scraper->extraerUnaSemana($url));
         }
 
         jsonResponse(['success' => false, 'message' => 'Acción no válida']);
