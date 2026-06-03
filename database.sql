@@ -25,8 +25,7 @@ CREATE TABLE IF NOT EXISTS perfiles (
 INSERT INTO perfiles (nombre, descripcion) VALUES
 ('Anciano', 'Anciano de la congregación'),
 ('Siervo Ministerial', 'Siervo ministerial de la congregación'),
-('Discursante', 'Discursante público'),
-('Ayudante', 'Ayudante para asignaciones');
+('Precursor', 'Precursor regular');
 
 -- Tabla de personas
 CREATE TABLE IF NOT EXISTS personas (
@@ -53,6 +52,16 @@ CREATE TABLE IF NOT EXISTS persona_partes_disponibles (
     puede_presentar TINYINT(1) DEFAULT 1,
     FOREIGN KEY (persona_id) REFERENCES personas(id) ON DELETE CASCADE,
     UNIQUE KEY unique_persona_parte (persona_id, tipo_parte)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish_ci;
+
+-- Tabla de relación muchos-a-muchos entre personas y perfiles
+CREATE TABLE IF NOT EXISTS persona_perfiles (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    persona_id INT NOT NULL,
+    perfil_id INT NOT NULL,
+    FOREIGN KEY (persona_id) REFERENCES personas(id) ON DELETE CASCADE,
+    FOREIGN KEY (perfil_id) REFERENCES perfiles(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_persona_perfil (persona_id, perfil_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish_ci;
 
 -- Tabla de programas semanales (información extraída de jw.org)

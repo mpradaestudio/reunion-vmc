@@ -229,7 +229,7 @@ $seccionesPartes = [
 
 <!-- Modal para agregar/editar persona -->
 <div class="modal fade" id="modalPersona" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalPersonaTitulo">
@@ -241,7 +241,7 @@ $seccionesPartes = [
                 <input type="hidden" name="id" id="persona_id">
                 <input type="hidden" name="action" id="persona_action" value="create">
 
-                <div class="modal-body">
+                <div class="modal-body" style="max-height: 65vh; overflow-y: auto;">
                     <!-- Nombre / Apellido -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -254,34 +254,32 @@ $seccionesPartes = [
                         </div>
                     </div>
 
-                    <!-- Perfil (checkboxes) / Estado -->
-                    <div class="row">
-                        <div class="col-md-8 mb-3">
-                            <label class="form-label">Perfil * <small class="text-muted">(uno o varios)</small></label>
-                            <div class="d-flex flex-wrap gap-3 border rounded p-2">
-                                <?php foreach ($perfiles as $perfil): ?>
-                                <div class="form-check">
-                                    <input class="form-check-input chk-perfil" type="checkbox"
-                                           name="perfil_ids[]" value="<?php echo $perfil['id']; ?>"
-                                           id="perfil_<?php echo $perfil['id']; ?>">
-                                    <label class="form-check-label" for="perfil_<?php echo $perfil['id']; ?>">
-                                        <?php echo $perfil['nombre']; ?>
-                                    </label>
-                                </div>
-                                <?php endforeach; ?>
+                    <!-- Perfil (checkboxes) -->
+                    <div class="mb-3">
+                        <label class="form-label">Perfil * <small class="text-muted">(uno o varios)</small></label>
+                        <div class="d-flex flex-wrap gap-3 border rounded p-2">
+                            <?php foreach ($perfiles as $perfil): ?>
+                            <div class="form-check">
+                                <input class="form-check-input chk-perfil" type="checkbox"
+                                       name="perfil_ids[]" value="<?php echo $perfil['id']; ?>"
+                                       id="perfil_<?php echo $perfil['id']; ?>">
+                                <label class="form-check-label" for="perfil_<?php echo $perfil['id']; ?>">
+                                    <?php echo $perfil['nombre']; ?>
+                                </label>
                             </div>
+                            <?php endforeach; ?>
                         </div>
-                        <div class="col-md-4 mb-3">
+                    </div>
+
+                    <!-- Estado / Teléfono (50/50) -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
                             <label for="activo" class="form-label">Estado</label>
                             <select class="form-select" id="activo" name="activo">
                                 <option value="1">Activo</option>
                                 <option value="0">Inactivo</option>
                             </select>
                         </div>
-                    </div>
-
-                    <!-- Teléfono -->
-                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="telefono" class="form-label">Teléfono</label>
                             <input type="tel" class="form-control" id="telefono" name="telefono">
@@ -310,13 +308,13 @@ $seccionesPartes = [
                         $grupoId = 'grupo_' . $key;
                     ?>
                     <div class="card mb-2">
-                        <div class="card-header <?php echo $sec['clase']; ?> py-2">
-                            <div class="form-check mb-0">
+                        <div class="card-header <?php echo $sec['clase']; ?> py-2 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-white"><?php echo $sec['titulo']; ?></span>
+                            <div class="form-check form-switch mb-0">
                                 <input class="form-check-input chk-todos" type="checkbox"
-                                       id="all_<?php echo $key; ?>" data-grupo="<?php echo $grupoId; ?>">
-                                <label class="form-check-label fw-bold text-white" for="all_<?php echo $key; ?>">
-                                    <?php echo $sec['titulo']; ?>
-                                </label>
+                                       id="all_<?php echo $key; ?>" data-grupo="<?php echo $grupoId; ?>"
+                                       title="Seleccionar todo">
+                                <label class="form-check-label text-white small" for="all_<?php echo $key; ?>">Todas</label>
                             </div>
                         </div>
                         <div class="card-body py-2 grupo-partes" id="<?php echo $grupoId; ?>">
