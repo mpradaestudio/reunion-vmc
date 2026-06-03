@@ -35,11 +35,75 @@ foreach ($roles as $rol) {
     $rolesAsignados[$rol['rol']] = $rol;
 }
 
-// Obtener personas activas
-$personas = fetchAll("
-    SELECT id, CONCAT(nombre, ' ', apellido) as nombre_completo, perfil_id
-    FROM personas WHERE activo = 1 ORDER BY nombre, apellido
-");
+// Obtener personas activas agrupadas por la parte que pueden presentar
+$personasPorCapacidad = [];
+try {
+    $rows = fetchAll("
+        SELECT ppd.tipo_parte, p.id, CONCAT(p.nombre, ' ', p.apellido) AS nombre_completo
+        FROM persona_partes_disponibles ppd
+        INNER JOIN personas p ON p.id = ppd.persona_id
+        WHERE p.activo = 1 AND ppd.puede_presentar = 1
+        ORDER BY p.nombre, p.apellido
+    ");
+    foreach ($rows as $r) {
+        $personasPorCapacidad[$r['tipo_parte']][] = $r;
+    }
+} catch (Exception $e) {
+    $personasPorCapacidad = [];
+}
+
+/**
+ * Lista de personas habilitadas para una capacidad (tipo_parte) dada.
+ */
+function personasPara($capacidad) {
+    global $personasPorCapacidad;
+    return $personasPorCapacidad[$capacidad] ?? [];
+}
+
+/**
+ * Determina la capacidad requerida para una parte del programa según su
+ * sección, título y el orden del presentador (1 o 2).
+ * Debe coincidir con los valores marcados en el modal de Personas.
+ */
+function capacidadRequerida($seccion, $titulo, $orden) {
+    $t = mb_strtolower($titulo, 'UTF-8');
+
+    if ($seccion === 'TESOROS DE LA BIBLIA') {
+        if (mb_strpos($t, 'perlas') !== false)  return 'Busquemos perlas escondidas';
+        if (mb_strpos($t, 'lectura') !== false) return 'Lectura de la Biblia';
+        return 'Discurso Tesoros';
+    }
+    if ($seccion === 'SEAMOS MEJORES MAESTROS') {
+        return ($orden == 1) ? 'Estudiante' : 'Ayudante';
+    }
+    if ($seccion === 'NUESTRA VIDA CRISTIANA') {
+        if (mb_strpos($t, 'estudio b') !== false) {
+            return ($orden == 1) ? 'Conductor' : 'Lector';
+        }
+        if (mb_strpos($t, 'necesidades') !== false) return 'Necesidades';
+        return 'Partes';
+    }
+    return null;
+}
+
+/**
+ * Genera las <option> de un <select> a partir de la lista filtrada.
+ * Si la persona ya asignada no está en la lista (perdió la capacidad),
+ * se agrega igualmente para no perder la selección.
+ */
+function renderOpciones($lista, $selId, $selNombre = '') {
+    $html = '<option value="">Sin asignar</option>';
+    $encontrado = false;
+    foreach ($lista as $p) {
+        $sel = ($selId && $p['id'] == $selId) ? 'selected' : '';
+        if ($sel) $encontrado = true;
+        $html .= '<option value="' . $p['id'] . '" ' . $sel . '>' . htmlspecialchars($p['nombre_completo']) . '</option>';
+    }
+    if ($selId && !$encontrado) {
+        $html .= '<option value="' . $selId . '" selected>' . htmlspecialchars($selNombre) . ' (no habilitado)</option>';
+    }
+    return $html;
+}
 
 // Formatear fecha
 $fecha_inicio = new DateTime($programa['fecha_inicio']);
@@ -91,13 +155,11 @@ $fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' d
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Presidente:</label>
                         <select class="form-select asignar-rol" data-rol="Presidente">
-                            <option value="">Sin asignar</option>
-                            <?php foreach ($personas as $persona): ?>
-                                <option value="<?php echo $persona['id']; ?>"
-                                    <?php echo (isset($rolesAsignados['Presidente']) && $rolesAsignados['Presidente']['persona_id'] == $persona['id']) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($persona['nombre_completo']); ?>
-                                </option>
-                            <?php endforeach; ?>
+                            <?php echo renderOpciones(
+                                personasPara('Presidente'),
+                                $rolesAsignados['Presidente']['persona_id'] ?? null,
+                                $rolesAsignados['Presidente']['nombre_completo'] ?? ''
+                            ); ?>
                         </select>
                     </div>
                     
@@ -105,13 +167,11 @@ $fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' d
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Oración inicial:</label>
                         <select class="form-select asignar-rol" data-rol="Oración inicial">
-                            <option value="">Sin asignar</option>
-                            <?php foreach ($personas as $persona): ?>
-                                <option value="<?php echo $persona['id']; ?>"
-                                    <?php echo (isset($rolesAsignados['Oración inicial']) && $rolesAsignados['Oración inicial']['persona_id'] == $persona['id']) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($persona['nombre_completo']); ?>
-                                </option>
-                            <?php endforeach; ?>
+                            <?php echo renderOpciones(
+                                personasPara('Oración'),
+                                $rolesAsignados['Oración inicial']['persona_id'] ?? null,
+                                $rolesAsignados['Oración inicial']['nombre_completo'] ?? ''
+                            ); ?>
                         </select>
                     </div>
                     
@@ -119,13 +179,11 @@ $fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' d
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Oración final:</label>
                         <select class="form-select asignar-rol" data-rol="Oración final">
-                            <option value="">Sin asignar</option>
-                            <?php foreach ($personas as $persona): ?>
-                                <option value="<?php echo $persona['id']; ?>"
-                                    <?php echo (isset($rolesAsignados['Oración final']) && $rolesAsignados['Oración final']['persona_id'] == $persona['id']) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($persona['nombre_completo']); ?>
-                                </option>
-                            <?php endforeach; ?>
+                            <?php echo renderOpciones(
+                                personasPara('Oración'),
+                                $rolesAsignados['Oración final']['persona_id'] ?? null,
+                                $rolesAsignados['Oración final']['nombre_completo'] ?? ''
+                            ); ?>
                         </select>
                     </div>
                 </div>
@@ -229,36 +287,41 @@ $fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' d
                             $etiquetas = ['Conductor:', 'Lector:'];
                         }
 
+                        // 50/50 cuando son dos personas; 100% cuando es una
+                        $colClase = $dosPersonas ? 'col-6' : 'col-12';
+                        ?>
+                        <div class="row g-2">
+                        <?php
                         for ($i = 1; $i <= $numAsignaciones; $i++):
                             $asignacionActual = $asignacionesPorOrden[$i] ?? null;
+                            $cap       = capacidadRequerida($seccion['seccion'], $seccion['titulo'], $i);
+                            $lista     = $cap ? personasPara($cap) : [];
+                            $selId     = $asignacionActual['persona_id'] ?? null;
+                            $selNombre = $asignacionActual['nombre_completo'] ?? '';
                         ?>
-                        <div class="mb-2">
-                            <label class="form-label small mb-1">
-                                <?php echo $etiquetas[$i - 1]; ?>
-                            </label>
-                            <div class="input-group input-group-sm">
-                                <select class="form-select asignar-parte" 
-                                        data-seccion-id="<?php echo $seccion['id']; ?>"
-                                        data-orden="<?php echo $i; ?>"
-                                        data-tipo="<?php echo $seccion['tipo_asignacion']; ?>">
-                                    <option value="">Sin asignar</option>
-                                    <?php foreach ($personas as $persona): ?>
-                                        <option value="<?php echo $persona['id']; ?>"
-                                            <?php echo ($asignacionActual && $asignacionActual['persona_id'] == $persona['id']) ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($persona['nombre_completo']); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <?php if ($asignacionActual): ?>
-                                <button class="btn btn-outline-danger btn-desasignar"
-                                        data-seccion-id="<?php echo $seccion['id']; ?>"
-                                        data-orden="<?php echo $i; ?>">
-                                    <i class="bi bi-x"></i>
-                                </button>
+                            <div class="<?php echo $colClase; ?>">
+                                <label class="form-label small mb-1"><?php echo $etiquetas[$i - 1]; ?></label>
+                                <div class="input-group input-group-sm">
+                                    <select class="form-select asignar-parte"
+                                            data-seccion-id="<?php echo $seccion['id']; ?>"
+                                            data-orden="<?php echo $i; ?>"
+                                            data-tipo="<?php echo htmlspecialchars($seccion['tipo_asignacion']); ?>">
+                                        <?php echo renderOpciones($lista, $selId, $selNombre); ?>
+                                    </select>
+                                    <?php if ($asignacionActual): ?>
+                                    <button class="btn btn-outline-danger btn-desasignar"
+                                            data-seccion-id="<?php echo $seccion['id']; ?>"
+                                            data-orden="<?php echo $i; ?>">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                    <?php endif; ?>
+                                </div>
+                                <?php if ($cap && empty($lista)): ?>
+                                    <small class="text-muted">Nadie habilitado para esta parte</small>
                                 <?php endif; ?>
                             </div>
-                        </div>
                         <?php endfor; ?>
+                        </div>
                     </div>
                 </div>
             </div>
