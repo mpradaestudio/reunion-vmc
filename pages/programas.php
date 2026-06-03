@@ -159,26 +159,27 @@ $mesNombre = [
                 </p>
                 <?php endif; ?>
 
-                <!-- Canciones -->
+                <!-- Canciones + Presidente -->
                 <div class="mb-3">
-                    <small class="text-muted">
+                    <small class="d-block">
                         <i class="bi bi-music-note"></i>
                         Canciones: <?php echo $programa['cancion_inicial']; ?>,
                         <?php echo $programa['cancion_media']; ?>,
                         <?php echo $programa['cancion_final']; ?>
                     </small>
+                    <small class="d-block">                        
+                        <i class="bi bi-person"></i>
+                        Presidente: <?php echo $programa['presidente_nombre']
+                            ? htmlspecialchars($programa['presidente_nombre'])
+                            : '<span>Sin asignar</span>'; ?>
+                    </small>
                 </div>
 
-                <!-- Partes + Presidente -->
+                <!-- Partes -->
                 <div class="mb-3">
                     <small>
                         <i class="bi bi-list-check"></i>
-                        <?php echo $programa['total_secciones']; ?> partes
-                        &nbsp;|&nbsp;
-                        <i class="bi bi-person"></i>
-                        <?php echo $programa['presidente_nombre']
-                            ? htmlspecialchars($programa['presidente_nombre'])
-                            : '<span class="text-muted">Sin presidente</span>'; ?>
+                        <?php echo $programa['total_secciones']; ?> partes                        
                     </small>
                 </div>
 
