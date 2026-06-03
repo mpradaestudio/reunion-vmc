@@ -152,9 +152,9 @@ $proximosProgramas = fetchAll("
                                     <p class="mb-3">
                                         <small class="text-muted">
                                             <i class="bi bi-person"></i>
-                                            <?php echo $programa['presidente_nombre']
+                                            Presidente: <?php echo $programa['presidente_nombre']
                                                 ? htmlspecialchars($programa['presidente_nombre'])
-                                                : '<span class="text-muted">Sin presidente</span>'; ?>
+                                                : '<span class="text-muted">Sin asignar</span>'; ?>
                                         </small>
                                     </p>
 
