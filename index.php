@@ -14,12 +14,18 @@ $asignacionesPendientes = fetchOne("
     WHERE p.fecha_inicio >= CURDATE() AND ap.id IS NULL
 ")['total'];
 
-// Obtener próximos programas
+// Obtener próximos programas (máx. 6, incluye presidente asignado)
 $proximosProgramas = fetchAll("
-    SELECT * FROM programas_semanales 
-    WHERE fecha_inicio >= CURDATE() 
-    ORDER BY fecha_inicio ASC 
-    LIMIT 4
+    SELECT ps.*,
+           (SELECT CONCAT(p.nombre, ' ', p.apellido)
+            FROM asignaciones_roles ar
+            INNER JOIN personas p ON p.id = ar.persona_id
+            WHERE ar.programa_id = ps.id AND ar.rol = 'Presidente'
+            LIMIT 1) as presidente_nombre
+    FROM programas_semanales ps
+    WHERE ps.fecha_inicio >= CURDATE()
+    ORDER BY ps.fecha_inicio ASC
+    LIMIT 6
 ");
 ?>
 
@@ -105,42 +111,55 @@ $proximosProgramas = fetchAll("
             </div>
             <div class="card-body">
                 <?php if (count($proximosProgramas) > 0): ?>
-                    <div class="row">
-                        <?php foreach ($proximosProgramas as $programa): 
-                            $hoy = date('Y-m-d');
-                            $claseEstado = '';
-                            if ($programa['fecha_inicio'] <= $hoy && $programa['fecha_fin'] >= $hoy) {
-                                $claseEstado = 'actual';
-                            } elseif ($programa['fecha_inicio'] > $hoy) {
-                                $claseEstado = 'futuro';
-                            }
+                    <div class="row g-3">
+                        <?php
+                        $hoy        = date('Y-m-d');
+                        $mesesNombre = [
+                            1=>'enero',2=>'febrero',3=>'marzo',4=>'abril',
+                            5=>'mayo',6=>'junio',7=>'julio',8=>'agosto',
+                            9=>'septiembre',10=>'octubre',11=>'noviembre',12=>'diciembre'
+                        ];
+                        foreach ($proximosProgramas as $programa):
+                            $claseEstado = ($programa['fecha_inicio'] <= $hoy && $programa['fecha_fin'] >= $hoy)
+                                           ? 'actual' : 'futuro';
+                            // Días sin cero inicial
+                            $fi     = new DateTime($programa['fecha_inicio']);
+                            $ff     = new DateTime($programa['fecha_fin']);
+                            $mes    = $mesesNombre[(int)$fi->format('n')];
+                            $mesFin = $mesesNombre[(int)$ff->format('n')];
+                            $diaIni = (int)$fi->format('d');
+                            $diaFin = (int)$ff->format('d');
                         ?>
-                        <div class="col-md-6 mb-3">
-                            <div class="card programa-card <?php echo $claseEstado; ?>">
+                        <div class="col-md-4 col-sm-6">
+                            <div class="card programa-card <?php echo $claseEstado; ?> h-100 no-hover">
                                 <div class="card-body">
-                                    <h6 class="card-title fw-bold"><?php echo $programa['titulo_semana']; ?></h6>
-                                    <p class="card-text text-muted mb-2">
-                                        <i class="bi bi-calendar3"></i>
-                                        <?php 
-                                            $fecha_inicio = new DateTime($programa['fecha_inicio']);
-                                            $fecha_fin = new DateTime($programa['fecha_fin']);
-                                            $mesesNombre = [
-                                                1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril',
-                                                5 => 'mayo', 6 => 'junio', 7 => 'julio', 8 => 'agosto',
-                                                9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre'
-                                            ];
-                                            $mesIdx = (int)$fecha_inicio->format('n');
-                                            echo $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' de ' . 
-                                                 $mesesNombre[$mesIdx] . ' ' . $fecha_inicio->format('Y');
-                                        ?>
+                                    <!-- Título (ya incluye el rango de fechas) -->
+                                    <h6 class="card-title fw-bold mb-3">
+                                        <?php echo htmlspecialchars($programa['titulo_semana']); ?>
+                                    </h6>
+
+                                    <!-- Canciones -->
+                                    <p class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-music-note"></i>
+                                            Canciones: <?php echo $programa['cancion_inicial']; ?>,
+                                            <?php echo $programa['cancion_media']; ?>,
+                                            <?php echo $programa['cancion_final']; ?>
+                                        </small>
                                     </p>
-                                    <?php if ($programa['referencia_biblica']): ?>
-                                        <p class="card-text mb-2">
-                                            <i class="bi bi-book"></i>
-                                            <small><?php echo $programa['referencia_biblica']; ?></small>
-                                        </p>
-                                    <?php endif; ?>
-                                    <a href="pages/programa_detalle.php?id=<?php echo $programa['id']; ?>" class="btn btn-sm btn-primary">
+
+                                    <!-- Presidente -->
+                                    <p class="mb-3">
+                                        <small class="text-muted">
+                                            <i class="bi bi-person"></i>
+                                            <?php echo $programa['presidente_nombre']
+                                                ? htmlspecialchars($programa['presidente_nombre'])
+                                                : '<span class="text-muted fst-italic">Sin presidente</span>'; ?>
+                                        </small>
+                                    </p>
+
+                                    <a href="pages/programa_detalle.php?id=<?php echo $programa['id']; ?>"
+                                       class="btn btn-sm btn-primary w-100">
                                         <i class="bi bi-eye"></i> Ver Detalles
                                     </a>
                                 </div>
