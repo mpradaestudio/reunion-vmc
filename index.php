@@ -122,9 +122,9 @@ $proximosProgramas = fetchAll("
                         foreach ($proximosProgramas as $programa):
                             $claseEstado = ($programa['fecha_inicio'] <= $hoy && $programa['fecha_fin'] >= $hoy)
                                            ? 'actual' : 'futuro';
-                            $badgeHtml   = $claseEstado === 'actual'
-                                           ? '<span class="badge bg-success">Esta semana</span>'
-                                           : '<span class="badge bg-primary">Próximo</span>';
+                            $badgeHtml = $claseEstado === 'actual'
+                                        ? '<span class="badge bg-success">Esta semana</span>'
+                                        : '<span class="badge bg-primary">Próximo</span>';
                             // Días sin cero inicial
                             $fi     = new DateTime($programa['fecha_inicio']);
                             $ff     = new DateTime($programa['fecha_fin']);
@@ -136,7 +136,7 @@ $proximosProgramas = fetchAll("
                         <div class="col-md-4 col-sm-6">
                             <div class="card programa-card <?php echo $claseEstado; ?> h-100 no-hover">
                                 <div class="card-body">
-                                    <!-- Título + badge estado + enlace jw.org -->
+                                    <!-- Título (ya incluye el rango de fechas) -->
                                     <div class="d-flex justify-content-between align-items-start mb-3">
                                         <h6 class="card-title fw-bold mb-0 pe-2">
                                             <?php echo htmlspecialchars($programa['titulo_semana']); ?>
@@ -145,18 +145,19 @@ $proximosProgramas = fetchAll("
                                             <?php echo $badgeHtml; ?>
                                             <?php if (!empty($programa['url_fuente'])): ?>
                                             <a href="<?php echo htmlspecialchars($programa['url_fuente']); ?>"
-                                               target="_blank" rel="noopener noreferrer"
-                                               class="btn btn-sm btn-outline-secondary p-1 lh-1"
-                                               title="Ver en jw.org">
+                                            target="_blank" rel="noopener noreferrer"
+                                            class="btn btn-sm btn-light rounded-1 p-1 lh-1"
+                                            title="Ver en JW.ORG">
                                                 <i class="bi bi-box-arrow-up-right" style="font-size:.85rem;"></i>
                                             </a>
                                             <?php endif; ?>
                                         </div>
                                     </div>
 
+
                                     <!-- Canciones -->
                                     <p class="mb-0">
-                                        <small class="text-muted">
+                                        <small class="">
                                             <i class="bi bi-music-note"></i>
                                             Canciones: <?php echo $programa['cancion_inicial']; ?>,
                                             <?php echo $programa['cancion_media']; ?>,
@@ -166,11 +167,11 @@ $proximosProgramas = fetchAll("
 
                                     <!-- Presidente -->
                                     <p class="mb-3">
-                                        <small class="text-muted">
+                                        <small class="">
                                             <i class="bi bi-person"></i>
                                             Presidente: <?php echo $programa['presidente_nombre']
                                                 ? htmlspecialchars($programa['presidente_nombre'])
-                                                : '<span class="text-muted">Sin asignar</span>'; ?>
+                                                : '<span>Sin asignar</span>'; ?>
                                         </small>
                                     </p>
 

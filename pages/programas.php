@@ -146,14 +146,15 @@ $mesNombre = [
                         <?php echo $badgeHtml; ?>
                         <?php if (!empty($programa['url_fuente'])): ?>
                         <a href="<?php echo htmlspecialchars($programa['url_fuente']); ?>"
-                           target="_blank" rel="noopener noreferrer"
-                           class="btn btn-sm btn-outline-secondary p-1 lh-1"
-                           title="Ver en jw.org">
+                        target="_blank" rel="noopener noreferrer"
+                        class="btn btn-sm btn-light rounded-1 p-1 lh-1"
+                        title="Ver en JW.ORG">
                             <i class="bi bi-box-arrow-up-right" style="font-size:.85rem;"></i>
                         </a>
                         <?php endif; ?>
                     </div>
                 </div>
+
 
                 <!-- Fecha (oculta — título ya la incluye; se conserva para PDF) -->
                 <p class="text-muted mb-2 d-none" data-fecha="<?php echo htmlspecialchars($fechaFormato); ?>">
@@ -266,13 +267,13 @@ $mesNombre = [
                     <i class="bi bi-link-45deg"></i> URL de la semana
                 </label>
                 <input type="text" class="form-control" id="urlSemana"
-                       placeholder="https://www.jw.org/es/biblioteca/guia-actividades-reunion-testigos-jehova/...">
+                       placeholder="https://www.jw.org/es/">
                 <small class="text-muted d-block mt-1">
-                    Ejemplo: …/julio-agosto-2026-mwb/Vida-y-Ministerio-Cristianos-6-a-12-de-julio-de-2026/
+                    Fuente: <a href="https://www.jw.org/es/biblioteca/guia-actividades-reunion-testigos-jehova/" target="_blank" rel="noopener">https://www.jw.org/es/biblioteca/guia-actividades-reunion-testigos-jehova/</a>
                 </small>
                 <div id="extraerEstado" class="mt-3"></div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-primary" id="btnExtraerUrl">
                     <i class="bi bi-cloud-download"></i> Extraer
