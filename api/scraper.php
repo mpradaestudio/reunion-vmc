@@ -204,15 +204,41 @@ class JWOrgScraper {
     /**
      * Obtiene las fechas. Primero intenta desde la URL (muy fiable),
      * luego desde el título como respaldo.
-     * URL ejemplo: ...Vida-y-Ministerio-Cristianos-6-a-12-de-julio-de-2026/
+     *
+     * Casos soportados:
+     *   A) Mismo mes:  ...6-a-12-de-julio-de-2026/
+     *   B) Dos meses:  ...27-de-julio-a-2-de-agosto-de-2026/
      */
     private function extraerFechas($url, $titulo) {
-        // 1) Desde la URL
+        // --- Desde la URL ---
+
+        // Caso B: semana que cruza dos meses (ej. 27-de-julio-a-2-de-agosto-de-2026)
+        if ($url && preg_match(
+            '/(\d{1,2})-de-([a-zñáéíóú]+)-a-(\d{1,2})-de-([a-zñáéíóú]+)-de-(\d{4})/iu',
+            $url, $m
+        )) {
+            $mesInicio = $this->convertirMesTextoANumero($m[2]);
+            $mesFin    = $this->convertirMesTextoANumero($m[4]);
+            $anio      = (int)$m[5];
+            // Si el mes de inicio es diciembre y el de fin es enero, el año de inicio es el anterior
+            $anioInicio = ($mesInicio === 12 && $mesFin === 1) ? $anio - 1 : $anio;
+            return [
+                'inicio'     => sprintf('%04d-%02d-%02d', $anioInicio, $mesInicio, (int)$m[1]),
+                'fin'        => sprintf('%04d-%02d-%02d', $anio,       $mesFin,    (int)$m[3]),
+                'dia_inicio' => (int)$m[1],
+                'dia_fin'    => (int)$m[3],
+                'mes'        => $mesInicio,   // mes del inicio (para el título)
+                'mes_fin'    => $mesFin,
+                'anio'       => $anio,
+            ];
+        }
+
+        // Caso A: semana dentro del mismo mes (ej. 3-a-9-de-agosto-de-2026)
         if ($url && preg_match('/(\d{1,2})-a-(\d{1,2})-de-([a-zñáéíóú]+)-de-(\d{4})/iu', $url, $m)) {
             $mes = $this->convertirMesTextoANumero($m[3]);
             return [
-                'inicio' => sprintf('%04d-%02d-%02d', (int)$m[4], $mes, (int)$m[1]),
-                'fin'    => sprintf('%04d-%02d-%02d', (int)$m[4], $mes, (int)$m[2]),
+                'inicio'     => sprintf('%04d-%02d-%02d', (int)$m[4], $mes, (int)$m[1]),
+                'fin'        => sprintf('%04d-%02d-%02d', (int)$m[4], $mes, (int)$m[2]),
                 'dia_inicio' => (int)$m[1],
                 'dia_fin'    => (int)$m[2],
                 'mes'        => $mes,
@@ -220,7 +246,32 @@ class JWOrgScraper {
             ];
         }
 
-        // 2) Desde el título: "6-12 de julio ..." o "6 a 12 de julio ..."
+        // --- Desde el título (respaldo) ---
+
+        // Caso B en título: "27 de julio a 2 de agosto de 2026"
+        if (preg_match(
+            '/(\d{1,2})\s+de\s+([a-zñáéíóú]+)\s+a\s+(\d{1,2})\s+de\s+([a-zñáéíóú]+)/iu',
+            $titulo, $m
+        )) {
+            $mesInicio = $this->convertirMesTextoANumero($m[2]);
+            $mesFin    = $this->convertirMesTextoANumero($m[4]);
+            $anio = 2026;
+            if (preg_match('/(20\d{2})/', $titulo, $ma)) {
+                $anio = (int)$ma[1];
+            }
+            $anioInicio = ($mesInicio === 12 && $mesFin === 1) ? $anio - 1 : $anio;
+            return [
+                'inicio'     => sprintf('%04d-%02d-%02d', $anioInicio, $mesInicio, (int)$m[1]),
+                'fin'        => sprintf('%04d-%02d-%02d', $anio,       $mesFin,    (int)$m[3]),
+                'dia_inicio' => (int)$m[1],
+                'dia_fin'    => (int)$m[3],
+                'mes'        => $mesInicio,
+                'mes_fin'    => $mesFin,
+                'anio'       => $anio,
+            ];
+        }
+
+        // Caso A en título: "6-12 de julio ..." o "6 a 12 de julio ..."
         if (preg_match('/(\d{1,2})\s*(?:-|a)\s*(\d{1,2})\s+de\s+([a-zñáéíóú]+)/iu', $titulo, $m)) {
             $mes  = $this->convertirMesTextoANumero($m[3]);
             $anio = 2026;
@@ -228,8 +279,8 @@ class JWOrgScraper {
                 $anio = (int)$ma[1];
             }
             return [
-                'inicio' => sprintf('%04d-%02d-%02d', $anio, $mes, (int)$m[1]),
-                'fin'    => sprintf('%04d-%02d-%02d', $anio, $mes, (int)$m[2]),
+                'inicio'     => sprintf('%04d-%02d-%02d', $anio, $mes, (int)$m[1]),
+                'fin'        => sprintf('%04d-%02d-%02d', $anio, $mes, (int)$m[2]),
                 'dia_inicio' => (int)$m[1],
                 'dia_fin'    => (int)$m[2],
                 'mes'        => $mes,
@@ -245,8 +296,17 @@ class JWOrgScraper {
             1=>'enero',2=>'febrero',3=>'marzo',4=>'abril',5=>'mayo',6=>'junio',
             7=>'julio',8=>'agosto',9=>'septiembre',10=>'octubre',11=>'noviembre',12=>'diciembre'
         ];
-        $mes = $meses[$fechas['mes']] ?? '';
-        return $fechas['dia_inicio'] . '-' . $fechas['dia_fin'] . ' de ' . $mes;
+        $mesInicio = $meses[$fechas['mes']] ?? '';
+
+        // Semana que cruza dos meses
+        if (!empty($fechas['mes_fin']) && $fechas['mes_fin'] !== $fechas['mes']) {
+            $mesFin = $meses[$fechas['mes_fin']] ?? '';
+            return $fechas['dia_inicio'] . ' de ' . $mesInicio
+                 . ' - ' . $fechas['dia_fin'] . ' de ' . $mesFin;
+        }
+
+        // Semana dentro del mismo mes
+        return $fechas['dia_inicio'] . '-' . $fechas['dia_fin'] . ' de ' . $mesInicio;
     }
 
     /**
