@@ -147,8 +147,8 @@ $mesNombre = [
                         <?php if (!empty($programa['url_fuente'])): ?>
                         <a href="<?php echo htmlspecialchars($programa['url_fuente']); ?>"
                         target="_blank" rel="noopener noreferrer"
-                        class="btn btn-sm btn-outline-secondary p-1 lh-1"
-                        title="Ver en jw.org">
+                        class="btn btn-sm btn-light rounded-1 p-1 lh-1"
+                        title="Ver en JW.ORG">
                             <i class="bi bi-box-arrow-up-right" style="font-size:.85rem;"></i>
                         </a>
                         <?php endif; ?>
