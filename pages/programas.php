@@ -257,7 +257,7 @@ $mesNombre = [
                 <input type="text" class="form-control" id="urlSemana"
                        placeholder="https://www.jw.org/es/">
                 <small class="text-muted d-block mt-1">
-                    Ejemplo: <a href="https://www.jw.org/es/biblioteca/guia-actividades-reunion-testigos-jehova/" target="_blank">
+                    Ejemplo: <a href="https://www.jw.org/es/biblioteca/guia-actividades-reunion-testigos-jehova/" target="_blank">https://www.jw.org/es/biblioteca/guia-actividades-reunion-testigos-jehova</a>
                 </small>
                 <div id="extraerEstado" class="mt-3"></div>
             </div>
