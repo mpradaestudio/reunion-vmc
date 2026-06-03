@@ -426,19 +426,60 @@ a {
     color: #ffffff !important;
 }
 
-/* El dorado requiere texto oscuro para cumplir contraste accesible */
+/* Dorado: texto oscuro por defecto para contraste accesible (ej. modal de personas) */
 .seccion-maestros {
     background-color: var(--color-maestros) !important;
     color: #1f2733 !important;
 }
 
-.seccion-maestros .text-white,
 .seccion-maestros .form-check-label {
     color: #1f2733 !important;
 }
 
 .seccion-maestros .form-check-input {
     border-color: rgba(31, 39, 51, 0.45);
+}
+
+/*
+ * TÍTULOS DE LAS 3 SECCIONES EN programa_detalle.php
+ * Forzar blanco en h5/h6 dentro de card-header coloreado,
+ * independiente del tema (light/dark) y de las variables de Bootstrap.
+ */
+.card-header.seccion-tesoros,
+.card-header.seccion-vida {
+    color: #ffffff !important;
+}
+
+.card-header.seccion-tesoros h1,
+.card-header.seccion-tesoros h2,
+.card-header.seccion-tesoros h3,
+.card-header.seccion-tesoros h4,
+.card-header.seccion-tesoros h5,
+.card-header.seccion-tesoros h6,
+.card-header.seccion-tesoros .mb-0,
+.card-header.seccion-vida h1,
+.card-header.seccion-vida h2,
+.card-header.seccion-vida h3,
+.card-header.seccion-vida h4,
+.card-header.seccion-vida h5,
+.card-header.seccion-vida h6,
+.card-header.seccion-vida .mb-0 {
+    color: #ffffff !important;
+}
+
+/* Maestros: título siempre blanco (pedido explícito), resto con texto oscuro */
+.card-header.seccion-maestros {
+    color: #ffffff !important;
+}
+
+.card-header.seccion-maestros h1,
+.card-header.seccion-maestros h2,
+.card-header.seccion-maestros h3,
+.card-header.seccion-maestros h4,
+.card-header.seccion-maestros h5,
+.card-header.seccion-maestros h6,
+.card-header.seccion-maestros .mb-0 {
+    color: #ffffff !important;
 }
 
 /* Píldoras/etiquetas de sección reutilizables */

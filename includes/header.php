@@ -95,4 +95,4 @@ function navActive($page, $current) {
     </nav>
 
     <!-- Main Content -->
-    <main class="container-fluid py-4">
+    <main class="container py-4">
