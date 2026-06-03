@@ -162,7 +162,7 @@ $mesNombre = [
                 <!-- Canciones  + Presidente -->
                 <div class="mb-3">
                     <small class="d-block">
-                        <i class="bi bi-music-note"></i>
+                        <i class="bi bi-music-note-beamed"></i>
                         Canciones: <?php echo $programa['cancion_inicial']; ?>,
                         <?php echo $programa['cancion_media']; ?>,
                         <?php echo $programa['cancion_final']; ?>
