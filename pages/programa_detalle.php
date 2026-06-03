@@ -1,0 +1,352 @@
+<?php
+$pageTitle = 'Detalle del Programa';
+require_once __DIR__ . '/../includes/header.php';
+
+$programaId = $_GET['id'] ?? null;
+
+if (!$programaId) {
+    redirect('programas.php');
+}
+
+// Obtener programa completo
+$programa = fetchOne("SELECT * FROM programas_semanales WHERE id = ?", [$programaId]);
+
+if (!$programa) {
+    redirect('programas.php');
+}
+
+// Obtener secciones
+$secciones = fetchAll("
+    SELECT * FROM programa_secciones 
+    WHERE programa_id = ? 
+    ORDER BY orden
+", [$programaId]);
+
+// Obtener asignaciones de roles
+$rolesAsignados = [];
+$roles = fetchAll("
+    SELECT ar.*, CONCAT(p.nombre, ' ', p.apellido) as nombre_completo
+    FROM asignaciones_roles ar
+    LEFT JOIN personas p ON ar.persona_id = p.id
+    WHERE ar.programa_id = ?
+", [$programaId]);
+
+foreach ($roles as $rol) {
+    $rolesAsignados[$rol['rol']] = $rol;
+}
+
+// Obtener personas activas
+$personas = fetchAll("
+    SELECT id, CONCAT(nombre, ' ', apellido) as nombre_completo, perfil_id
+    FROM personas WHERE activo = 1 ORDER BY nombre, apellido
+");
+
+// Formatear fecha
+$fecha_inicio = new DateTime($programa['fecha_inicio']);
+$fecha_fin = new DateTime($programa['fecha_fin']);
+$mesNombre = [
+    1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril',
+    5 => 'mayo', 6 => 'junio', 7 => 'julio', 8 => 'agosto',
+    9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre'
+];
+$mes = $mesNombre[(int)$fecha_inicio->format('n')];
+$fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' de ' . $mes . ' ' . $fecha_inicio->format('Y');
+?>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <a href="programas.php" class="btn btn-outline-secondary mb-2">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+                <h1 class="h2 mb-0"><?php echo htmlspecialchars($programa['titulo_semana']); ?></h1>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-calendar3"></i> <?php echo $fechaFormato; ?>
+                    <?php if ($programa['referencia_biblica']): ?>
+                        | <i class="bi bi-book"></i> <?php echo htmlspecialchars($programa['referencia_biblica']); ?>
+                    <?php endif; ?>
+                </p>
+            </div>
+            <div>
+                <a href="exportar_pdf.php?programa_id=<?php echo $programaId; ?>" 
+                   class="btn btn-danger" target="_blank">
+                    <i class="bi bi-file-pdf"></i> Exportar PDF
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Roles generales -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person-badge"></i> Roles Generales</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Presidente -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Presidente:</label>
+                        <select class="form-select asignar-rol" data-rol="Presidente">
+                            <option value="">Sin asignar</option>
+                            <?php foreach ($personas as $persona): ?>
+                                <option value="<?php echo $persona['id']; ?>"
+                                    <?php echo (isset($rolesAsignados['Presidente']) && $rolesAsignados['Presidente']['persona_id'] == $persona['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($persona['nombre_completo']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <!-- Oración inicial -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Oración inicial:</label>
+                        <select class="form-select asignar-rol" data-rol="Oración inicial">
+                            <option value="">Sin asignar</option>
+                            <?php foreach ($personas as $persona): ?>
+                                <option value="<?php echo $persona['id']; ?>"
+                                    <?php echo (isset($rolesAsignados['Oración inicial']) && $rolesAsignados['Oración inicial']['persona_id'] == $persona['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($persona['nombre_completo']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <!-- Oración final -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Oración final:</label>
+                        <select class="form-select asignar-rol" data-rol="Oración final">
+                            <option value="">Sin asignar</option>
+                            <?php foreach ($personas as $persona): ?>
+                                <option value="<?php echo $persona['id']; ?>"
+                                    <?php echo (isset($rolesAsignados['Oración final']) && $rolesAsignados['Oración final']['persona_id'] == $persona['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($persona['nombre_completo']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Canciones -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-around text-center">
+                    <div>
+                        <i class="bi bi-music-note"></i>
+                        <strong>Canción inicial:</strong> <?php echo $programa['cancion_inicial']; ?>
+                    </div>
+                    <div>
+                        <i class="bi bi-music-note"></i>
+                        <strong>Canción media:</strong> <?php echo $programa['cancion_media']; ?>
+                    </div>
+                    <div>
+                        <i class="bi bi-music-note"></i>
+                        <strong>Canción final:</strong> <?php echo $programa['cancion_final']; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Secciones del programa -->
+<div class="row">
+    <div class="col-12">
+        <?php
+        $seccionActual = '';
+        foreach ($secciones as $seccion):
+            // Obtener asignaciones de esta sección
+            $asignaciones = fetchAll("
+                SELECT ap.*, CONCAT(p.nombre, ' ', p.apellido) as nombre_completo
+                FROM asignaciones_partes ap
+                LEFT JOIN personas p ON ap.persona_id = p.id
+                WHERE ap.seccion_id = ?
+                ORDER BY ap.orden_presentador
+            ", [$seccion['id']]);
+            
+            // Agrupar asignaciones por orden
+            $asignacionesPorOrden = [];
+            foreach ($asignaciones as $asig) {
+                $asignacionesPorOrden[$asig['orden_presentador']] = $asig;
+            }
+            
+            // Nueva sección
+            if ($seccionActual !== $seccion['seccion']):
+                if ($seccionActual !== ''): ?>
+                    </div></div></div>
+                <?php endif;
+                
+                $seccionActual = $seccion['seccion'];
+                $claseSeccion = '';
+                if ($seccion['seccion'] === 'TESOROS DE LA BIBLIA') {
+                    $claseSeccion = 'seccion-tesoros';
+                } elseif ($seccion['seccion'] === 'SEAMOS MEJORES MAESTROS') {
+                    $claseSeccion = 'seccion-maestros';
+                } elseif ($seccion['seccion'] === 'NUESTRA VIDA CRISTIANA') {
+                    $claseSeccion = 'seccion-vida';
+                }
+                ?>
+                <div class="card mb-3">
+                    <div class="card-header <?php echo $claseSeccion; ?>">
+                        <h5 class="mb-0"><?php echo $seccion['seccion']; ?></h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group list-group-flush">
+            <?php endif; ?>
+            
+            <!-- Parte individual -->
+            <div class="list-group-item">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <strong><?php echo htmlspecialchars($seccion['titulo']); ?></strong>
+                        <?php if ($seccion['duracion']): ?>
+                            <span class="badge bg-secondary ms-2"><?php echo $seccion['duracion']; ?> min.</span>
+                        <?php endif; ?>
+                        <br>
+                        <small class="text-muted"><?php echo $seccion['tipo_asignacion']; ?></small>
+                    </div>
+                    <div class="col-md-6">
+                        <?php
+                        // Determinar cuántas asignaciones se necesitan
+                        $numAsignaciones = ($seccion['tipo_asignacion'] === 'Estudiante/Ayudante') ? 2 : 1;
+                        
+                        for ($i = 1; $i <= $numAsignaciones; $i++):
+                            $asignacionActual = $asignacionesPorOrden[$i] ?? null;
+                        ?>
+                        <div class="mb-2">
+                            <label class="form-label small mb-1">
+                                <?php echo ($numAsignaciones > 1) ? ($i == 1 ? 'Estudiante:' : 'Ayudante:') : 'Asignado:'; ?>
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <select class="form-select asignar-parte" 
+                                        data-seccion-id="<?php echo $seccion['id']; ?>"
+                                        data-orden="<?php echo $i; ?>"
+                                        data-tipo="<?php echo $seccion['tipo_asignacion']; ?>">
+                                    <option value="">Sin asignar</option>
+                                    <?php foreach ($personas as $persona): ?>
+                                        <option value="<?php echo $persona['id']; ?>"
+                                            <?php echo ($asignacionActual && $asignacionActual['persona_id'] == $persona['id']) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($persona['nombre_completo']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <?php if ($asignacionActual): ?>
+                                <button class="btn btn-outline-danger btn-desasignar"
+                                        data-seccion-id="<?php echo $seccion['id']; ?>"
+                                        data-orden="<?php echo $i; ?>">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+        
+        <?php if ($seccionActual !== ''): ?>
+                    </div></div></div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<script>
+const programaId = <?php echo $programaId; ?>;
+
+// Asignar rol general
+$('.asignar-rol').on('change', function() {
+    const rol = $(this).data('rol');
+    const personaId = $(this).val();
+    
+    if (!personaId) {
+        // Desasignar
+        $.post('../api/asignaciones.php', {
+            action: 'desasignar_rol',
+            programa_id: programaId,
+            rol: rol
+        }, function(response) {
+            if (response.success) {
+                APP.showNotification('Rol desasignado', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                APP.showNotification(response.message, 'danger');
+            }
+        });
+    } else {
+        // Asignar
+        $.post('../api/asignaciones.php', {
+            action: 'asignar_rol',
+            programa_id: programaId,
+            rol: rol,
+            persona_id: personaId
+        }, function(response) {
+            if (response.success) {
+                APP.showNotification('Rol asignado correctamente', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                APP.showNotification(response.message, 'danger');
+            }
+        });
+    }
+});
+
+// Asignar parte
+$('.asignar-parte').on('change', function() {
+    const seccionId = $(this).data('seccion-id');
+    const orden = $(this).data('orden');
+    const tipo = $(this).data('tipo');
+    const personaId = $(this).val();
+    
+    if (!personaId) {
+        return;
+    }
+    
+    $.post('../api/asignaciones.php', {
+        action: 'asignar_parte',
+        seccion_id: seccionId,
+        persona_id: personaId,
+        rol: tipo,
+        orden: orden
+    }, function(response) {
+        if (response.success) {
+            APP.showNotification('Persona asignada correctamente', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            APP.showNotification(response.message, 'danger');
+        }
+    });
+});
+
+// Desasignar parte
+$('.btn-desasignar').on('click', function() {
+    const seccionId = $(this).data('seccion-id');
+    const orden = $(this).data('orden');
+    
+    if (confirm('¿Desea quitar esta asignación?')) {
+        $.post('../api/asignaciones.php', {
+            action: 'desasignar_parte',
+            seccion_id: seccionId,
+            orden: orden
+        }, function(response) {
+            if (response.success) {
+                APP.showNotification('Asignación eliminada', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                APP.showNotification(response.message, 'danger');
+            }
+        });
+    }
+});
+</script>
+
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>

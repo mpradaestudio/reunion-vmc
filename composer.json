@@ -1,0 +1,14 @@
+{
+    "name": "congregacion/reunion-programador",
+    "description": "Sistema de programación de reuniones para congregaciones",
+    "type": "project",
+    "require": {
+        "php": ">=7.4",
+        "tecnickcom/tcpdf": "^6.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    }
+}

@@ -1,0 +1,331 @@
+/**
+ * Estilos personalizados para el Programador de Reuniones
+ */
+
+/* Google Sans como fuente principal */
+* {
+    font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+:root {
+    --color-tesoros: #6c757d;
+    --color-maestros: #d4a01e;
+    --color-vida: #8b1538;
+    --color-primary: #1a73e8;
+}
+
+body {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Navbar personalizada */
+.navbar {
+    background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%) !important;
+}
+
+.navbar-brand {
+    font-size: 1.3rem;
+    letter-spacing: -0.5px;
+}
+
+.nav-link {
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    transform: translateY(-2px);
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: 2px solid #f0f0f0;
+    font-weight: 600;
+    font-size: 1.1rem;
+    padding: 1rem 1.5rem;
+}
+
+/* Botones */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 0.5rem 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background-color: #1a73e8;
+    border-color: #1a73e8;
+}
+
+.btn-primary:hover {
+    background-color: #1557b0;
+    border-color: #1557b0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(26, 115, 232, 0.3);
+}
+
+.btn-success {
+    background-color: #34a853;
+    border-color: #34a853;
+}
+
+.btn-success:hover {
+    background-color: #2d8e47;
+    border-color: #2d8e47;
+}
+
+.btn-danger {
+    background-color: #ea4335;
+    border-color: #ea4335;
+}
+
+.btn-danger:hover {
+    background-color: #d23426;
+    border-color: #d23426;
+}
+
+.btn-warning {
+    background-color: #fbbc04;
+    border-color: #fbbc04;
+    color: #202124;
+}
+
+.btn-warning:hover {
+    background-color: #f9ab00;
+    border-color: #f9ab00;
+    color: #202124;
+}
+
+/* Tablas */
+.table {
+    background-color: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    color: #5f6368;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Badges */
+.badge {
+    border-radius: 6px;
+    padding: 0.4em 0.8em;
+    font-weight: 500;
+}
+
+/* Secciones del programa */
+.seccion-tesoros {
+    background-color: var(--color-tesoros);
+    color: white;
+}
+
+.seccion-maestros {
+    background-color: var(--color-maestros);
+    color: white;
+}
+
+.seccion-vida {
+    background-color: var(--color-vida);
+    color: white;
+}
+
+/* Tarjetas de programa semanal */
+.programa-card {
+    border-left: 4px solid #1a73e8;
+}
+
+.programa-card.pasado {
+    opacity: 0.6;
+    border-left-color: #9aa0a6;
+}
+
+.programa-card.actual {
+    border-left-color: #34a853;
+    background-color: #f0fdf4;
+}
+
+.programa-card.futuro {
+    border-left-color: #1a73e8;
+}
+
+/* Formularios */
+.form-label {
+    font-weight: 500;
+    color: #5f6368;
+    margin-bottom: 0.5rem;
+}
+
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #dadce0;
+    padding: 0.6rem 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #1a73e8;
+    box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+}
+
+/* Alertas */
+.alert {
+    border-radius: 8px;
+    border: none;
+}
+
+/* Modal */
+.modal-content {
+    border-radius: 12px;
+    border: none;
+}
+
+.modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+/* Loading spinner */
+.spinner-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+}
+
+/* Dashboard Cards */
+.dashboard-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.dashboard-card.blue {
+    background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+}
+
+.dashboard-card.green {
+    background: linear-gradient(135deg, #34a853 0%, #2d8e47 100%);
+}
+
+.dashboard-card.orange {
+    background: linear-gradient(135deg, #fbbc04 0%, #f9ab00 100%);
+}
+
+.dashboard-card.red {
+    background: linear-gradient(135deg, #ea4335 0%, #d23426 100%);
+}
+
+.dashboard-card h3 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.dashboard-card p {
+    margin: 0;
+    opacity: 0.9;
+}
+
+/* Persona card */
+.persona-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.persona-card:hover {
+    border-color: #1a73e8 !important;
+}
+
+/* Asignación badge */
+.asignacion-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    margin: 0.25rem;
+    background-color: #e8f0fe;
+    color: #1a73e8;
+    font-weight: 500;
+}
+
+/* Empty state */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #9aa0a6;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+/* Hover shadow utility */
+.hover-shadow {
+    transition: all 0.3s ease;
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-4px);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .dashboard-card h3 {
+        font-size: 2rem;
+    }
+    
+    .table {
+        font-size: 0.9rem;
+    }
+}
+
+/* Print styles para PDF */
+@media print {
+    .navbar, .btn, footer {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none !important;
+        page-break-inside: avoid;
+    }
+}
