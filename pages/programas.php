@@ -159,26 +159,27 @@ $mesNombre = [
                 </p>
                 <?php endif; ?>
 
-                <!-- Canciones -->
+                <!-- Canciones  + Presidente -->
                 <div class="mb-3">
-                    <small class="text-muted">
+                    <small class="d-block">
                         <i class="bi bi-music-note"></i>
                         Canciones: <?php echo $programa['cancion_inicial']; ?>,
                         <?php echo $programa['cancion_media']; ?>,
                         <?php echo $programa['cancion_final']; ?>
                     </small>
+                    <small class="d-block">                        
+                        <i class="bi bi-person"></i>
+                        Presidente: <?php echo $programa['presidente_nombre']
+                            ? htmlspecialchars($programa['presidente_nombre'])
+                            : '<span class="text-muted">Sin asignar</span>'; ?>
+                    </small>
                 </div>
 
-                <!-- Partes + Presidente -->
+                <!-- Partes -->
                 <div class="mb-3">
                     <small>
                         <i class="bi bi-list-check"></i>
                         <?php echo $programa['total_secciones']; ?> partes
-                        &nbsp;|&nbsp;
-                        <i class="bi bi-person"></i>
-                        <?php echo $programa['presidente_nombre']
-                            ? htmlspecialchars($programa['presidente_nombre'])
-                            : '<span class="text-muted">Sin presidente</span>'; ?>
                     </small>
                 </div>
 
@@ -211,10 +212,10 @@ $mesNombre = [
 <div class="d-flex justify-content-center mt-4 d-none" id="batchActions">
     <div class="batch-actions">
         <span class="batch-count" id="batchCount">0 seleccionados</span>
-        <button class="btn btn-sm btn-outline-secondary" id="btnDeselAll">
+        <button class="btn btn-sm btn-outline-secondary rounded-pill" id="btnDeselAll">
             <i class="bi bi-x-circle"></i> Deseleccionar todo
         </button>
-        <button class="btn btn-sm btn-danger" id="btnEliminarLote">
+        <button class="btn btn-sm btn-danger rounded-pill" id="btnEliminarLote">
             <i class="bi bi-trash"></i> Eliminar seleccionados
         </button>
     </div>
@@ -261,7 +262,7 @@ $mesNombre = [
                 </small>
                 <div id="extraerEstado" class="mt-3"></div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 <button type="button" class="btn btn-primary" id="btnExtraerUrl">
                     <i class="bi bi-cloud-download"></i> Extraer
