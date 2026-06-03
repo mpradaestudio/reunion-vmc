@@ -377,9 +377,11 @@ class JWOrgScraper {
                 $resto = trim($m[2]);
 
                 // Duración: buscar primero en la misma línea
-                $duracion = $this->buscarDuracion($resto);
+                $duracion       = $this->buscarDuracion($resto);
+                $subtipo        = null;
+                $lineaSubtipo   = null;   // línea donde está la duración (y posiblemente el subtipo)
 
-                // Si no está, mirar las siguientes líneas (jw.org la pone aparte)
+                // Si no está en la misma línea, mirar las siguientes (jw.org la pone aparte)
                 if ($duracion === null) {
                     for ($k = 1; $k <= 3 && ($idx + $k) < $total; $k++) {
                         $siguiente = $lineas[$idx + $k];
@@ -390,10 +392,21 @@ class JWOrgScraper {
                         }
                         $d = $this->buscarDuracion($siguiente);
                         if ($d !== null) {
-                            $duracion = $d;
+                            $duracion     = $d;
+                            $lineaSubtipo = $siguiente;
                             break;
                         }
                     }
+                } else {
+                    // La duración estaba en la misma línea que el título
+                    $lineaSubtipo = $resto;
+                }
+
+                // Extraer subtipo desde la línea que contiene la duración.
+                // Formato: "(N mins.) SUBTIPO. resto..." o "(N mins.) Subtipo."
+                // Tomamos el texto entre el cierre del paréntesis de minutos y el primer punto.
+                if ($lineaSubtipo !== null) {
+                    $subtipo = $this->extraerSubtipo($lineaSubtipo);
                 }
 
                 // El título es el texto antes del primer paréntesis
@@ -411,16 +424,67 @@ class JWOrgScraper {
                 $tipoAsignacion = $this->determinarTipoAsignacion($seccionActual, $titulo);
 
                 $partes[] = [
-                    'orden'           => $orden++,
-                    'seccion'         => $seccionActual,
-                    'titulo'          => $titulo,
-                    'duracion'        => $duracion,
-                    'tipo_asignacion' => $tipoAsignacion,
+                    'orden'             => $orden++,
+                    'seccion'           => $seccionActual,
+                    'titulo'            => $titulo,
+                    'duracion'          => $duracion,
+                    'tipo_asignacion'   => $tipoAsignacion,
+                    'subtipo_actividad' => $subtipo,
                 ];
             }
         }
 
         return $partes;
+    }
+
+    /**
+     * Extrae el subtipo de actividad desde la línea que contiene la duración.
+     *
+     * jw.org pone el subtipo así (en la misma línea que los minutos):
+     *   "(4 mins.) PREDICACIÓN INFORMAL. Busque una manera..."
+     *   "(4 mins.) DE CASA EN CASA. Utilice una..."
+     *   "(15 mins.) Análisis con el auditorio."
+     *   "(4 mins.) Escenificación. Un niño..."
+     *
+     * Algoritmo:
+     *   1. Quitar la parte de duración: "(N min[s].)"
+     *   2. Tomar el texto hasta el primer punto seguido de espacio o fin de cadena.
+     *   3. Capitalizar correctamente (primera letra mayúscula, resto minúscula).
+     *   4. Descartar si el resultado es demasiado largo (>60 chars) → sería prosa, no subtipo.
+     */
+    private function extraerSubtipo($texto) {
+        // 1. Quitar la duración entre paréntesis al inicio: "(4 mins.)" o "(10 min)"
+        $sinDuracion = preg_replace('/^\s*\(\d{1,3}\s*mins?\.?\)\s*/iu', '', $texto);
+        $sinDuracion = trim($sinDuracion);
+
+        if ($sinDuracion === '') {
+            return null;
+        }
+
+        // 2. Tomar solo el texto hasta el primer punto + espacio (o punto al final)
+        //    Esto captura "PREDICACIÓN INFORMAL" de "PREDICACIÓN INFORMAL. Busque..."
+        //    y "Análisis con el auditorio" de "Análisis con el auditorio."
+        if (preg_match('/^(.+?)\.\s/u', $sinDuracion, $m)) {
+            $candidato = trim($m[1]);
+        } elseif (preg_match('/^(.+?)\.\s*$/u', $sinDuracion, $m)) {
+            $candidato = trim($m[1]);
+        } else {
+            // Sin punto: tomar todo (líneas muy cortas como "Escenificación")
+            $candidato = $sinDuracion;
+        }
+
+        // 3. Descartar si es demasiado largo (sería párrafo descriptivo, no subtipo)
+        if (mb_strlen($candidato, 'UTF-8') > 60) {
+            return null;
+        }
+
+        // 4. Capitalizar: primera letra mayúscula, resto minúsculas
+        //    (jw.org suele ponerlos en MAYÚSCULAS sostenidas)
+        $candidato = mb_strtolower($candidato, 'UTF-8');
+        $candidato = mb_strtoupper(mb_substr($candidato, 0, 1, 'UTF-8'), 'UTF-8')
+                   . mb_substr($candidato, 1, null, 'UTF-8');
+
+        return $candidato !== '' ? $candidato : null;
     }
 
     /**
@@ -660,12 +724,13 @@ class JWOrgScraper {
                       ->execute([$programaId]);
 
             $stmtSeccion = $this->pdo->prepare("
-                INSERT INTO programa_secciones (programa_id, orden, seccion, titulo, duracion, tipo_asignacion)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO programa_secciones (programa_id, orden, seccion, titulo, duracion, tipo_asignacion, subtipo_actividad)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ");
             foreach ($datos['secciones'] as $s) {
                 $stmtSeccion->execute([
                     $programaId, $s['orden'], $s['seccion'], $s['titulo'], $s['duracion'], $s['tipo_asignacion'],
+                    $s['subtipo_actividad'] ?? null,
                 ]);
             }
 

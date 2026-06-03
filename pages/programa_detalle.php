@@ -269,8 +269,22 @@ $fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' d
                         <?php if ($seccion['duracion']): ?>
                             <span class="badge bg-secondary ms-2"><?php echo $seccion['duracion']; ?> min.</span>
                         <?php endif; ?>
-                        <br>
-                        <small class="text-muted"><?php echo $seccion['tipo_asignacion']; ?></small>
+                        <?php
+                        // Mostrar subtipo_actividad según la sección:
+                        // - TESOROS: nunca (sería referencia bíblica, no subtipo)
+                        // - Estudio bíblico congregación: nunca (tipo ya visible en dropdowns)
+                        // - MAESTROS / VIDA: mostrar si existe
+                        $mostrarSubtipo = false;
+                        if (!empty($seccion['subtipo_actividad'])
+                            && $seccion['seccion'] !== 'TESOROS DE LA BIBLIA'
+                            && $seccion['tipo_asignacion'] !== 'Conductor/Lector'
+                        ) {
+                            $mostrarSubtipo = true;
+                        }
+                        ?>
+                        <?php if ($mostrarSubtipo): ?>
+                            <br><small class="text-muted"><?php echo htmlspecialchars($seccion['subtipo_actividad']); ?></small>
+                        <?php endif; ?>
                     </div>
                     <div class="col-md-6">
                         <?php
