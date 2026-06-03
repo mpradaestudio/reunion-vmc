@@ -348,9 +348,19 @@ const batchActions  = document.getElementById('batchActions');
 const batchCountEl  = document.getElementById('batchCount');
 const btnDeselAll   = document.getElementById('btnDeselAll');
 const btnElimLote   = document.getElementById('btnEliminarLote');
-const confirmModal  = new bootstrap.Modal(document.getElementById('modalConfirmLote'));
 const confirmCount  = document.getElementById('confirmLoteCount');
 const btnConfirm    = document.getElementById('btnConfirmEliminarLote');
+
+// El modal se crea de forma lazy: Bootstrap JS se carga en el footer,
+// DESPUÉS de este script, así que no podemos instanciarlo al nivel superior
+// (daría 'bootstrap is not defined' y rompería TODO el bloque JS).
+let _confirmModal = null;
+function getConfirmModal() {
+    if (!_confirmModal && window.bootstrap) {
+        _confirmModal = new bootstrap.Modal(document.getElementById('modalConfirmLote'));
+    }
+    return _confirmModal;
+}
 
 function getChecked() {
     return [...document.querySelectorAll('.programa-checkbox:checked')];
@@ -392,7 +402,13 @@ btnElimLote?.addEventListener('click', () => {
     const n = getChecked().length;
     if (n === 0) return;
     confirmCount.textContent = n;
-    confirmModal.show();
+    const modal = getConfirmModal();
+    if (modal) {
+        modal.show();
+    } else if (confirm('¿Eliminar ' + n + ' programa(s) y sus asignaciones?')) {
+        // Respaldo si Bootstrap no estuviera disponible
+        btnConfirm.click();
+    }
 });
 
 // Confirmar y ejecutar eliminación en lote
@@ -410,13 +426,13 @@ btnConfirm?.addEventListener('click', function () {
         if (response.success) {
             window.location.href = 'programas.php?msg=eliminado';
         } else {
-            confirmModal.hide();
+            getConfirmModal()?.hide();
             APP.showNotification(response.message, 'danger');
             document.getElementById('btnConfirmEliminarLote').disabled = false;
             document.getElementById('btnConfirmEliminarLote').innerHTML = '<i class="bi bi-trash"></i> Sí, eliminar';
         }
     }).fail(function () {
-        confirmModal.hide();
+        getConfirmModal()?.hide();
         APP.showNotification('Error al conectar con el servidor', 'danger');
     });
 });
