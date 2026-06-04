@@ -46,6 +46,9 @@ function navActive($page, $current) {
     <?php $cssVer = @filemtime(BASE_PATH . '/assets/css/style.css') ?: APP_VERSION; ?>
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>assets/css/style.css?v=<?php echo $cssVer; ?>">
 
+    <!-- CSS adicional inyectado por la página (ej. Select2) -->
+    <?php if (!empty($extraHeadHtml)) echo $extraHeadHtml; ?>
+
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 </head>

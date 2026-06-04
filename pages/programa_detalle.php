@@ -1,5 +1,38 @@
 <?php
 $pageTitle = 'Detalle del Programa';
+
+// Select2: CSS en el <head> vía buffer de salida antes de que header.php escriba el HTML
+$extraHeadHtml = '
+    <!-- Select2 CSS (solo programa_detalle) -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    <style>
+        /* Ajuste visual Select2 dentro de input-group */
+        .input-group .select2-container { flex: 1 1 auto; min-width: 0; }
+        .select2-container--bootstrap-5 .select2-selection { border-radius: var(--vmc-radius-sm); }
+        /* Dark mode */
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection,
+        [data-bs-theme="dark"] .select2-dropdown {
+            background-color: var(--vmc-surface-2);
+            border-color: var(--vmc-border-strong);
+            color: var(--vmc-text);
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-results__option {
+            background-color: var(--vmc-surface-2);
+            color: var(--vmc-text);
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-results__option--highlighted {
+            background-color: var(--vmc-primary);
+            color: #fff;
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-search__field {
+            background-color: var(--vmc-surface-3);
+            border-color: var(--vmc-border-strong);
+            color: var(--vmc-text);
+        }
+    </style>
+';
+
 require_once __DIR__ . '/../includes/header.php';
 
 $programaId = $_GET['id'] ?? null;
@@ -464,6 +497,47 @@ $('.btn-desasignar').on('click', function() {
             }
         });
     }
+});
+</script>
+
+<!-- Select2 JS (solo programa_detalle) -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function () {
+
+    // Configuración base de Select2
+    const select2Config = {
+        theme        : 'bootstrap-5',
+        language     : 'es',
+        allowClear   : true,
+        width        : '100%',
+        placeholder  : function () {
+            // Usa el primer option vacío como placeholder
+            return $(this).find('option[value=""]').text() || 'Sin asignar';
+        }
+    };
+
+    // Inicializar en los selects de roles generales (Presidente, Oración)
+    $('.asignar-rol').select2(select2Config);
+
+    // Inicializar en los selects de partes del programa
+    $('.asignar-parte').select2(select2Config);
+
+    // Select2 dispara 'select2:select' y 'select2:unselect' además de 'change'.
+    // Los listeners jQuery 'change' existentes se siguen disparando correctamente
+    // porque Select2 emite un evento 'change' nativo después de cada selección.
+    // No se necesita ningún ajuste adicional en la lógica de asignación.
+
+    // Sincronizar tema oscuro/claro cuando el usuario lo cambia
+    document.getElementById('themeToggle')?.addEventListener('click', function () {
+        // Pequeño delay para que data-bs-theme ya esté actualizado
+        setTimeout(function () {
+            // Re-renderizar dropdowns abiertos si los hay
+            if ($('.select2-container--open').length) {
+                $('body').trigger('click'); // cierra el dropdown abierto
+            }
+        }, 50);
+    });
 });
 </script>
 
