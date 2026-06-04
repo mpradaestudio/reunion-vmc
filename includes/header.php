@@ -8,8 +8,18 @@ function navActive($page, $current) {
     return $page === $current ? 'active' : '';
 }
 
-// Iniciales para el avatar (primera letra del nombre de la congregación)
-$iniciales = mb_strtoupper(mb_substr($config['nombre_congregacion'], 0, 2, 'UTF-8'), 'UTF-8');
+// Nombre completo → topbar
+$nombreCompleto = $config['nombre_congregacion'];
+
+// Nombre corto → sidebar: elimina el prefijo "Congregación" (acentuado o no)
+// Ej: "Congregación El Caney" → "El Caney"
+$nombreCorto = trim(preg_replace('/^congregaci[oó]n\s*/iu', '', $nombreCompleto));
+if ($nombreCorto === '') {
+    $nombreCorto = $nombreCompleto;   // fallback por si el nombre ES solo "Congregación"
+}
+
+// Iniciales del avatar (2 primeras letras del nombre completo)
+$iniciales = mb_strtoupper(mb_substr($nombreCompleto, 0, 2, 'UTF-8'), 'UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -67,7 +77,7 @@ $iniciales = mb_strtoupper(mb_substr($config['nombre_congregacion'], 0, 2, 'UTF-
     <!-- Logo / Brand -->
     <a class="sidebar-brand" href="<?php echo BASE_URL; ?>index.php" title="Inicio">
         <i class="bi bi-people sb-icon"></i>
-        <span class="sb-name"><?php echo htmlspecialchars($config['nombre_congregacion']); ?></span>
+        <span class="sb-name"><?php echo htmlspecialchars($nombreCorto); ?></span>
     </a>
 
     <!-- Navegación principal -->
@@ -129,7 +139,7 @@ $iniciales = mb_strtoupper(mb_substr($config['nombre_congregacion'], 0, 2, 'UTF-
 
     <!-- Nombre de la congregación (se oculta cuando sidebar está abierto en desktop) -->
     <h1 class="topbar-title" id="topbarTitle">
-        <?php echo htmlspecialchars($config['nombre_congregacion']); ?>
+        <?php echo htmlspecialchars($nombreCompleto); ?>
     </h1>
 
     <!-- Acciones derechas -->
@@ -150,7 +160,7 @@ $iniciales = mb_strtoupper(mb_substr($config['nombre_congregacion'], 0, 2, 'UTF-
         </button>
 
         <!-- Avatar / usuario -->
-        <span class="topbar-avatar" title="<?php echo htmlspecialchars($config['nombre_congregacion']); ?>">
+        <span class="topbar-avatar" title="<?php echo htmlspecialchars($nombreCompleto); ?>">
             <?php echo $iniciales; ?>
         </span>
 
