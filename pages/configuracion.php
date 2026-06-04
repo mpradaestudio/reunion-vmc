@@ -920,11 +920,15 @@ $(document).on('submit', '#formEditarBosquejo', function (e) {
     const payload = { action: 'update', id, numero, titulo, nota_no_presentar: nota };
     if (noPresentar) payload.no_presentar = '1';
 
-    apiPost('../api/bosquejos.php', payload, function () {
+    apiPost('../api/bosquejos.php', payload, function (res) {
         $btn.prop('disabled', false);
         bootstrap.Modal.getInstance(document.getElementById('modalEditarBosquejo'))?.hide();
         bosquejosRecargar();
-        APP.showNotification('Bosquejo actualizado', 'success');
+        if (res && res.sin_columnas_np && noPresentar) {
+            APP.showNotification('Guardado, pero falta importar database_update_v10.sql para activar "No presentar"', 'warning');
+        } else {
+            APP.showNotification('Bosquejo actualizado', 'success');
+        }
     }, function () {
         $btn.prop('disabled', false);  // rehabilitar si hay error
     });

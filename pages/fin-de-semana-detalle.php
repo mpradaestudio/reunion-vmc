@@ -198,14 +198,11 @@ function optionsFds(array $lista, ?int $selId): string {
                 </select>
                 <small class="text-muted">Escribe el número o palabras del título para buscar</small>
 
-                <!-- Warning: bosquejo marcado como "No presentar" (fijo, no se oculta) -->
-                <div id="alertNoPresentar" class="alert alert-warning d-flex align-items-start gap-2 mt-2 mb-0"
+                <!-- Warning: bosquejo marcado como "No presentar" -->
+                <div id="alertNoPresentar" class="alert alert-warning mt-2 mb-0"
                      style="display:none;">
-                    <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
-                    <div>
-                        <strong>No presentar</strong>
-                        <div id="alertNoPresentarNota" class="mt-1 small"></div>
-                    </div>
+                    <strong>No presentar</strong>
+                    <div id="alertNoPresentarNota" class="mt-1 small"></div>
                 </div>
                 <?php
                 // Pre-renderizar el warning si el bosquejo ya está seleccionado y tiene no_presentar=1
@@ -217,7 +214,7 @@ function optionsFds(array $lista, ?int $selId): string {
                         );
                         if ($bNota && (int)$bNota['no_presentar'] === 1) {
                             echo '<script>
-                                document.getElementById("alertNoPresentar").style.display="flex";
+                                document.getElementById("alertNoPresentar").style.display="block";
                                 document.getElementById("alertNoPresentarNota").textContent='
                                 . json_encode($bNota['nota_no_presentar'] ?? '') . ';
                             </script>';
@@ -426,10 +423,10 @@ $(document).ready(function () {
         // Mostrar/ocultar warning "No presentar"
         if (e.type === 'select2:select' && e.params && e.params.data) {
             const d = e.params.data;
-            // Solo mostrar si el bosquejo tiene no_presentar=1 (campo devuelto por la API)
+            // Solo mostrar si el bosquejo tiene el toggle no_presentar activo
             if (parseInt(d.no_presentar) === 1) {
                 $('#alertNoPresentarNota').text(d.nota_no_presentar || '');
-                $('#alertNoPresentar').css('display', 'flex');
+                $('#alertNoPresentar').css('display', 'block');
             } else {
                 $('#alertNoPresentar').css('display', 'none');
             }

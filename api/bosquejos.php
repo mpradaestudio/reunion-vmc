@@ -2,9 +2,9 @@
 /**
  * API REST — Bosquejos
  * GET  ?action=list              → todos (activos)
- * GET  ?action=search&q=texto   → búsqueda por número o palabras del título
+ * GET  ?action=search&q=texto    → búsqueda por número o palabras del título
  * POST action=create             → nuevo bosquejo
- * POST action=update             → editar número/título
+ * POST action=update             → editar número/título/no_presentar/nota
  * POST action=delete             → eliminar (si no está en uso)
  */
 
@@ -14,33 +14,50 @@ header('Content-Type: application/json; charset=utf-8');
 
 $pdo = getDBConnection();
 
+/**
+ * Detecta si la tabla bosquejos tiene las columnas no_presentar / nota_no_presentar.
+ * Permite que la API funcione aunque la migración v9/v10 no se haya aplicado.
+ */
+function bosquejosTieneNoPresentar(PDO $pdo): bool {
+    static $cache = null;
+    if ($cache !== null) return $cache;
+    try {
+        $cols = $pdo->query("SHOW COLUMNS FROM bosquejos LIKE 'no_presentar'")->fetchAll();
+        $cache = count($cols) > 0;
+    } catch (Exception $e) {
+        $cache = false;
+    }
+    return $cache;
+}
+
 /* ── GET ─────────────────────────────────────────────────────── */
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $action = $_GET['action'] ?? 'list';
+    $tieneNP = bosquejosTieneNoPresentar($pdo);
+    // Columnas extra solo si existen
+    $colsExtra = $tieneNP ? ', no_presentar, nota_no_presentar' : '';
 
     // ── Listar todos ─────────────────────────────────────────────
     if ($action === 'list') {
-        $rows = fetchAll("SELECT id, numero, titulo FROM bosquejos WHERE activo=1 ORDER BY numero");
+        $rows = fetchAll("SELECT id, numero, titulo$colsExtra FROM bosquejos WHERE activo=1 ORDER BY numero");
         jsonResponse(['success' => true, 'data' => $rows]);
     }
 
     // ── Búsqueda para Select2 y paginador ────────────────────────
-    // Devuelve {results:[{id,text,numero,titulo}], pagination:{more}, total}
     if ($action === 'search') {
         $q       = trim($_GET['q'] ?? '');
         $page    = max(1, (int)($_GET['page']     ?? 1));
         $perPage = max(1, (int)($_GET['per_page'] ?? 30));
-        // per_page=9999 significa "todo" (desde configuracion.php)
         if ($perPage >= 9999) { $page = 1; $perPage = 99999; }
         $offset = ($page - 1) * $perPage;
 
         if ($q === '') {
-            $rows  = fetchAll("SELECT id, numero, titulo FROM bosquejos WHERE activo=1 ORDER BY numero LIMIT ? OFFSET ?", [$perPage, $offset]);
+            $rows  = fetchAll("SELECT id, numero, titulo$colsExtra FROM bosquejos WHERE activo=1 ORDER BY numero LIMIT ? OFFSET ?", [$perPage, $offset]);
             $total = (int)(fetchOne("SELECT COUNT(*) AS n FROM bosquejos WHERE activo=1")['n'] ?? 0);
         } else {
             $like  = '%' . $q . '%';
             $rows  = fetchAll("
-                SELECT id, numero, titulo
+                SELECT id, numero, titulo$colsExtra
                 FROM bosquejos
                 WHERE activo=1
                   AND (CAST(numero AS CHAR) LIKE ? OR titulo LIKE ?)
@@ -56,12 +73,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
 
         $items = array_map(fn($r) => [
-            'id'               => $r['id'],
-            'text'             => $r['numero'] . ' — ' . $r['titulo'],
-            'numero'           => $r['numero'],
-            'titulo'           => $r['titulo'],
-            'no_presentar'     => (int)($r['no_presentar'] ?? 0),
-            'nota_no_presentar'=> $r['nota_no_presentar'] ?? '',
+            'id'                => $r['id'],
+            'text'              => $r['numero'] . ' — ' . $r['titulo'],
+            'numero'            => $r['numero'],
+            'titulo'            => $r['titulo'],
+            'no_presentar'      => (int)($r['no_presentar'] ?? 0),
+            'nota_no_presentar' => $r['nota_no_presentar'] ?? '',
         ], $rows);
 
         jsonResponse([
@@ -76,22 +93,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
 /* ── POST ────────────────────────────────────────────────────── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? '';
+    $action  = $_POST['action'] ?? '';
+    $tieneNP = bosquejosTieneNoPresentar($pdo);
 
     // ── Crear ─────────────────────────────────────────────────────
     if ($action === 'create') {
         $numero = (int)($_POST['numero'] ?? 0);
-        $titulo = trim($_POST['titulo'] ?? '');   // sin sanitizeInput: guardamos el texto real
+        $titulo = trim($_POST['titulo'] ?? '');
         if ($numero <= 0 || $titulo === '') {
             jsonResponse(['success' => false, 'message' => 'Número y título son obligatorios']);
         }
+
+        // Conflicto de número
+        $conflicto = fetchOne("SELECT id FROM bosquejos WHERE numero = ?", [$numero]);
+        if ($conflicto) {
+            jsonResponse(['success' => false, 'message' => 'Ya existe un bosquejo con ese número']);
+        }
+
         try {
             $pdo->prepare("INSERT INTO bosquejos (numero, titulo) VALUES (?, ?)")
                 ->execute([$numero, $titulo]);
             $nuevo = fetchOne("SELECT * FROM bosquejos WHERE id=?", [$pdo->lastInsertId()]);
             jsonResponse(['success' => true, 'message' => 'Bosquejo creado', 'data' => $nuevo]);
         } catch (Exception $e) {
-            jsonResponse(['success' => false, 'message' => 'Ya existe un bosquejo con ese número']);
+            jsonResponse(['success' => false, 'message' => 'Error al crear: ' . $e->getMessage()]);
         }
     }
 
@@ -104,26 +129,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notaNoPresentar = trim($_POST['nota_no_presentar'] ?? '');
 
         if (!$id || $numero <= 0 || $titulo === '') {
-            jsonResponse(['success' => false, 'message' => 'Datos no válidos']);
+            jsonResponse(['success' => false, 'message' => 'Número y título son obligatorios']);
         }
 
-        // Verificar conflicto de número con OTRO registro (no con el mismo)
-        $conflicto = fetchOne(
-            "SELECT id FROM bosquejos WHERE numero = ? AND id != ?",
-            [$numero, $id]
-        );
+        // Conflicto de número con OTRO registro
+        $conflicto = fetchOne("SELECT id FROM bosquejos WHERE numero = ? AND id != ?", [$numero, $id]);
         if ($conflicto) {
             jsonResponse(['success' => false, 'message' => 'Número ya en uso por otro bosquejo']);
         }
 
-        // Actualizar sin riesgo de falso conflicto en el índice UNIQUE
-        $pdo->prepare("
-            UPDATE bosquejos
-            SET numero=?, titulo=?, no_presentar=?, nota_no_presentar=?
-            WHERE id=?
-        ")->execute([$numero, $titulo, $noPresentar, $notaNoPresentar ?: null, $id]);
-
-        jsonResponse(['success' => true, 'message' => 'Bosquejo actualizado']);
+        try {
+            if ($tieneNP) {
+                // Tabla con columnas de "no presentar"
+                $pdo->prepare("
+                    UPDATE bosquejos
+                    SET numero = ?, titulo = ?, no_presentar = ?, nota_no_presentar = ?
+                    WHERE id = ?
+                ")->execute([$numero, $titulo, $noPresentar, ($notaNoPresentar !== '' ? $notaNoPresentar : null), $id]);
+            } else {
+                // Tabla antigua: solo número y título
+                $pdo->prepare("UPDATE bosquejos SET numero = ?, titulo = ? WHERE id = ?")
+                    ->execute([$numero, $titulo, $id]);
+            }
+            jsonResponse([
+                'success'   => true,
+                'message'   => 'Bosquejo actualizado',
+                'sin_columnas_np' => !$tieneNP,   // avisa al front si faltan columnas
+            ]);
+        } catch (Exception $e) {
+            jsonResponse(['success' => false, 'message' => 'Error al actualizar: ' . $e->getMessage()]);
+        }
     }
 
     // ── Eliminar ──────────────────────────────────────────────────
@@ -131,7 +166,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = (int)($_POST['id'] ?? 0);
         if (!$id) jsonResponse(['success' => false, 'message' => 'ID no válido']);
 
-        // Verificar si está en uso en programas_fds (como dp_bosquejo_id)
         try {
             $uso = fetchOne("SELECT COUNT(*) AS n FROM programas_fds WHERE dp_bosquejo_id=?", [$id]);
             if ((int)($uso['n'] ?? 0) > 0) {
