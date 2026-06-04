@@ -107,36 +107,70 @@ function renderOpciones($lista, $selId, $selNombre = '') {
 
 // Formatear fecha
 $fecha_inicio = new DateTime($programa['fecha_inicio']);
-$fecha_fin = new DateTime($programa['fecha_fin']);
+$fecha_fin    = new DateTime($programa['fecha_fin']);
 $mesNombre = [
-    1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril',
-    5 => 'mayo', 6 => 'junio', 7 => 'julio', 8 => 'agosto',
-    9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre'
+    1=>'enero', 2=>'febrero',  3=>'marzo',    4=>'abril',
+    5=>'mayo',  6=>'junio',    7=>'julio',    8=>'agosto',
+    9=>'septiembre', 10=>'octubre', 11=>'noviembre', 12=>'diciembre'
 ];
-$mes = $mesNombre[(int)$fecha_inicio->format('n')];
-$fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' de ' . $mes . ' ' . $fecha_inicio->format('Y');
+$mes        = $mesNombre[(int)$fecha_inicio->format('n')];
+$fechaFormato = (int)$fecha_inicio->format('d') . '-' . (int)$fecha_fin->format('d')
+              . ' de ' . $mes . ' ' . $fecha_inicio->format('Y');
+
+// Navegación: semana anterior y siguiente (por fecha_inicio)
+$semanaAnterior = fetchOne(
+    "SELECT id FROM programas_semanales WHERE fecha_inicio < ? ORDER BY fecha_inicio DESC LIMIT 1",
+    [$programa['fecha_inicio']]
+);
+$semanaSiguiente = fetchOne(
+    "SELECT id FROM programas_semanales WHERE fecha_inicio > ? ORDER BY fecha_inicio ASC LIMIT 1",
+    [$programa['fecha_inicio']]
+);
 ?>
 
-<!-- Fila 1: botones en extremos opuestos -->
-<div class="d-flex justify-content-between align-items-center mb-2">
+<!-- ── Fila 1: Volver | ← semana anterior · siguiente → | Exportar PDF ── -->
+<div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+
+    <!-- Extremo izquierdo -->
     <a href="programas.php" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left"></i> Volver
     </a>
+
+    <!-- Centro: navegación entre semanas -->
+    <div class="d-flex gap-2">
+        <?php if ($semanaAnterior): ?>
+        <a href="programa_detalle.php?id=<?php echo $semanaAnterior['id']; ?>"
+           class="btn btn-outline-primary" title="Semana anterior">
+            <i class="bi bi-chevron-left"></i> Anterior
+        </a>
+        <?php else: ?>
+        <button class="btn btn-outline-primary" disabled>
+            <i class="bi bi-chevron-left"></i> Anterior
+        </button>
+        <?php endif; ?>
+
+        <?php if ($semanaSiguiente): ?>
+        <a href="programa_detalle.php?id=<?php echo $semanaSiguiente['id']; ?>"
+           class="btn btn-outline-primary" title="Semana siguiente">
+            Siguiente <i class="bi bi-chevron-right"></i>
+        </a>
+        <?php else: ?>
+        <button class="btn btn-outline-primary" disabled>
+            Siguiente <i class="bi bi-chevron-right"></i>
+        </button>
+        <?php endif; ?>
+    </div>
+
+    <!-- Extremo derecho -->
     <a href="exportar_pdf.php?programa_id=<?php echo $programaId; ?>"
        class="btn btn-danger" target="_blank">
         <i class="bi bi-file-pdf"></i> Exportar PDF
     </a>
 </div>
 
-<!-- Fila 2: título y fecha -->
+<!-- ── Fila 2: Título de la semana ── -->
 <div class="mb-4">
-    <h1 class="h2 mb-1"><?php echo htmlspecialchars($programa['titulo_semana']); ?></h1>
-    <p class="text-muted mb-0">
-        <i class="bi bi-calendar3"></i> <?php echo $fechaFormato; ?>
-        <?php if ($programa['referencia_biblica']): ?>
-            | <i class="bi bi-book"></i> <?php echo htmlspecialchars($programa['referencia_biblica']); ?>
-        <?php endif; ?>
-    </p>
+    <h1 class="h2 mb-0"><?php echo htmlspecialchars($programa['titulo_semana']); ?></h1>
 </div>
 
 <!-- Roles generales -->
