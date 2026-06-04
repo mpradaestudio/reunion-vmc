@@ -397,45 +397,58 @@ function limpiarProgramasPasados() {
 /* ── Privilegios ─────────────────────────────────────────── */
 
 // Agregar nuevo privilegio
-$('#formNuevoPrivilegio').on('submit', function (e) {
+$(document).on('submit', '#formNuevoPrivilegio', function (e) {
     e.preventDefault();
-    const nombre = $.trim($('#nombrePrivilegio').val());
+    const nombre   = $.trim($('#nombrePrivilegio').val());
+    const $btn     = $(this).find('button[type="submit"]');
     if (!nombre) return;
 
-    $.post('../api/privilegios.php', { action: 'create', nombre: nombre }, function (res) {
-        if (res.success) {
-            // Insertar fila en la lista sin recargar
-            const id = res.data.id;
-            const html = `
-                <div class="list-group-item d-flex justify-content-between align-items-center"
-                     id="priv-row-${id}">
-                    <span class="fw-medium">${$('<span>').text(res.data.nombre).html()}</span>
-                    <button class="btn btn-sm btn-outline-danger btn-eliminar-privilegio"
-                            data-id="${id}" data-nombre="${$('<span>').text(res.data.nombre).html()}"
-                            title="Eliminar">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>`;
+    $btn.prop('disabled', true);
 
-            // Si la lista no existe aún, crearla
-            if ($('#lista-privilegios').length === 0) {
-                $('#card-privilegios .card-body').html('<div class="list-group" id="lista-privilegios">' + html + '</div>');
+    $.ajax({
+        url     : '../api/privilegios.php',
+        method  : 'POST',
+        dataType: 'json',
+        data    : { action: 'create', nombre: nombre },
+        success : function (res) {
+            $btn.prop('disabled', false);
+            if (res.success) {
+                const id      = res.data.id;
+                const nombreE = $('<span>').text(res.data.nombre).html();
+                const html    = `
+                    <div class="list-group-item d-flex justify-content-between align-items-center"
+                         id="priv-row-${id}">
+                        <span class="fw-medium">${nombreE}</span>
+                        <button class="btn btn-sm btn-outline-danger btn-eliminar-privilegio"
+                                data-id="${id}" data-nombre="${nombreE}" title="Eliminar">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>`;
+
+                if ($('#lista-privilegios').length === 0) {
+                    // Reemplazar el mensaje vacío por la lista
+                    $('#card-privilegios .card-body p.text-muted').replaceWith(
+                        '<div class="list-group" id="lista-privilegios">' + html + '</div>'
+                    );
+                } else {
+                    $('#lista-privilegios').append(html);
+                }
+
+                bootstrap.Modal.getInstance(document.getElementById('modalNuevoPrivilegio'))?.hide();
+                APP.showNotification('Privilegio "' + res.data.nombre + '" creado', 'success');
             } else {
-                $('#lista-privilegios').append(html);
+                APP.showNotification(res.message, 'danger');
             }
-
-            $('#modalNuevoPrivilegio').modal('hide');
-            APP.showNotification('Privilegio "' + res.data.nombre + '" creado', 'success');
-        } else {
-            APP.showNotification(res.message, 'danger');
+        },
+        error   : function () {
+            $btn.prop('disabled', false);
+            APP.showNotification('Error al conectar con el servidor', 'danger');
         }
-    }).fail(function () {
-        APP.showNotification('Error al conectar con el servidor', 'danger');
     });
 });
 
 // Limpiar modal al cerrar
-$('#modalNuevoPrivilegio').on('hidden.bs.modal', function () {
+$(document).on('hidden.bs.modal', '#modalNuevoPrivilegio', function () {
     $('#nombrePrivilegio').val('');
 });
 
@@ -445,15 +458,22 @@ $(document).on('click', '.btn-eliminar-privilegio', function () {
     const nombre = $(this).data('nombre');
     if (!confirm('¿Eliminar el privilegio "' + nombre + '"?\n\nSolo se puede eliminar si ninguna persona lo tiene asignado.')) return;
 
-    $.post('../api/privilegios.php', { action: 'delete', id: id }, function (res) {
-        if (res.success) {
-            $('#priv-row-' + id).fadeOut(200, function () { $(this).remove(); });
-            APP.showNotification('Privilegio eliminado', 'success');
-        } else {
-            APP.showNotification(res.message, 'danger');
+    $.ajax({
+        url     : '../api/privilegios.php',
+        method  : 'POST',
+        dataType: 'json',
+        data    : { action: 'delete', id: id },
+        success : function (res) {
+            if (res.success) {
+                $('#priv-row-' + id).fadeOut(200, function () { $(this).remove(); });
+                APP.showNotification('Privilegio eliminado', 'success');
+            } else {
+                APP.showNotification(res.message, 'danger');
+            }
+        },
+        error   : function () {
+            APP.showNotification('Error al conectar con el servidor', 'danger');
         }
-    }).fail(function () {
-        APP.showNotification('Error al conectar con el servidor', 'danger');
     });
 });
 </script>
