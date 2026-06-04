@@ -24,20 +24,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         jsonResponse(['success' => true, 'data' => $rows]);
     }
 
-    // ── Búsqueda para Select2 ─────────────────────────────────────
-    // Devuelve [{id, text}] que es el formato que espera Select2
+    // ── Búsqueda para Select2 y paginador ────────────────────────
+    // Devuelve {results:[{id,text,numero,titulo}], pagination:{more}, total}
     if ($action === 'search') {
-        $q    = trim($_GET['q'] ?? '');
-        $page = max(1, (int)($_GET['page'] ?? 1));
-        $perPage = 30;
-        $offset  = ($page - 1) * $perPage;
+        $q       = trim($_GET['q'] ?? '');
+        $page    = max(1, (int)($_GET['page']     ?? 1));
+        $perPage = max(1, (int)($_GET['per_page'] ?? 30));
+        // per_page=9999 significa "todo" (desde configuracion.php)
+        if ($perPage >= 9999) { $page = 1; $perPage = 99999; }
+        $offset = ($page - 1) * $perPage;
 
         if ($q === '') {
-            // Sin búsqueda: primeros 30 ordenados por número
             $rows  = fetchAll("SELECT id, numero, titulo FROM bosquejos WHERE activo=1 ORDER BY numero LIMIT ? OFFSET ?", [$perPage, $offset]);
             $total = (int)(fetchOne("SELECT COUNT(*) AS n FROM bosquejos WHERE activo=1")['n'] ?? 0);
         } else {
-            // Buscar por número exacto O palabras en el título
             $like  = '%' . $q . '%';
             $rows  = fetchAll("
                 SELECT id, numero, titulo
@@ -55,16 +55,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             ", [$like, $like])['n'] ?? 0);
         }
 
-        // Formatear para Select2: {id, text}
         $items = array_map(fn($r) => [
-            'id'   => $r['id'],
-            'text' => $r['numero'] . ' — ' . $r['titulo'],
+            'id'     => $r['id'],
+            'text'   => $r['numero'] . ' — ' . $r['titulo'],
             'numero' => $r['numero'],
             'titulo' => $r['titulo'],
         ], $rows);
 
         jsonResponse([
             'results'    => $items,
+            'total'      => $total,
             'pagination' => ['more' => ($offset + $perPage) < $total],
         ]);
     }

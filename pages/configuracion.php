@@ -243,15 +243,10 @@ $stats = [
                 </p>
 
                 <?php
+                // Solo verificar si la tabla existe; el contenido lo carga JS vía AJAX
                 $bosquejosExist = true;
-                $totalBosquejos = 0;
-                $muestraBosquejos = [];
-                try {
-                    $totalBosquejos  = (int)(fetchOne("SELECT COUNT(*) AS n FROM bosquejos WHERE activo=1")['n'] ?? 0);
-                    $muestraBosquejos = fetchAll("SELECT id, numero, titulo FROM bosquejos WHERE activo=1 ORDER BY numero LIMIT 10");
-                } catch (Exception $e) {
-                    $bosquejosExist = false;
-                }
+                try { fetchOne("SELECT 1 FROM bosquejos LIMIT 1"); }
+                catch (Exception $e) { $bosquejosExist = false; }
                 ?>
 
                 <?php if (!$bosquejosExist): ?>
@@ -259,55 +254,42 @@ $stats = [
                     <i class="bi bi-exclamation-triangle"></i>
                     Importa <code>database_update_v9.sql</code> en phpMyAdmin para activar esta sección.
                 </div>
-
-                <?php elseif ($totalBosquejos === 0): ?>
-                <p class="text-muted text-center py-3 msg-empty-bosquejos">
-                    <i class="bi bi-inbox d-block mb-1" style="font-size:2rem;opacity:.5;"></i>
-                    No hay bosquejos. Usa <strong>Importar CSV</strong> para cargar todos de una vez.
-                </p>
-
                 <?php else: ?>
-                <!-- Buscador rápido dentro de la lista -->
-                <div class="input-group input-group-sm mb-3">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" class="form-control" id="filtroBosquejos"
-                           placeholder="Filtrar por número o título…">
-                </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <small class="text-muted">Total: <strong><?php echo $totalBosquejos; ?></strong> bosquejos</small>
-                    <small class="text-muted">Mostrando los últimos 10 — usa el buscador para encontrar más</small>
-                </div>
-
-                <div class="list-group" id="lista-bosquejos">
-                    <?php foreach ($muestraBosquejos as $b): ?>
-                    <div class="list-group-item d-flex justify-content-between align-items-center"
-                         id="bosq-row-<?php echo $b['id']; ?>"
-                         data-id="<?php echo $b['id']; ?>"
-                         data-numero="<?php echo $b['numero']; ?>"
-                         data-titulo="<?php echo htmlspecialchars($b['titulo']); ?>">
-                        <span>
-                            <span class="badge bg-secondary me-2"><?php echo $b['numero']; ?></span>
-                            <?php echo htmlspecialchars($b['titulo']); ?>
-                        </span>
-                        <div class="d-flex gap-1">
-                            <button class="btn btn-xs btn-outline-primary btn-editar-bosquejo"
-                                    data-id="<?php echo $b['id']; ?>"
-                                    data-numero="<?php echo $b['numero']; ?>"
-                                    data-titulo="<?php echo htmlspecialchars($b['titulo']); ?>"
-                                    title="Editar" style="padding:.2rem .5rem;font-size:.75rem;">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                            <button class="btn btn-xs btn-outline-danger btn-eliminar-bosquejo"
-                                    data-id="<?php echo $b['id']; ?>"
-                                    data-numero="<?php echo $b['numero']; ?>"
-                                    title="Eliminar" style="padding:.2rem .5rem;font-size:.75rem;">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
+                <!-- Toolbar: buscador + selector de tamaño de página -->
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                    <div class="input-group input-group-sm flex-grow-1" style="min-width:180px;">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="filtroBosquejos"
+                               placeholder="Filtrar por número o título…">
                     </div>
-                    <?php endforeach; ?>
+                    <div class="d-flex align-items-center gap-1">
+                        <label class="form-label mb-0 text-muted small">Mostrar:</label>
+                        <select class="form-select form-select-sm" id="bosqPorPagina" style="width:auto;">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="0">Todo</option>
+                        </select>
+                    </div>
                 </div>
+
+                <!-- Info: total y rango visible -->
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <small class="text-muted" id="bosqInfo">Cargando…</small>
+                </div>
+
+                <!-- Lista de bosquejos (renderizada por JS) -->
+                <div id="lista-bosquejos" class="list-group mb-3">
+                    <div class="list-group-item text-center text-muted py-4">
+                        <div class="spinner-border spinner-border-sm me-2"></div>Cargando bosquejos…
+                    </div>
+                </div>
+
+                <!-- Paginador Bootstrap centrado (renderizado por JS) -->
+                <nav id="bosqPaginadorWrap" aria-label="Paginación bosquejos">
+                    <ul class="pagination pagination-sm justify-content-center mb-0" id="bosqPaginador"></ul>
+                </nav>
+
                 <?php endif; ?>
             </div>
         </div>
@@ -686,50 +668,169 @@ $(document).on('click', '.btn-eliminar-privilegio', function () {
    BOSQUEJOS — CRUD + filtro en vivo
 ================================================================ */
 
-// Filtro en vivo: busca en BD vía AJAX al escribir
-let bosquejoFiltroTimer;
-$(document).on('input', '#filtroBosquejos', function () {
-    const q = $.trim($(this).val());
-    clearTimeout(bosquejoFiltroTimer);
-    bosquejoFiltroTimer = setTimeout(function () {
+/* ================================================================
+   BOSQUEJOS — carga AJAX con paginación y búsqueda
+================================================================ */
+const Bosquejos = {
+    pagina   : 1,
+    porPagina: 20,    // default
+    q        : '',
+    total    : 0,
+    timer    : null,
+
+    // Renderiza una fila de la lista
+    buildRow(b) {
+        const tituloE = $('<span>').text(b.titulo).html();
+        const numE    = $('<span>').text(String(b.numero)).html();
+        return `
+            <div class="list-group-item d-flex justify-content-between align-items-center"
+                 id="bosq-row-${b.id}" data-id="${b.id}"
+                 data-numero="${numE}" data-titulo="${tituloE}">
+                <span>
+                    <span class="badge bg-secondary me-2">${numE}</span>${tituloE}
+                </span>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-outline-primary btn-editar-bosquejo"
+                            data-id="${b.id}" data-numero="${numE}" data-titulo="${tituloE}"
+                            title="Editar" style="padding:.2rem .5rem;font-size:.75rem;">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-eliminar-bosquejo"
+                            data-id="${b.id}" data-numero="${numE}"
+                            title="Eliminar" style="padding:.2rem .5rem;font-size:.75rem;">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>`;
+    },
+
+    // Renderiza el paginador Bootstrap centrado
+    buildPaginator(currentPage, totalPages) {
+        if (totalPages <= 1) { $('#bosqPaginador').empty(); return; }
+
+        let html = '';
+
+        // Anterior
+        html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link bosq-page" href="#" data-page="${currentPage - 1}">&laquo;</a></li>`;
+
+        // Números de página (ventana de 5 alrededor de la actual)
+        const delta = 2;
+        let start = Math.max(1, currentPage - delta);
+        let end   = Math.min(totalPages, currentPage + delta);
+
+        if (start > 1) {
+            html += `<li class="page-item"><a class="page-link bosq-page" href="#" data-page="1">1</a></li>`;
+            if (start > 2) html += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+        }
+
+        for (let p = start; p <= end; p++) {
+            html += `<li class="page-item ${p === currentPage ? 'active' : ''}">
+                <a class="page-link bosq-page" href="#" data-page="${p}">${p}</a></li>`;
+        }
+
+        if (end < totalPages) {
+            if (end < totalPages - 1) html += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
+            html += `<li class="page-item"><a class="page-link bosq-page" href="#" data-page="${totalPages}">${totalPages}</a></li>`;
+        }
+
+        // Siguiente
+        html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link bosq-page" href="#" data-page="${currentPage + 1}">&raquo;</a></li>`;
+
+        $('#bosqPaginador').html(html);
+    },
+
+    // Llama a la API y actualiza la lista + paginador + info
+    cargar(pagina, porPagina, q) {
+        this.pagina    = pagina    ?? this.pagina;
+        this.porPagina = porPagina ?? this.porPagina;
+        this.q         = (q !== undefined) ? q : this.q;
+
+        const perPage = this.porPagina === 0 ? 9999 : this.porPagina;
+        const page    = this.pagina;
+
+        $('#lista-bosquejos').html(
+            '<div class="list-group-item text-center text-muted py-3">' +
+            '<div class="spinner-border spinner-border-sm me-2"></div>Cargando…</div>'
+        );
+        $('#bosqPaginador').empty();
+
         $.ajax({
             url     : '../api/bosquejos.php',
             method  : 'GET',
             dataType: 'json',
-            data    : { action: 'search', q: q },
-            success : function (res) {
+            data    : { action: 'search', q: this.q, page: page, per_page: perPage },
+            success : (res) => {
                 const $lista = $('#lista-bosquejos');
                 $lista.empty();
+
                 if (!res.results || res.results.length === 0) {
-                    $lista.html('<div class="list-group-item text-muted text-center">Sin resultados</div>');
+                    $lista.html('<div class="list-group-item text-muted text-center py-3">Sin resultados</div>');
+                    $('#bosqInfo').text('Sin resultados');
+                    $('#bosqPaginador').empty();
                     return;
                 }
-                res.results.forEach(function (b) {
-                    const tituloE = $('<span>').text(b.titulo).html();
-                    $lista.append(`
-                        <div class="list-group-item d-flex justify-content-between align-items-center"
-                             id="bosq-row-${b.id}" data-id="${b.id}" data-numero="${b.numero}" data-titulo="${tituloE}">
-                            <span>
-                                <span class="badge bg-secondary me-2">${b.numero}</span>${tituloE}
-                            </span>
-                            <div class="d-flex gap-1">
-                                <button class="btn btn-outline-primary btn-editar-bosquejo"
-                                        data-id="${b.id}" data-numero="${b.numero}" data-titulo="${tituloE}"
-                                        title="Editar" style="padding:.2rem .5rem;font-size:.75rem;">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn btn-outline-danger btn-eliminar-bosquejo"
-                                        data-id="${b.id}" data-numero="${b.numero}"
-                                        title="Eliminar" style="padding:.2rem .5rem;font-size:.75rem;">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                        </div>`);
-                });
+
+                res.results.forEach(b => $lista.append(this.buildRow(b)));
+
+                // Info de rango
+                const total     = res.total ?? 0;
+                const totalPages = this.porPagina === 0 ? 1 : Math.ceil(total / perPage);
+                const desde     = this.porPagina === 0 ? 1 : (page - 1) * perPage + 1;
+                const hasta     = Math.min(desde + res.results.length - 1, total);
+                $('#bosqInfo').html(
+                    `Mostrando <strong>${desde}–${hasta}</strong> de <strong>${total}</strong> bosquejos`
+                );
+
+                this.buildPaginator(page, totalPages);
+            },
+            error: () => {
+                $('#lista-bosquejos').html(
+                    '<div class="list-group-item text-danger">Error al cargar bosquejos</div>'
+                );
             }
         });
-    }, 350);
+    },
+
+    init() {
+        // Carga inicial
+        this.cargar(1, 20, '');
+
+        // Cambio de tamaño de página
+        $(document).on('change', '#bosqPorPagina', (e) => {
+            this.cargar(1, parseInt(e.target.value), undefined);
+        });
+
+        // Búsqueda con debounce
+        $(document).on('input', '#filtroBosquejos', (e) => {
+            clearTimeout(this.timer);
+            this.timer = setTimeout(() => {
+                this.cargar(1, undefined, e.target.value.trim());
+            }, 350);
+        });
+
+        // Clic en página del paginador
+        $(document).on('click', '.bosq-page', (e) => {
+            e.preventDefault();
+            const p = parseInt($(e.currentTarget).data('page'));
+            if (!isNaN(p)) this.cargar(p, undefined, undefined);
+        });
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('lista-bosquejos')) Bosquejos.init();
 });
+
+// Recargar lista después de crear, editar o eliminar un bosquejo
+function bosquejosRecargar() {
+    Bosquejos.cargar(Bosquejos.pagina, Bosquejos.porPagina, Bosquejos.q);
+}
+
+// Filtro en vivo: ya manejado por Bosquejos.init()
+// (dejamos el binding antiguo vacío para no duplicar)
+let bosquejoFiltroTimer;
 
 // Crear bosquejo
 $(document).on('submit', '#formNuevoBosquejo', function (e) {
@@ -740,37 +841,9 @@ $(document).on('submit', '#formNuevoBosquejo', function (e) {
 
     apiPost('../api/bosquejos.php', { action: 'create', numero: numero, titulo: titulo }, function (res) {
         $btn.prop('disabled', false);
-        const b = res.data;
-        const tituloE = $('<span>').text(b.titulo).html();
-        const html = `
-            <div class="list-group-item d-flex justify-content-between align-items-center"
-                 id="bosq-row-${b.id}" data-id="${b.id}" data-numero="${b.numero}" data-titulo="${tituloE}">
-                <span>
-                    <span class="badge bg-secondary me-2">${b.numero}</span>${tituloE}
-                </span>
-                <div class="d-flex gap-1">
-                    <button class="btn btn-outline-primary btn-editar-bosquejo"
-                            data-id="${b.id}" data-numero="${b.numero}" data-titulo="${tituloE}"
-                            title="Editar" style="padding:.2rem .5rem;font-size:.75rem;">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-outline-danger btn-eliminar-bosquejo"
-                            data-id="${b.id}" data-numero="${b.numero}"
-                            title="Eliminar" style="padding:.2rem .5rem;font-size:.75rem;">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            </div>`;
-
-        if ($('#lista-bosquejos').length === 0) {
-            $('#card-bosquejos .card-body .msg-empty-bosquejos').replaceWith(
-                '<div class="list-group" id="lista-bosquejos">' + html + '</div>'
-            );
-        } else {
-            $('#lista-bosquejos').prepend(html);
-        }
         bootstrap.Modal.getInstance(document.getElementById('modalNuevoBosquejo'))?.hide();
-        APP.showNotification('Bosquejo #' + b.numero + ' creado', 'success');
+        bosquejosRecargar();
+        APP.showNotification('Bosquejo #' + res.data.numero + ' creado', 'success');
     });
     $btn.prop('disabled', false);
 });
@@ -801,14 +874,8 @@ $(document).on('submit', '#formEditarBosquejo', function (e) {
 
     apiPost('../api/bosquejos.php', { action: 'update', id: id, numero: numero, titulo: titulo }, function () {
         $btn.prop('disabled', false);
-        // Actualizar fila en la lista
-        const $row = $('#bosq-row-' + id);
-        const tituloE = $('<span>').text(titulo).html();
-        $row.find('span').first().html(`<span class="badge bg-secondary me-2">${numero}</span>${tituloE}`);
-        $row.data('numero', numero).data('titulo', titulo);
-        $row.find('.btn-editar-bosquejo').data('numero', numero).data('titulo', titulo);
-        $row.find('.btn-eliminar-bosquejo').data('numero', numero);
         bootstrap.Modal.getInstance(document.getElementById('modalEditarBosquejo'))?.hide();
+        bosquejosRecargar();
         APP.showNotification('Bosquejo actualizado', 'success');
     });
     $btn.prop('disabled', false);
@@ -821,7 +888,7 @@ $(document).on('click', '.btn-eliminar-bosquejo', function () {
     if (!confirm('¿Eliminar el bosquejo #' + numero + '?')) return;
 
     apiPost('../api/bosquejos.php', { action: 'delete', id: id }, function () {
-        $('#bosq-row-' + id).fadeOut(200, function () { $(this).remove(); });
+        bosquejosRecargar();
         APP.showNotification('Bosquejo eliminado', 'success');
     });
 });
