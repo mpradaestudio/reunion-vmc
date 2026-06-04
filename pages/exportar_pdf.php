@@ -50,9 +50,9 @@ define('PDF_MARGIN_B',  12);
 define('PDF_PAGE_W',   215.9);
 define('PDF_INNER_W',  PDF_PAGE_W - PDF_MARGIN_L - PDF_MARGIN_R);  // ≈ 187.9 mm
 
-// Columnas — izq 54% / der 46% para dar más espacio a nombres largos
-define('PDF_COL_L',    round(PDF_INNER_W * 0.54));   // ≈ 101 mm  contenido
-define('PDF_COL_R',    round(PDF_INNER_W * 0.46));   // ≈  86 mm  asignaciones
+// Columnas — izq 52% / der 48% para dar más espacio a nombres largos
+define('PDF_COL_L',    round(PDF_INNER_W * 0.52));   // ≈  98 mm  contenido
+define('PDF_COL_R',    round(PDF_INNER_W * 0.48));   // ≈  90 mm  asignaciones
 define('PDF_COL_R_X',  PDF_MARGIN_L + PDF_COL_L);    // X inicio columna derecha
 
 // Alturas de fila
