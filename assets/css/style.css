@@ -1560,5 +1560,11 @@ body {
     }
 }
 
-/* Ocultar el topbar (main nav) antiguo — ya reemplazado */
-.navbar.vmc-old-nav { display: none !important; }
+/* Bloquear transiciones durante la carga inicial (anti-ghost).
+   Se quita por JS inmediatamente después de aplicar el estado inicial. */
+.sb-no-transition .sidebar,
+.sb-no-transition .topbar,
+.sb-no-transition .content-wrapper {
+    transition: none !important;
+}
+

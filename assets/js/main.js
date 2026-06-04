@@ -402,12 +402,24 @@ const Sidebar = {
         this.toggleBtn  = document.getElementById('sidebarToggle');
         this.themeLabel = document.getElementById('themeLabel');
 
-        if (!this.sidebar) return;
+        if (!this.sidebar) {
+            // Quitar la clase aunque no haya sidebar (ej. exportar_pdf)
+            document.documentElement.classList.remove('sb-no-transition');
+            return;
+        }
 
-        // Estado inicial desktop
+        // Aplicar estado inicial SIN transición (el anti-FOUC ya bloqueó las transitions)
         if (!this.isMobile() && this.isStoredCollapsed()) {
             this.applyDesktop(true);
         }
+
+        // Rehabilitar transiciones después de que el navegador haya pintado
+        // el estado correcto (doble rAF garantiza 2 frames de diferencia)
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                document.documentElement.classList.remove('sb-no-transition');
+            });
+        });
 
         // Botón hamburguesa
         this.toggleBtn?.addEventListener('click', () => this.toggle());

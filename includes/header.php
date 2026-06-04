@@ -18,9 +18,10 @@ $iniciales = mb_strtoupper(mb_substr($config['nombre_congregacion'], 0, 2, 'UTF-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $pageTitle . ' – ' . APP_NAME; ?></title>
 
-    <!-- Anti-FOUC: tema antes de pintar -->
+    <!-- Anti-FOUC: tema + sidebar colapsado antes de pintar -->
     <script>
         (function () {
+            // Tema
             try {
                 var s = localStorage.getItem('vmc-theme');
                 var t = s ? s : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
@@ -28,6 +29,9 @@ $iniciales = mb_strtoupper(mb_substr($config['nombre_congregacion'], 0, 2, 'UTF-
             } catch(e) {
                 document.documentElement.setAttribute('data-bs-theme', 'light');
             }
+            // Sidebar: bloquear transición durante la carga inicial
+            // para evitar el "ghost" de animación 240px→72px
+            document.documentElement.classList.add('sb-no-transition');
         })();
     </script>
 
