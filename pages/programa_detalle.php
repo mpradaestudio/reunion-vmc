@@ -117,23 +117,26 @@ $mes = $mesNombre[(int)$fecha_inicio->format('n')];
 $fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' de ' . $mes . ' ' . $fecha_inicio->format('Y');
 ?>
 
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <a href="programas.php" class="btn btn-outline-secondary mb-2">
-                    <i class="bi bi-arrow-left"></i> Volver
-                </a>
-                <h1 class="h2 mb-0"><?php echo htmlspecialchars($programa['titulo_semana']); ?></h1>                
-            </div>
-            <div>
-                <a href="exportar_pdf.php?programa_id=<?php echo $programaId; ?>" 
-                   class="btn btn-danger" target="_blank">
-                    <i class="bi bi-file-pdf"></i> Exportar PDF
-                </a>
-            </div>
-        </div>
-    </div>
+<!-- Fila 1: botones en extremos opuestos -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <a href="programas.php" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+    <a href="exportar_pdf.php?programa_id=<?php echo $programaId; ?>"
+       class="btn btn-danger" target="_blank">
+        <i class="bi bi-file-pdf"></i> Exportar PDF
+    </a>
+</div>
+
+<!-- Fila 2: título y fecha -->
+<div class="mb-4">
+    <h1 class="h2 mb-1"><?php echo htmlspecialchars($programa['titulo_semana']); ?></h1>
+    <p class="text-muted mb-0">
+        <i class="bi bi-calendar3"></i> <?php echo $fechaFormato; ?>
+        <?php if ($programa['referencia_biblica']): ?>
+            | <i class="bi bi-book"></i> <?php echo htmlspecialchars($programa['referencia_biblica']); ?>
+        <?php endif; ?>
+    </p>
 </div>
 
 <!-- Roles generales -->
