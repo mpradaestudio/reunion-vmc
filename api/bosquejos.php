@@ -99,22 +99,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'update') {
         $id              = (int)($_POST['id'] ?? 0);
         $numero          = (int)($_POST['numero'] ?? 0);
-        $titulo          = trim($_POST['titulo'] ?? '');            // sin sanitizeInput
+        $titulo          = trim($_POST['titulo'] ?? '');
         $noPresentar     = isset($_POST['no_presentar']) ? 1 : 0;
-        $notaNoPresentar = trim($_POST['nota_no_presentar'] ?? ''); // sin sanitizeInput
+        $notaNoPresentar = trim($_POST['nota_no_presentar'] ?? '');
+
         if (!$id || $numero <= 0 || $titulo === '') {
             jsonResponse(['success' => false, 'message' => 'Datos no válidos']);
         }
-        try {
-            $pdo->prepare("
-                UPDATE bosquejos
-                SET numero=?, titulo=?, no_presentar=?, nota_no_presentar=?
-                WHERE id=?
-            ")->execute([$numero, $titulo, $noPresentar, $notaNoPresentar ?: null, $id]);
-            jsonResponse(['success' => true, 'message' => 'Bosquejo actualizado']);
-        } catch (Exception $e) {
+
+        // Verificar conflicto de número con OTRO registro (no con el mismo)
+        $conflicto = fetchOne(
+            "SELECT id FROM bosquejos WHERE numero = ? AND id != ?",
+            [$numero, $id]
+        );
+        if ($conflicto) {
             jsonResponse(['success' => false, 'message' => 'Número ya en uso por otro bosquejo']);
         }
+
+        // Actualizar sin riesgo de falso conflicto en el índice UNIQUE
+        $pdo->prepare("
+            UPDATE bosquejos
+            SET numero=?, titulo=?, no_presentar=?, nota_no_presentar=?
+            WHERE id=?
+        ")->execute([$numero, $titulo, $noPresentar, $notaNoPresentar ?: null, $id]);
+
+        jsonResponse(['success' => true, 'message' => 'Bosquejo actualizado']);
     }
 
     // ── Eliminar ──────────────────────────────────────────────────
