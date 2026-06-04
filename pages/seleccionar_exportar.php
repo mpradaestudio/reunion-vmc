@@ -27,7 +27,7 @@ $mesesNombres = [
                 <i class="bi bi-file-pdf me-2"></i>
                 Exportar Programas a PDF
             </h1>
-            <a href="programas.php" class="btn btn-outline-secondary">
+            <a href="entre-semana.php" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Volver
             </a>
         </div>
@@ -74,7 +74,7 @@ $mesesNombres = [
                     <i class="bi bi-calendar-x"></i>
                     <h3>No hay programas disponibles</h3>
                     <p>Primero debes extraer programas desde jw.org</p>
-                    <a href="programas.php" class="btn btn-primary">
+                    <a href="entre-semana.php" class="btn btn-primary">
                         <i class="bi bi-cloud-download"></i> Ir a Programas
                     </a>
                 </div>

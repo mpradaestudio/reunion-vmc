@@ -89,14 +89,14 @@ require_once __DIR__ . '/../includes/header.php';
 $programaId = $_GET['id'] ?? null;
 
 if (!$programaId) {
-    redirect('programas.php');
+    redirect('entre-semana.php');
 }
 
 // Obtener programa completo
 $programa = fetchOne("SELECT * FROM programas_semanales WHERE id = ?", [$programaId]);
 
 if (!$programa) {
-    redirect('programas.php');
+    redirect('entre-semana.php');
 }
 
 // Obtener secciones
@@ -216,7 +216,7 @@ $semanaSiguiente = fetchOne(
 <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
 
     <!-- Extremo izquierdo -->
-    <a href="programas.php" class="btn btn-outline-secondary">
+    <a href="entre-semana.php" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left"></i> Volver
     </a>
 

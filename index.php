@@ -37,7 +37,7 @@ $proximosProgramas = fetchAll("
                 Panel de Control
             </h1>
             <div>
-                <a href="pages/programas.php" class="btn btn-primary">
+                <a href="pages/entre-semana.php" class="btn btn-primary">
                     <i class="bi bi-calendar-plus"></i> Ver Programas
                 </a>
             </div>
@@ -105,7 +105,7 @@ $proximosProgramas = fetchAll("
                     <i class="bi bi-calendar-week me-2"></i>
                     Próximos Programas
                 </h5>
-                <a href="pages/programas.php" class="btn btn-sm btn-outline-primary">
+                <a href="pages/entre-semana.php" class="btn btn-sm btn-outline-primary">
                     Ver todos <i class="bi bi-arrow-right"></i>
                 </a>
             </div>
@@ -188,7 +188,7 @@ $proximosProgramas = fetchAll("
                     <div class="empty-state">
                         <i class="bi bi-calendar-x"></i>
                         <p>No hay programas próximos</p>
-                        <a href="pages/programas.php" class="btn btn-primary">
+                        <a href="pages/entre-semana.php" class="btn btn-primary">
                             <i class="bi bi-cloud-download"></i> Extraer Programas
                         </a>
                     </div>
@@ -217,13 +217,13 @@ $proximosProgramas = fetchAll("
                         </a>
                     </div>
                     <div class="col-md-3 col-sm-6">
-                        <a href="pages/programas.php" class="quick-tile">
+                        <a href="pages/entre-semana.php" class="quick-tile">
                             <i class="bi bi-cloud-download icon-success"></i>
                             <span>Extraer Programas</span>
                         </a>
                     </div>
                     <div class="col-md-3 col-sm-6">
-                        <a href="pages/programas.php" class="quick-tile">
+                        <a href="pages/entre-semana.php" class="quick-tile">
                             <i class="bi bi-person-check icon-warning"></i>
                             <span>Asignar Partes</span>
                         </a>

@@ -249,7 +249,8 @@ $seccionesPartes = [
                 <input type="hidden" name="action" id="persona_action" value="create">
 
                 <div class="modal-body" style="max-height: 65vh; overflow-y: auto;">
-                    <!-- Nombre / Apellido -->
+
+                    <!-- 1. Nombre / Apellido -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="nombre" class="form-label">Nombre *</label>
@@ -261,7 +262,22 @@ $seccionesPartes = [
                         </div>
                     </div>
 
-                    <!-- Perfil (checkboxes) -->
+                    <!-- 2. Estado / Teléfono -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="activo" class="form-label">Estado</label>
+                            <select class="form-select" id="activo" name="activo">
+                                <option value="1">Activo</option>
+                                <option value="0">Inactivo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="telefono" class="form-label">Teléfono</label>
+                            <input type="tel" class="form-control" id="telefono" name="telefono">
+                        </div>
+                    </div>
+
+                    <!-- 3. Perfil (checkboxes) -->
                     <div class="mb-3">
                         <label class="form-label">Perfil * <small class="text-muted">(uno o varios)</small></label>
                         <div class="d-flex flex-wrap gap-3 border rounded p-2">
@@ -278,25 +294,33 @@ $seccionesPartes = [
                         </div>
                     </div>
 
-                    <!-- Estado / Teléfono (50/50) -->
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="activo" class="form-label">Estado</label>
-                            <select class="form-select" id="activo" name="activo">
-                                <option value="1">Activo</option>
-                                <option value="0">Inactivo</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="telefono" class="form-label">Teléfono</label>
-                            <input type="tel" class="form-control" id="telefono" name="telefono">
+                    <!-- 4. Privilegios (inmediatamente después de Perfil) -->
+                    <?php if (!empty($privilegiosModal)): ?>
+                    <div class="mb-3">
+                        <label class="form-label"><i class="bi bi-shield-check"></i> Privilegios</label>
+                        <div class="d-flex flex-wrap gap-3 border rounded p-2">
+                            <?php foreach ($privilegiosModal as $priv): ?>
+                            <div class="form-check">
+                                <input class="form-check-input chk-privilegio" type="checkbox"
+                                       name="privilegio_ids[]" value="<?php echo $priv['id']; ?>"
+                                       id="priv_<?php echo $priv['id']; ?>">
+                                <label class="form-check-label" for="priv_<?php echo $priv['id']; ?>">
+                                    <?php echo htmlspecialchars($priv['nombre']); ?>
+                                </label>
+                            </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
+                    <?php endif; ?>
 
                     <hr>
-                    <h6 class="fw-bold mb-3"><i class="bi bi-check2-square"></i> Partes que presenta</h6>
 
-                    <!-- Presidente / Oración -->
+                    <!-- 5. Reunión entre semana (renombrado) -->
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-calendar-week"></i> Reunión entre semana
+                    </h6>
+
+                    <!-- Presidente / Oración (partes sueltas) -->
                     <div class="d-flex flex-wrap gap-4 mb-3">
                         <div class="form-check">
                             <input class="form-check-input chk-parte-suelta" type="checkbox"
@@ -310,18 +334,18 @@ $seccionesPartes = [
                         </div>
                     </div>
 
-                    <!-- Secciones con sus partes -->
+                    <!-- Secciones Entre Semana -->
                     <?php foreach ($seccionesPartes as $key => $sec):
                         $grupoId = 'grupo_' . $key;
                     ?>
                     <div class="card mb-2">
                         <div class="card-header <?php echo $sec['clase']; ?> py-2 d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-white"><?php echo $sec['titulo']; ?></span>
+                            <span class="fw-bold"><?php echo $sec['titulo']; ?></span>
                             <div class="form-check form-switch mb-0">
                                 <input class="form-check-input chk-todos" type="checkbox"
                                        id="all_<?php echo $key; ?>" data-grupo="<?php echo $grupoId; ?>"
                                        title="Seleccionar todo">
-                                <label class="form-check-label text-white small" for="all_<?php echo $key; ?>">Todas</label>
+                                <label class="form-check-label small" for="all_<?php echo $key; ?>">Todas</label>
                             </div>
                         </div>
                         <div class="card-body py-2 grupo-partes" id="<?php echo $grupoId; ?>">
@@ -345,25 +369,46 @@ $seccionesPartes = [
                     </div>
                     <?php endforeach; ?>
 
-                    <!-- Privilegios -->
-                    <?php if (!empty($privilegiosModal)): ?>
+                    <!-- 6. Reunión fin de semana -->
                     <hr>
-                    <h6 class="fw-bold mb-3"><i class="bi bi-shield-check"></i> Privilegios</h6>
-                    <div class="d-flex flex-wrap gap-3 border rounded p-2 mb-3">
-                        <?php foreach ($privilegiosModal as $priv): ?>
-                        <div class="form-check">
-                            <input class="form-check-input chk-privilegio" type="checkbox"
-                                   name="privilegio_ids[]" value="<?php echo $priv['id']; ?>"
-                                   id="priv_<?php echo $priv['id']; ?>">
-                            <label class="form-check-label" for="priv_<?php echo $priv['id']; ?>">
-                                <?php echo htmlspecialchars($priv['nombre']); ?>
-                            </label>
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-calendar2-week"></i> Reunión fin de semana
+                    </h6>
+                    <div class="card mb-2">
+                        <div class="card-header py-2 d-flex justify-content-between align-items-center"
+                             style="background-color:var(--vmc-primary);color:#fff;">
+                            <span class="fw-bold">FIN DE SEMANA</span>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input chk-todos" type="checkbox"
+                                       id="all_fds" data-grupo="grupo_fds"
+                                       title="Seleccionar todo">
+                                <label class="form-check-label text-white small" for="all_fds">Todas</label>
+                            </div>
                         </div>
-                        <?php endforeach; ?>
+                        <div class="card-body py-2 grupo-partes" id="grupo_fds">
+                            <div class="row">
+                                <?php
+                                $partesFds = ['Presidente', 'Oración', 'Conductor', 'Lector'];
+                                foreach ($partesFds as $i => $parte):
+                                    $inputId = 'p_fds_' . $i;
+                                ?>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input chk-parte" type="checkbox"
+                                               name="partes_disponibles[]"
+                                               value="FDS_<?php echo htmlspecialchars($parte); ?>"
+                                               id="<?php echo $inputId; ?>">
+                                        <label class="form-check-label" for="<?php echo $inputId; ?>">
+                                            <?php echo htmlspecialchars($parte); ?>
+                                        </label>
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
                     </div>
-                    <?php endif; ?>
 
-                    <!-- Notas -->
+                    <!-- 7. Notas -->
                     <div class="mb-2 mt-3">
                         <label for="notas" class="form-label">Notas</label>
                         <textarea class="form-control" id="notas" name="notas" rows="2"></textarea>

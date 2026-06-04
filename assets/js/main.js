@@ -440,8 +440,48 @@ const Sidebar = {
     }
 };
 
+/* ── Sidebar groups: toggle de submenús ─────────────────────── */
+const SidebarGroups = {
+    KEY: 'vmc-sb-groups',   // JSON {groupId: bool (collapsed)}
+
+    load() {
+        try { return JSON.parse(localStorage.getItem(this.KEY) || '{}'); } catch(e) { return {}; }
+    },
+    save(state) {
+        try { localStorage.setItem(this.KEY, JSON.stringify(state)); } catch(e) {}
+    },
+
+    init() {
+        const state = this.load();
+
+        document.querySelectorAll('.sidebar-group-toggle').forEach(btn => {
+            const targetId = btn.dataset.target;
+            const items    = document.getElementById(targetId);
+            if (!items) return;
+
+            // Restaurar estado guardado
+            if (state[targetId]) {
+                items.classList.add('sb-group-collapsed');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+
+            btn.addEventListener('click', () => {
+                // En sidebar colapsado, no colapsar subgrupos (solo iconos visibles)
+                if (document.getElementById('sidebar')?.classList.contains('collapsed')) return;
+
+                const isCollapsed = items.classList.toggle('sb-group-collapsed');
+                btn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+                const s = this.load();
+                s[targetId] = isCollapsed;
+                this.save(s);
+            });
+        });
+    }
+};
+
 /* ── Inicialización única al cargar el DOM ──────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
     Theme.init();
     Sidebar.init();
+    SidebarGroups.init();
 });

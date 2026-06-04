@@ -97,12 +97,31 @@ $iniciales = mb_strtoupper(mb_substr($nombreCompleto, 0, 2, 'UTF-8'), 'UTF-8');
             <span class="sb-item-label">Personas</span>
         </a>
 
-        <a class="sidebar-item <?php echo navActive('programas.php',  $currentPage) ?: navActive('programa_detalle.php', $currentPage) ?: navActive('seleccionar_exportar.php', $currentPage); ?>"
-           href="<?php echo BASE_URL; ?>pages/programas.php"
-           title="Reuniones">
-            <i class="bi bi-calendar-check sb-item-icon"></i>
-            <span class="sb-item-label">Reuniones</span>
-        </a>
+        <!-- Reuniones: grupo colapsable -->
+        <div class="sidebar-group" id="sbGroupReuniones">
+            <button class="sidebar-item sidebar-group-toggle w-100"
+                    data-target="sbGroupReunionesItems"
+                    aria-expanded="true"
+                    title="Reuniones">
+                <i class="bi bi-calendar-check sb-item-icon"></i>
+                <span class="sb-item-label">Reuniones</span>
+                <i class="bi bi-chevron-down sb-chevron ms-auto"></i>
+            </button>
+            <div class="sidebar-group-items" id="sbGroupReunionesItems">
+                <a class="sidebar-item sidebar-subitem <?php echo navActive('entre-semana.php', $currentPage) ?: navActive('programa_detalle.php', $currentPage) ?: navActive('seleccionar_exportar.php', $currentPage); ?>"
+                   href="<?php echo BASE_URL; ?>pages/entre-semana.php"
+                   title="Entre semana">
+                    <i class="bi bi-journal-text sb-item-icon"></i>
+                    <span class="sb-item-label">Entre semana</span>
+                </a>
+                <a class="sidebar-item sidebar-subitem <?php echo navActive('fin-de-semana.php', $currentPage) ?: navActive('fin-de-semana-detalle.php', $currentPage); ?>"
+                   href="<?php echo BASE_URL; ?>pages/fin-de-semana.php"
+                   title="Fin de semana">
+                    <i class="bi bi-journal-richtext sb-item-icon"></i>
+                    <span class="sb-item-label">Fin de semana</span>
+                </a>
+            </div>
+        </div>
 
     </nav>
 
