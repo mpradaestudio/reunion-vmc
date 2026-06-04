@@ -1697,3 +1697,16 @@ body {
     border-color    : var(--vmc-border);
     color           : var(--vmc-text-muted);
 }
+
+
+/* ============================================================
+   41. Toggle "No presentar" — color primario del proyecto
+   ============================================================ */
+.bosq-no-presentar-toggle:checked {
+    background-color: var(--vmc-primary);
+    border-color    : var(--vmc-primary);
+}
+.bosq-no-presentar-toggle:focus {
+    border-color    : var(--vmc-primary);
+    box-shadow      : 0 0 0 3px rgba(var(--bs-primary-rgb), 0.20);
+}

@@ -895,12 +895,12 @@ $(document).on('change', '#bosquejoEditNoPresentar', function () {
 
 $(document).on('submit', '#formEditarBosquejo', function (e) {
     e.preventDefault();
-    const id         = $('#bosquejoEditId').val();
-    const numero     = $.trim($('#bosquejoEditNumero').val());
-    const titulo     = $.trim($('#bosquejoEditTitulo').val());
+    const id          = $('#bosquejoEditId').val();
+    const numero      = $.trim($('#bosquejoEditNumero').val());
+    const titulo      = $.trim($('#bosquejoEditTitulo').val());
     const noPresentar = $('#bosquejoEditNoPresentar').is(':checked') ? 1 : 0;
-    const nota       = $.trim($('#bosquejoEditNota').val());
-    const $btn       = $(this).find('button[type="submit"]').prop('disabled', true);
+    const nota        = $.trim($('#bosquejoEditNota').val());
+    const $btn        = $(this).find('button[type="submit"]').prop('disabled', true);
 
     const payload = { action: 'update', id, numero, titulo, nota_no_presentar: nota };
     if (noPresentar) payload.no_presentar = '1';
@@ -911,7 +911,7 @@ $(document).on('submit', '#formEditarBosquejo', function (e) {
         bosquejosRecargar();
         APP.showNotification('Bosquejo actualizado', 'success');
     });
-    $btn.prop('disabled', false);
+    // NOTA: $btn se rehabilita dentro del callback para evitar doble envío
 });
 
 // Eliminar bosquejo
@@ -991,12 +991,12 @@ $(document).on('click', '.btn-eliminar-bosquejo', function () {
 
                     <!-- Toggle "No presentar" -->
                     <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox"
+                        <input class="form-check-input bosq-no-presentar-toggle" type="checkbox"
                                id="bosquejoEditNoPresentar" name="no_presentar"
                                role="switch">
-                        <label class="form-check-label fw-semibold text-warning"
+                        <label class="form-check-label fw-semibold"
                                for="bosquejoEditNoPresentar">
-                            <i class="bi bi-exclamation-triangle-fill me-1"></i>No presentar
+                            No presentar
                         </label>
                     </div>
 

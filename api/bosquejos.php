@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ── Crear ─────────────────────────────────────────────────────
     if ($action === 'create') {
         $numero = (int)($_POST['numero'] ?? 0);
-        $titulo = trim(sanitizeInput($_POST['titulo'] ?? ''));
+        $titulo = trim($_POST['titulo'] ?? '');   // sin sanitizeInput: guardamos el texto real
         if ($numero <= 0 || $titulo === '') {
             jsonResponse(['success' => false, 'message' => 'Número y título son obligatorios']);
         }
@@ -97,11 +97,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ── Actualizar ────────────────────────────────────────────────
     if ($action === 'update') {
-        $id             = (int)($_POST['id'] ?? 0);
-        $numero         = (int)($_POST['numero'] ?? 0);
-        $titulo         = trim(sanitizeInput($_POST['titulo'] ?? ''));
-        $noPresentar    = isset($_POST['no_presentar']) ? 1 : 0;
-        $notaNoPresentar = trim(sanitizeInput($_POST['nota_no_presentar'] ?? ''));
+        $id              = (int)($_POST['id'] ?? 0);
+        $numero          = (int)($_POST['numero'] ?? 0);
+        $titulo          = trim($_POST['titulo'] ?? '');            // sin sanitizeInput
+        $noPresentar     = isset($_POST['no_presentar']) ? 1 : 0;
+        $notaNoPresentar = trim($_POST['nota_no_presentar'] ?? ''); // sin sanitizeInput
         if (!$id || $numero <= 0 || $titulo === '') {
             jsonResponse(['success' => false, 'message' => 'Datos no válidos']);
         }
