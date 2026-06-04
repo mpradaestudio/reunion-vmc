@@ -220,8 +220,99 @@ $stats = [
                 <?php endif; ?>
             </div>
         </div>
+
+        <!-- ── Bosquejos ──────────────────────────────────────── -->
+        <div class="card mb-4" id="card-bosquejos">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-journals"></i> Bosquejos</h5>
+                <div class="d-flex gap-2">
+                    <a href="../importar_bosquejos.php" target="_blank"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-upload"></i> Importar CSV
+                    </a>
+                    <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                            data-bs-target="#modalNuevoBosquejo">
+                        <i class="bi bi-plus-circle"></i> Agregar
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Discursos públicos disponibles. Se usan en Reunión Fin de Semana para seleccionar el tema del Discurso Público.
+                    Puedes importarlos masivamente desde un CSV con el botón <strong>Importar CSV</strong>.
+                </p>
+
+                <?php
+                $bosquejosExist = true;
+                $totalBosquejos = 0;
+                $muestraBosquejos = [];
+                try {
+                    $totalBosquejos  = (int)(fetchOne("SELECT COUNT(*) AS n FROM bosquejos WHERE activo=1")['n'] ?? 0);
+                    $muestraBosquejos = fetchAll("SELECT id, numero, titulo FROM bosquejos WHERE activo=1 ORDER BY numero LIMIT 10");
+                } catch (Exception $e) {
+                    $bosquejosExist = false;
+                }
+                ?>
+
+                <?php if (!$bosquejosExist): ?>
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Importa <code>database_update_v9.sql</code> en phpMyAdmin para activar esta sección.
+                </div>
+
+                <?php elseif ($totalBosquejos === 0): ?>
+                <p class="text-muted text-center py-3 msg-empty-bosquejos">
+                    <i class="bi bi-inbox d-block mb-1" style="font-size:2rem;opacity:.5;"></i>
+                    No hay bosquejos. Usa <strong>Importar CSV</strong> para cargar todos de una vez.
+                </p>
+
+                <?php else: ?>
+                <!-- Buscador rápido dentro de la lista -->
+                <div class="input-group input-group-sm mb-3">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="filtroBosquejos"
+                           placeholder="Filtrar por número o título…">
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <small class="text-muted">Total: <strong><?php echo $totalBosquejos; ?></strong> bosquejos</small>
+                    <small class="text-muted">Mostrando los últimos 10 — usa el buscador para encontrar más</small>
+                </div>
+
+                <div class="list-group" id="lista-bosquejos">
+                    <?php foreach ($muestraBosquejos as $b): ?>
+                    <div class="list-group-item d-flex justify-content-between align-items-center"
+                         id="bosq-row-<?php echo $b['id']; ?>"
+                         data-id="<?php echo $b['id']; ?>"
+                         data-numero="<?php echo $b['numero']; ?>"
+                         data-titulo="<?php echo htmlspecialchars($b['titulo']); ?>">
+                        <span>
+                            <span class="badge bg-secondary me-2"><?php echo $b['numero']; ?></span>
+                            <?php echo htmlspecialchars($b['titulo']); ?>
+                        </span>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-xs btn-outline-primary btn-editar-bosquejo"
+                                    data-id="<?php echo $b['id']; ?>"
+                                    data-numero="<?php echo $b['numero']; ?>"
+                                    data-titulo="<?php echo htmlspecialchars($b['titulo']); ?>"
+                                    title="Editar" style="padding:.2rem .5rem;font-size:.75rem;">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-xs btn-outline-danger btn-eliminar-bosquejo"
+                                    data-id="<?php echo $b['id']; ?>"
+                                    data-numero="<?php echo $b['numero']; ?>"
+                                    title="Eliminar" style="padding:.2rem .5rem;font-size:.75rem;">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
-    
+
     <!-- Estadísticas -->
     <div class="col-md-4">
         <div class="card mb-4">
@@ -591,27 +682,223 @@ $(document).on('click', '.btn-eliminar-privilegio', function () {
     });
 });
 
-/* Inicializar Sortable después de crear la lista dinámicamente */
-function initSortableAfterCreate(listId, apiUrl) {
-    const el = document.getElementById(listId);
-    if (!el || typeof Sortable === 'undefined') return;
-    Sortable.create(el, {
-        handle    : '.drag-handle',
-        animation : 150,
-        ghostClass: 'sortable-ghost',
-        onEnd     : function () {
-            const ids = [...el.querySelectorAll('[data-id]')].map(r => r.dataset.id);
-            const fd  = new FormData();
-            fd.append('action', 'reorder');
-            ids.forEach(id => fd.append('ids[]', id));
-            fetch(apiUrl, { method: 'POST', body: fd }).catch(() => {});
+/* ================================================================
+   BOSQUEJOS — CRUD + filtro en vivo
+================================================================ */
+
+// Filtro en vivo: busca en BD vía AJAX al escribir
+let bosquejoFiltroTimer;
+$(document).on('input', '#filtroBosquejos', function () {
+    const q = $.trim($(this).val());
+    clearTimeout(bosquejoFiltroTimer);
+    bosquejoFiltroTimer = setTimeout(function () {
+        $.ajax({
+            url     : '../api/bosquejos.php',
+            method  : 'GET',
+            dataType: 'json',
+            data    : { action: 'search', q: q },
+            success : function (res) {
+                const $lista = $('#lista-bosquejos');
+                $lista.empty();
+                if (!res.results || res.results.length === 0) {
+                    $lista.html('<div class="list-group-item text-muted text-center">Sin resultados</div>');
+                    return;
+                }
+                res.results.forEach(function (b) {
+                    const tituloE = $('<span>').text(b.titulo).html();
+                    $lista.append(`
+                        <div class="list-group-item d-flex justify-content-between align-items-center"
+                             id="bosq-row-${b.id}" data-id="${b.id}" data-numero="${b.numero}" data-titulo="${tituloE}">
+                            <span>
+                                <span class="badge bg-secondary me-2">${b.numero}</span>${tituloE}
+                            </span>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-outline-primary btn-editar-bosquejo"
+                                        data-id="${b.id}" data-numero="${b.numero}" data-titulo="${tituloE}"
+                                        title="Editar" style="padding:.2rem .5rem;font-size:.75rem;">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-eliminar-bosquejo"
+                                        data-id="${b.id}" data-numero="${b.numero}"
+                                        title="Eliminar" style="padding:.2rem .5rem;font-size:.75rem;">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>`);
+                });
+            }
+        });
+    }, 350);
+});
+
+// Crear bosquejo
+$(document).on('submit', '#formNuevoBosquejo', function (e) {
+    e.preventDefault();
+    const numero = $.trim($('#bosquejoNumero').val());
+    const titulo = $.trim($('#bosquejoTitulo').val());
+    const $btn   = $(this).find('button[type="submit"]').prop('disabled', true);
+
+    apiPost('../api/bosquejos.php', { action: 'create', numero: numero, titulo: titulo }, function (res) {
+        $btn.prop('disabled', false);
+        const b = res.data;
+        const tituloE = $('<span>').text(b.titulo).html();
+        const html = `
+            <div class="list-group-item d-flex justify-content-between align-items-center"
+                 id="bosq-row-${b.id}" data-id="${b.id}" data-numero="${b.numero}" data-titulo="${tituloE}">
+                <span>
+                    <span class="badge bg-secondary me-2">${b.numero}</span>${tituloE}
+                </span>
+                <div class="d-flex gap-1">
+                    <button class="btn btn-outline-primary btn-editar-bosquejo"
+                            data-id="${b.id}" data-numero="${b.numero}" data-titulo="${tituloE}"
+                            title="Editar" style="padding:.2rem .5rem;font-size:.75rem;">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-eliminar-bosquejo"
+                            data-id="${b.id}" data-numero="${b.numero}"
+                            title="Eliminar" style="padding:.2rem .5rem;font-size:.75rem;">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>`;
+
+        if ($('#lista-bosquejos').length === 0) {
+            $('#card-bosquejos .card-body .msg-empty-bosquejos').replaceWith(
+                '<div class="list-group" id="lista-bosquejos">' + html + '</div>'
+            );
+        } else {
+            $('#lista-bosquejos').prepend(html);
         }
+        bootstrap.Modal.getInstance(document.getElementById('modalNuevoBosquejo'))?.hide();
+        APP.showNotification('Bosquejo #' + b.numero + ' creado', 'success');
     });
-}
+    $btn.prop('disabled', false);
+});
+
+$(document).on('hidden.bs.modal', '#modalNuevoBosquejo', function () {
+    $('#bosquejoNumero').val('');
+    $('#bosquejoTitulo').val('');
+});
+
+// Editar bosquejo — reutilizamos el modal de crear cambiando el action
+$(document).on('click', '.btn-editar-bosquejo', function () {
+    const id     = $(this).data('id');
+    const numero = $(this).data('numero');
+    const titulo = $(this).data('titulo');
+
+    $('#bosquejoEditId').val(id);
+    $('#bosquejoEditNumero').val(numero);
+    $('#bosquejoEditTitulo').val(titulo);
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEditarBosquejo')).show();
+});
+
+$(document).on('submit', '#formEditarBosquejo', function (e) {
+    e.preventDefault();
+    const id     = $('#bosquejoEditId').val();
+    const numero = $.trim($('#bosquejoEditNumero').val());
+    const titulo = $.trim($('#bosquejoEditTitulo').val());
+    const $btn   = $(this).find('button[type="submit"]').prop('disabled', true);
+
+    apiPost('../api/bosquejos.php', { action: 'update', id: id, numero: numero, titulo: titulo }, function () {
+        $btn.prop('disabled', false);
+        // Actualizar fila en la lista
+        const $row = $('#bosq-row-' + id);
+        const tituloE = $('<span>').text(titulo).html();
+        $row.find('span').first().html(`<span class="badge bg-secondary me-2">${numero}</span>${tituloE}`);
+        $row.data('numero', numero).data('titulo', titulo);
+        $row.find('.btn-editar-bosquejo').data('numero', numero).data('titulo', titulo);
+        $row.find('.btn-eliminar-bosquejo').data('numero', numero);
+        bootstrap.Modal.getInstance(document.getElementById('modalEditarBosquejo'))?.hide();
+        APP.showNotification('Bosquejo actualizado', 'success');
+    });
+    $btn.prop('disabled', false);
+});
+
+// Eliminar bosquejo
+$(document).on('click', '.btn-eliminar-bosquejo', function () {
+    const id     = $(this).data('id');
+    const numero = $(this).data('numero');
+    if (!confirm('¿Eliminar el bosquejo #' + numero + '?')) return;
+
+    apiPost('../api/bosquejos.php', { action: 'delete', id: id }, function () {
+        $('#bosq-row-' + id).fadeOut(200, function () { $(this).remove(); });
+        APP.showNotification('Bosquejo eliminado', 'success');
+    });
+});
 </script>
 
 <!-- SortableJS CDN -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+
+<!-- Modal: nuevo bosquejo -->
+<div class="modal fade" id="modalNuevoBosquejo" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-journals"></i> Nuevo Bosquejo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formNuevoBosquejo">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">N° *</label>
+                            <input type="number" class="form-control" id="bosquejoNumero"
+                                   name="numero" min="1" required placeholder="Ej: 41">
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label">Título *</label>
+                            <input type="text" class="form-control" id="bosquejoTitulo"
+                                   name="titulo" required maxlength="255"
+                                   placeholder="Título del bosquejo">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Agregar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: editar bosquejo -->
+<div class="modal fade" id="modalEditarBosquejo" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-pencil"></i> Editar Bosquejo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEditarBosquejo">
+                <input type="hidden" id="bosquejoEditId">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">N° *</label>
+                            <input type="number" class="form-control" id="bosquejoEditNumero"
+                                   name="numero" min="1" required>
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label">Título *</label>
+                            <input type="text" class="form-control" id="bosquejoEditTitulo"
+                                   name="titulo" required maxlength="255">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Modal: nuevo perfil -->
 <div class="modal fade" id="modalNuevoPerfil" tabindex="-1">

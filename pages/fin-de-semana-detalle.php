@@ -1,5 +1,62 @@
 <?php
 $pageTitle = 'Fin de Semana – Detalle';
+
+// Select2 CSS — igual que programa_detalle.php
+$extraHeadHtml = '
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    <style>
+        .select2-container--bootstrap-5.select2-container--focus .select2-selection,
+        .select2-container--bootstrap-5.select2-container--open  .select2-selection {
+            border-color: var(--vmc-primary) !important;
+            box-shadow : none !important;
+        }
+        .select2-container--bootstrap-5 .select2-dropdown
+            .select2-search .select2-search__field:focus {
+            border-color: var(--vmc-primary) !important;
+            box-shadow : none !important;
+        }
+        .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options
+            .select2-results__option--highlighted {
+            background-color: var(--vmc-primary) !important;
+            color: #fff !important;
+        }
+        .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options
+            .select2-results__option[aria-selected=true]:not(.select2-results__option--highlighted) {
+            background-color: var(--vmc-primary-soft) !important;
+            color: var(--vmc-primary) !important;
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection,
+        [data-bs-theme="dark"] .select2-dropdown {
+            background-color: var(--vmc-surface-2);
+            border-color: var(--vmc-border-strong);
+            color: var(--vmc-text);
+        }
+        [data-bs-theme="dark"] .select2-results__option {
+            background-color: var(--vmc-surface-2);
+            color: var(--vmc-text);
+        }
+        [data-bs-theme="dark"] .select2-search__field {
+            background-color: var(--vmc-surface-3);
+            border-color: var(--vmc-border-strong);
+            color: var(--vmc-text);
+        }
+        /* Resultado del bosquejo: número en badge */
+        .bosquejo-result-num {
+            display: inline-block;
+            background: var(--vmc-primary);
+            color: #fff;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: .78rem;
+            font-weight: 700;
+            margin-right: 6px;
+        }
+    </style>
+';
+
 require_once __DIR__ . '/../includes/header.php';
 
 $id = (int)($_GET['id'] ?? 0);
@@ -62,6 +119,17 @@ $fechaLabel = ($mes === $mesFin)
     ? "$dIni-$dFin de $mes {$fi->format('Y')}"
     : "$dIni de $mes – $dFin de $mesFin {$ff->format('Y')}";
 
+// Bosquejo seleccionado actualmente (para pre-cargar Select2)
+$bosquejoActual = null;
+if (!empty($semana['dp_bosquejo_id'])) {
+    try {
+        $bosquejoActual = fetchOne(
+            "SELECT id, numero, titulo FROM bosquejos WHERE id = ?",
+            [$semana['dp_bosquejo_id']]
+        );
+    } catch (Exception $e) { /* tabla aún no existe */ }
+}
+
 // Helper: render options para select
 function optionsFds(array $lista, ?int $selId): string {
     $html = '<option value="">Sin asignar</option>';
@@ -115,14 +183,20 @@ function optionsFds(array $lista, ?int $selId): string {
         <i class="bi bi-mic me-2"></i>DISCURSO PÚBLICO
     </div>
     <div class="card-body">
-        <!-- Tema y canción (editable inline) -->
+        <!-- Tema (Select2 busca por número o palabras) + canción -->
         <div class="row g-3 mb-4">
             <div class="col-md-8">
-                <label class="form-label fw-bold">Tema</label>
-                <input type="text" class="form-control fds-field" id="dp_tema"
-                       data-campo="dp_tema"
-                       value="<?php echo htmlspecialchars($semana['dp_tema'] ?? ''); ?>"
-                       placeholder="Tema del discurso">
+                <label class="form-label fw-bold">Tema del discurso</label>
+                <select class="form-select" id="sel_dp_bosquejo" style="width:100%;">
+                    <?php if ($bosquejoActual): ?>
+                    <option value="<?php echo $bosquejoActual['id']; ?>" selected>
+                        <?php echo $bosquejoActual['numero'] . ' — ' . htmlspecialchars($bosquejoActual['titulo']); ?>
+                    </option>
+                    <?php else: ?>
+                    <option value="">Buscar bosquejo…</option>
+                    <?php endif; ?>
+                </select>
+                <small class="text-muted">Escribe el número o palabras del título para buscar</small>
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-bold">Canción</label>
@@ -275,6 +349,66 @@ $(document).on('input', '.fds-asig-libre', function () {
             success : function (res) { if (!res.success) APP.showNotification(res.message, 'danger'); }
         });
     }, 600);
+});
+</script>
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function () {
+
+    // ── Select2 para bosquejos ────────────────────────────────
+    $('#sel_dp_bosquejo').select2({
+        theme      : 'bootstrap-5',
+        language   : 'es',
+        allowClear : true,
+        placeholder: 'Buscar bosquejo por número o título…',
+        width      : '100%',
+        minimumInputLength: 0,
+        ajax: {
+            url         : '../api/bosquejos.php',
+            dataType    : 'json',
+            delay       : 300,
+            data        : function (params) {
+                return { action: 'search', q: params.term || '', page: params.page || 1 };
+            },
+            processResults: function (data) {
+                return { results: data.results, pagination: data.pagination };
+            },
+            cache: true,
+        },
+        templateResult  : function (b) {
+            if (b.loading) return b.text;
+            if (!b.numero) return b.text;
+            const $el = $('<span>');
+            $el.append($('<span class="bosquejo-result-num">').text(b.numero));
+            $el.append(document.createTextNode(b.titulo));
+            return $el;
+        },
+        templateSelection: function (b) {
+            if (!b.numero) return b.text;
+            return b.numero + ' — ' + b.titulo;
+        },
+    });
+
+    // Al cambiar el bosquejo, guardar dp_bosquejo_id en programas_fds
+    $('#sel_dp_bosquejo').on('select2:select select2:unselect', function () {
+        const bosquejoId = $(this).val() || '';
+        $.ajax({
+            url     : '../api/programas_fds.php',
+            method  : 'POST',
+            dataType: 'json',
+            data    : { action: 'update', id: fdsId,
+                        fecha_inicio: '<?php echo $semana['fecha_inicio']; ?>',
+                        fecha_fin   : '<?php echo $semana['fecha_fin']; ?>',
+                        dp_bosquejo_id: bosquejoId,
+                        dp_cancion  : $('#dp_cancion').val() },
+            success : function (res) {
+                if (!res.success) APP.showNotification(res.message, 'danger');
+            }
+        });
+    });
+
 });
 </script>
 

@@ -86,16 +86,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'update') {
         $id = (int)($_POST['id'] ?? 0);
         if (!$id) jsonResponse(['success' => false, 'message' => 'ID no válido']);
+        // dp_bosquejo_id puede ser vacío (NULL) o un entero
+        $bosquejoId = !empty($_POST['dp_bosquejo_id']) ? (int)$_POST['dp_bosquejo_id'] : null;
         try {
             $pdo->prepare("
                 UPDATE programas_fds
-                SET fecha_inicio=?, fecha_fin=?, dp_tema=?, dp_cancion=?, notas=?
+                SET fecha_inicio=?, fecha_fin=?, dp_tema=?, dp_cancion=?,
+                    dp_bosquejo_id=?, notas=?
                 WHERE id=?
             ")->execute([
                 $_POST['fecha_inicio'] ?? '',
                 $_POST['fecha_fin']    ?? '',
                 sanitizeInput($_POST['dp_tema']    ?? ''),
                 sanitizeInput($_POST['dp_cancion'] ?? ''),
+                $bosquejoId,
                 sanitizeInput($_POST['notas']      ?? ''),
                 $id,
             ]);
