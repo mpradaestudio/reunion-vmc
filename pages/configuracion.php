@@ -256,25 +256,15 @@ $stats = [
                 </div>
                 <?php else: ?>
 
-                <!-- Toolbar: buscador + selector de tamaño de página -->
-                <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
-                    <div class="input-group input-group-sm flex-grow-1" style="min-width:180px;">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" id="filtroBosquejos"
-                               placeholder="Filtrar por número o título…">
-                    </div>
-                    <div class="d-flex align-items-center gap-1">
-                        <label class="form-label mb-0 text-muted small">Mostrar:</label>
-                        <select class="form-select form-select-sm" id="bosqPorPagina" style="width:auto;">
-                            <option value="10">10</option>
-                            <option value="20" selected>20</option>
-                            <option value="0">Todo</option>
-                        </select>
-                    </div>
+                <!-- Toolbar: solo buscador -->
+                <div class="input-group input-group-sm mb-3">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="filtroBosquejos"
+                           placeholder="Filtrar por número o título…">
                 </div>
 
                 <!-- Info: total y rango visible -->
-                <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="mb-2">
                     <small class="text-muted" id="bosqInfo">Cargando…</small>
                 </div>
 
@@ -285,10 +275,28 @@ $stats = [
                     </div>
                 </div>
 
-                <!-- Paginador Bootstrap centrado (renderizado por JS) -->
-                <nav id="bosqPaginadorWrap" aria-label="Paginación bosquejos">
-                    <ul class="pagination pagination-sm justify-content-center mb-0" id="bosqPaginador"></ul>
-                </nav>
+                <!-- Fila inferior: paginador (centro) + selector Mostrar (derecha) -->
+                <div class="d-flex align-items-center justify-content-between mt-3">
+
+                    <!-- Columna vacía izquierda para balancear -->
+                    <div style="min-width:100px;"></div>
+
+                    <!-- Paginador centrado -->
+                    <nav aria-label="Paginación bosquejos" id="bosqPaginadorWrap">
+                        <ul class="pagination pagination-sm mb-0 bosq-pagination" id="bosqPaginador"></ul>
+                    </nav>
+
+                    <!-- Selector "Mostrar XX" a la derecha -->
+                    <div class="d-flex align-items-center gap-2" style="min-width:100px;justify-content:flex-end;">
+                        <label class="form-label mb-0 text-muted small text-nowrap">Mostrar:</label>
+                        <select class="form-select form-select-sm bosq-per-page-select" id="bosqPorPagina">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="0">Todo</option>
+                        </select>
+                    </div>
+
+                </div>
 
                 <?php endif; ?>
             </div>

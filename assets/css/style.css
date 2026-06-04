@@ -1651,3 +1651,49 @@ body {
 .sidebar.collapsed .sidebar-subitem {
     padding-left: 14px !important;
 }
+
+
+/* ============================================================
+   40. PAGINADOR BOSQUEJOS — color primario del proyecto
+   ============================================================ */
+
+/* Página activa: fondo + borde azul del proyecto */
+.bosq-pagination .page-item.active .page-link {
+    background-color: var(--vmc-primary);
+    border-color    : var(--vmc-primary);
+    color           : #fff;
+}
+
+/* Hover en páginas inactivas */
+.bosq-pagination .page-item:not(.active):not(.disabled) .page-link:hover {
+    background-color: var(--vmc-primary-soft);
+    border-color    : var(--vmc-primary);
+    color           : var(--vmc-primary);
+}
+
+/* Igualar altura del select con los botones del paginador (pagination-sm ≈ 31px) */
+.bosq-per-page-select {
+    height     : 31px;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+    font-size  : 0.8rem;
+    width      : 70px !important;
+    line-height: 1.4;
+}
+
+/* Dark mode */
+[data-bs-theme="dark"] .bosq-pagination .page-link {
+    background-color: var(--vmc-surface-2);
+    border-color    : var(--vmc-border);
+    color           : var(--vmc-text);
+}
+[data-bs-theme="dark"] .bosq-pagination .page-item.active .page-link {
+    background-color: var(--vmc-primary);
+    border-color    : var(--vmc-primary);
+    color           : #fff;
+}
+[data-bs-theme="dark"] .bosq-pagination .page-item.disabled .page-link {
+    background-color: var(--vmc-surface-3);
+    border-color    : var(--vmc-border);
+    color           : var(--vmc-text-muted);
+}
