@@ -56,10 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
 
         $items = array_map(fn($r) => [
-            'id'     => $r['id'],
-            'text'   => $r['numero'] . ' — ' . $r['titulo'],
-            'numero' => $r['numero'],
-            'titulo' => $r['titulo'],
+            'id'               => $r['id'],
+            'text'             => $r['numero'] . ' — ' . $r['titulo'],
+            'numero'           => $r['numero'],
+            'titulo'           => $r['titulo'],
+            'no_presentar'     => (int)($r['no_presentar'] ?? 0),
+            'nota_no_presentar'=> $r['nota_no_presentar'] ?? '',
         ], $rows);
 
         jsonResponse([
@@ -95,15 +97,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ── Actualizar ────────────────────────────────────────────────
     if ($action === 'update') {
-        $id     = (int)($_POST['id'] ?? 0);
-        $numero = (int)($_POST['numero'] ?? 0);
-        $titulo = trim(sanitizeInput($_POST['titulo'] ?? ''));
+        $id             = (int)($_POST['id'] ?? 0);
+        $numero         = (int)($_POST['numero'] ?? 0);
+        $titulo         = trim(sanitizeInput($_POST['titulo'] ?? ''));
+        $noPresentar    = isset($_POST['no_presentar']) ? 1 : 0;
+        $notaNoPresentar = trim(sanitizeInput($_POST['nota_no_presentar'] ?? ''));
         if (!$id || $numero <= 0 || $titulo === '') {
             jsonResponse(['success' => false, 'message' => 'Datos no válidos']);
         }
         try {
-            $pdo->prepare("UPDATE bosquejos SET numero=?, titulo=? WHERE id=?")
-                ->execute([$numero, $titulo, $id]);
+            $pdo->prepare("
+                UPDATE bosquejos
+                SET numero=?, titulo=?, no_presentar=?, nota_no_presentar=?
+                WHERE id=?
+            ")->execute([$numero, $titulo, $noPresentar, $notaNoPresentar ?: null, $id]);
             jsonResponse(['success' => true, 'message' => 'Bosquejo actualizado']);
         } catch (Exception $e) {
             jsonResponse(['success' => false, 'message' => 'Número ya en uso por otro bosquejo']);

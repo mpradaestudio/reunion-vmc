@@ -688,18 +688,28 @@ const Bosquejos = {
 
     // Renderiza una fila de la lista
     buildRow(b) {
-        const tituloE = $('<span>').text(b.titulo).html();
-        const numE    = $('<span>').text(String(b.numero)).html();
+        const tituloE  = $('<span>').text(b.titulo).html();
+        const numE     = $('<span>').text(String(b.numero)).html();
+        const noPres   = b.no_presentar ? 1 : 0;
+        const nota     = b.nota_no_presentar || '';
+        const notaE    = $('<span>').text(nota).html();
+        const warningBadge = noPres
+            ? `<span class="badge bg-warning text-dark ms-2" title="${notaE}">
+                   <i class="bi bi-exclamation-triangle-fill"></i> No presentar
+               </span>`
+            : '';
         return `
             <div class="list-group-item d-flex justify-content-between align-items-center"
                  id="bosq-row-${b.id}" data-id="${b.id}"
-                 data-numero="${numE}" data-titulo="${tituloE}">
+                 data-numero="${numE}" data-titulo="${tituloE}"
+                 data-no-presentar="${noPres}" data-nota="${notaE}">
                 <span>
-                    <span class="badge bg-secondary me-2">${numE}</span>${tituloE}
+                    <span class="badge bg-secondary me-2">${numE}</span>${tituloE}${warningBadge}
                 </span>
                 <div class="d-flex gap-1">
                     <button class="btn btn-outline-primary btn-editar-bosquejo"
                             data-id="${b.id}" data-numero="${numE}" data-titulo="${tituloE}"
+                            data-no-presentar="${noPres}" data-nota="${notaE}"
                             title="Editar" style="padding:.2rem .5rem;font-size:.75rem;">
                         <i class="bi bi-pencil"></i>
                     </button>
@@ -863,24 +873,39 @@ $(document).on('hidden.bs.modal', '#modalNuevoBosquejo', function () {
 
 // Editar bosquejo — reutilizamos el modal de crear cambiando el action
 $(document).on('click', '.btn-editar-bosquejo', function () {
-    const id     = $(this).data('id');
-    const numero = $(this).data('numero');
-    const titulo = $(this).data('titulo');
+    const id         = $(this).data('id');
+    const numero     = $(this).data('numero');
+    const titulo     = $(this).data('titulo');
+    const noPres     = parseInt($(this).data('no-presentar')  || '0');
+    const nota       = $(this).data('nota') || '';
 
     $('#bosquejoEditId').val(id);
     $('#bosquejoEditNumero').val(numero);
     $('#bosquejoEditTitulo').val(titulo);
+    $('#bosquejoEditNoPresentar').prop('checked', noPres === 1);
+    $('#bosquejoEditNota').val(nota);
+    $('#notaNoPresentarWrap').toggle(noPres === 1);
     bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEditarBosquejo')).show();
+});
+
+// Toggle: mostrar/ocultar campo de nota
+$(document).on('change', '#bosquejoEditNoPresentar', function () {
+    $('#notaNoPresentarWrap').toggle(this.checked);
 });
 
 $(document).on('submit', '#formEditarBosquejo', function (e) {
     e.preventDefault();
-    const id     = $('#bosquejoEditId').val();
-    const numero = $.trim($('#bosquejoEditNumero').val());
-    const titulo = $.trim($('#bosquejoEditTitulo').val());
-    const $btn   = $(this).find('button[type="submit"]').prop('disabled', true);
+    const id         = $('#bosquejoEditId').val();
+    const numero     = $.trim($('#bosquejoEditNumero').val());
+    const titulo     = $.trim($('#bosquejoEditTitulo').val());
+    const noPresentar = $('#bosquejoEditNoPresentar').is(':checked') ? 1 : 0;
+    const nota       = $.trim($('#bosquejoEditNota').val());
+    const $btn       = $(this).find('button[type="submit"]').prop('disabled', true);
 
-    apiPost('../api/bosquejos.php', { action: 'update', id: id, numero: numero, titulo: titulo }, function () {
+    const payload = { action: 'update', id, numero, titulo, nota_no_presentar: nota };
+    if (noPresentar) payload.no_presentar = '1';
+
+    apiPost('../api/bosquejos.php', payload, function () {
         $btn.prop('disabled', false);
         bootstrap.Modal.getInstance(document.getElementById('modalEditarBosquejo'))?.hide();
         bosquejosRecargar();
@@ -951,7 +976,7 @@ $(document).on('click', '.btn-eliminar-bosquejo', function () {
             <form id="formEditarBosquejo">
                 <input type="hidden" id="bosquejoEditId">
                 <div class="modal-body">
-                    <div class="row g-3">
+                    <div class="row g-3 mb-3">
                         <div class="col-md-3">
                             <label class="form-label">N° *</label>
                             <input type="number" class="form-control" id="bosquejoEditNumero"
@@ -962,6 +987,26 @@ $(document).on('click', '.btn-eliminar-bosquejo', function () {
                             <input type="text" class="form-control" id="bosquejoEditTitulo"
                                    name="titulo" required maxlength="255">
                         </div>
+                    </div>
+
+                    <!-- Toggle "No presentar" -->
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox"
+                               id="bosquejoEditNoPresentar" name="no_presentar"
+                               role="switch">
+                        <label class="form-check-label fw-semibold text-warning"
+                               for="bosquejoEditNoPresentar">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>No presentar
+                        </label>
+                    </div>
+
+                    <!-- Campo de nota (se muestra solo si el toggle está activo) -->
+                    <div id="notaNoPresentarWrap" style="display:none;">
+                        <label class="form-label">Motivo / Nota interna</label>
+                        <textarea class="form-control" id="bosquejoEditNota"
+                                  name="nota_no_presentar" rows="3"
+                                  placeholder="Ej: Discurso ya presentado recientemente, o tema sensible…"></textarea>
+                        <small class="text-muted">Esta nota aparecerá como aviso en Fin de Semana al seleccionar este bosquejo.</small>
                     </div>
                 </div>
                 <div class="modal-footer">

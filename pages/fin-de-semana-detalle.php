@@ -197,6 +197,34 @@ function optionsFds(array $lista, ?int $selId): string {
                     <?php endif; ?>
                 </select>
                 <small class="text-muted">Escribe el número o palabras del título para buscar</small>
+
+                <!-- Warning: bosquejo marcado como "No presentar" (fijo, no se oculta) -->
+                <div id="alertNoPresentar" class="alert alert-warning d-flex align-items-start gap-2 mt-2 mb-0"
+                     style="display:none!important;">
+                    <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+                    <div>
+                        <strong>No presentar</strong>
+                        <div id="alertNoPresentarNota" class="mt-1 small"></div>
+                    </div>
+                </div>
+                <?php
+                // Pre-renderizar el warning si el bosquejo ya está seleccionado y tiene no_presentar=1
+                if ($bosquejoActual) {
+                    try {
+                        $bNota = fetchOne(
+                            "SELECT no_presentar, nota_no_presentar FROM bosquejos WHERE id=?",
+                            [$bosquejoActual['id']]
+                        );
+                        if ($bNota && $bNota['no_presentar']) {
+                            echo '<script>
+                                document.getElementById("alertNoPresentar").style.display="flex";
+                                document.getElementById("alertNoPresentarNota").textContent='
+                                . json_encode($bNota['nota_no_presentar'] ?? '') . ';
+                            </script>';
+                        }
+                    } catch (Exception $e) {}
+                }
+                ?>
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-bold">Canción</label>
@@ -392,8 +420,23 @@ $(document).ready(function () {
     });
 
     // Al cambiar el bosquejo, guardar dp_bosquejo_id en programas_fds
-    $('#sel_dp_bosquejo').on('select2:select select2:unselect', function () {
+    $('#sel_dp_bosquejo').on('select2:select select2:unselect', function (e) {
         const bosquejoId = $(this).val() || '';
+
+        // Mostrar/ocultar warning "No presentar"
+        if (e.type === 'select2:select' && e.params.data) {
+            const d = e.params.data;
+            if (d.no_presentar) {
+                $('#alertNoPresentarNota').text(d.nota_no_presentar || '');
+                $('#alertNoPresentar').css('display', 'flex');
+            } else {
+                $('#alertNoPresentar').css('display', 'none');
+            }
+        } else {
+            // unselect → ocultar
+            $('#alertNoPresentar').css('display', 'none');
+        }
+
         $.ajax({
             url     : '../api/programas_fds.php',
             method  : 'POST',
