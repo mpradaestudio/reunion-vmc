@@ -198,11 +198,11 @@ function optionsFds(array $lista, ?int $selId): string {
                 </select>
                 <small class="text-muted">Escribe el número o palabras del título para buscar</small>
 
-                <!-- Warning: bosquejo marcado como "No presentar" -->
-                <div id="alertNoPresentar" class="alert alert-warning mt-2 mb-0"
+                <!-- Warning: bosquejo marcado como "No presentar"
+                     alert-permanent evita que main.js lo oculte con fadeOut -->
+                <div id="alertNoPresentar" class="alert alert-warning alert-permanent mt-2 mb-0"
                      style="display:none;">
-                    <strong>No presentar</strong>
-                    <div id="alertNoPresentarNota" class="mt-1 small"></div>
+                    <div id="alertNoPresentarNota" class="small"></div>
                 </div>
                 <?php
                 // Pre-renderizar el warning si el bosquejo ya está seleccionado y tiene no_presentar=1
