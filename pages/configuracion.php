@@ -104,32 +104,62 @@ $stats = [
             </div>
         </div>
         
-        <!-- Gestión de Perfiles -->
-        <div class="card mb-4">
-            <div class="card-header">
+        <!-- ── Perfiles de Personas ───────────────────────────── -->
+        <div class="card mb-4" id="card-perfiles">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-person-badge"></i> Perfiles de Personas</h5>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                        data-bs-target="#modalNuevoPerfil">
+                    <i class="bi bi-plus-circle"></i> Agregar
+                </button>
             </div>
             <div class="card-body">
-                <p class="text-muted">Los siguientes perfiles están disponibles en el sistema:</p>
-                <?php $perfiles = fetchAll("SELECT * FROM perfiles ORDER BY nombre"); ?>
-                <div class="list-group">
-                    <?php foreach ($perfiles as $perfil): ?>
-                    <div class="list-group-item">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-1"><?php echo htmlspecialchars($perfil['nombre']); ?></h6>
-                                <small class="text-muted"><?php echo htmlspecialchars($perfil['descripcion']); ?></small>
-                            </div>
-                            <span class="badge bg-primary rounded-pill">
-                                <?php
-                                $numPersonas = fetchOne("SELECT COUNT(*) as total FROM personas WHERE perfil_id = ?", [$perfil['id']])['total'];
-                                echo $numPersonas . ' ' . ($numPersonas == 1 ? 'persona' : 'personas');
-                                ?>
-                            </span>
+                <p class="text-muted small mb-3">
+                    Define los perfiles que clasifican a las personas
+                    (p.&nbsp;ej. Anciano, Siervo Ministerial, Publicador).
+                    Arrastra <i class="bi bi-grip-vertical"></i> para reordenar.
+                </p>
+
+                <?php
+                $perfilesExist = true;
+                try {
+                    $perfiles = fetchAll("SELECT * FROM perfiles ORDER BY orden, nombre");
+                } catch (Exception $e) {
+                    $perfilesExist = false;
+                    $perfiles = [];
+                }
+                ?>
+
+                <?php if (!$perfilesExist): ?>
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Importa <code>database_update_v7.sql</code> para activar esta sección.
+                </div>
+                <?php elseif (empty($perfiles)): ?>
+                <p class="text-muted text-center py-3 msg-empty-perfiles">
+                    <i class="bi bi-inbox d-block mb-1" style="font-size:2rem;opacity:.5;"></i>
+                    No hay perfiles definidos aún.
+                </p>
+                <?php else: ?>
+                <div class="list-group sortable-list" id="lista-perfiles">
+                    <?php foreach ($perfiles as $perf): ?>
+                    <div class="list-group-item d-flex justify-content-between align-items-center"
+                         id="perf-row-<?php echo $perf['id']; ?>"
+                         data-id="<?php echo $perf['id']; ?>">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-grip-vertical drag-handle text-muted" style="cursor:grab;"></i>
+                            <span class="fw-medium"><?php echo htmlspecialchars($perf['nombre']); ?></span>
                         </div>
+                        <button class="btn btn-sm btn-outline-danger btn-eliminar-perfil"
+                                data-id="<?php echo $perf['id']; ?>"
+                                data-nombre="<?php echo htmlspecialchars($perf['nombre']); ?>"
+                                title="Eliminar">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
                     <?php endforeach; ?>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -169,11 +199,15 @@ $stats = [
                     No hay privilegios definidos aún.
                 </p>
                 <?php else: ?>
-                <div class="list-group" id="lista-privilegios">
+                <div class="list-group sortable-list" id="lista-privilegios">
                     <?php foreach ($privilegios as $priv): ?>
                     <div class="list-group-item d-flex justify-content-between align-items-center"
-                         id="priv-row-<?php echo $priv['id']; ?>">
-                        <span class="fw-medium"><?php echo htmlspecialchars($priv['nombre']); ?></span>
+                         id="priv-row-<?php echo $priv['id']; ?>"
+                         data-id="<?php echo $priv['id']; ?>">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-grip-vertical drag-handle text-muted" style="cursor:grab;"></i>
+                            <span class="fw-medium"><?php echo htmlspecialchars($priv['nombre']); ?></span>
+                        </div>
                         <button class="btn btn-sm btn-outline-danger btn-eliminar-privilegio"
                                 data-id="<?php echo $priv['id']; ?>"
                                 data-nombre="<?php echo htmlspecialchars($priv['nombre']); ?>"
@@ -394,89 +428,215 @@ function limpiarProgramasPasados() {
     }
 }
 
-/* ── Privilegios ─────────────────────────────────────────── */
-
-// Agregar nuevo privilegio
-$(document).on('submit', '#formNuevoPrivilegio', function (e) {
-    e.preventDefault();
-    const nombre   = $.trim($('#nombrePrivilegio').val());
-    const $btn     = $(this).find('button[type="submit"]');
-    if (!nombre) return;
-
-    $btn.prop('disabled', true);
-
+/* ================================================================
+   HELPER genérico: petición AJAX a una API
+================================================================ */
+function apiPost(url, data, onSuccess) {
     $.ajax({
-        url     : '../api/privilegios.php',
+        url     : url,
         method  : 'POST',
         dataType: 'json',
-        data    : { action: 'create', nombre: nombre },
+        data    : data,
         success : function (res) {
-            $btn.prop('disabled', false);
             if (res.success) {
-                const id      = res.data.id;
-                const nombreE = $('<span>').text(res.data.nombre).html();
-                const html    = `
-                    <div class="list-group-item d-flex justify-content-between align-items-center"
-                         id="priv-row-${id}">
-                        <span class="fw-medium">${nombreE}</span>
-                        <button class="btn btn-sm btn-outline-danger btn-eliminar-privilegio"
-                                data-id="${id}" data-nombre="${nombreE}" title="Eliminar">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>`;
-
-                if ($('#lista-privilegios').length === 0) {
-                    // Reemplazar el mensaje vacío por la lista
-                    $('#card-privilegios .card-body p.text-muted').replaceWith(
-                        '<div class="list-group" id="lista-privilegios">' + html + '</div>'
-                    );
-                } else {
-                    $('#lista-privilegios').append(html);
-                }
-
-                bootstrap.Modal.getInstance(document.getElementById('modalNuevoPrivilegio'))?.hide();
-                APP.showNotification('Privilegio "' + res.data.nombre + '" creado', 'success');
+                if (onSuccess) onSuccess(res);
             } else {
-                APP.showNotification(res.message, 'danger');
+                APP.showNotification(res.message || 'Error', 'danger');
             }
         },
         error   : function () {
-            $btn.prop('disabled', false);
             APP.showNotification('Error al conectar con el servidor', 'danger');
         }
     });
+}
+
+/* ================================================================
+   HELPER: construye HTML de una fila (perfil o privilegio)
+================================================================ */
+function buildRow(id, nombre, prefix, btnClass) {
+    const nombreE = $('<span>').text(nombre).html();
+    return `
+        <div class="list-group-item d-flex justify-content-between align-items-center"
+             id="${prefix}-row-${id}" data-id="${id}">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-grip-vertical drag-handle text-muted" style="cursor:grab;"></i>
+                <span class="fw-medium">${nombreE}</span>
+            </div>
+            <button class="btn btn-sm btn-outline-danger ${btnClass}"
+                    data-id="${id}" data-nombre="${nombreE}" title="Eliminar">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>`;
+}
+
+/* ================================================================
+   DRAG & DROP — SortableJS
+   Se inicializa en DOMContentLoaded (Bootstrap ya cargado en footer,
+   pero SortableJS no depende de él).
+================================================================ */
+document.addEventListener('DOMContentLoaded', function () {
+
+    function initSortable(listId, apiUrl) {
+        const el = document.getElementById(listId);
+        if (!el || typeof Sortable === 'undefined') return;
+
+        Sortable.create(el, {
+            handle    : '.drag-handle',
+            animation : 150,
+            ghostClass: 'sortable-ghost',
+            onEnd     : function () {
+                const ids = [...el.querySelectorAll('[data-id]')]
+                              .map(r => r.dataset.id);
+                apiPost(apiUrl, { action: 'reorder', 'ids[]': ids },
+                    function() { /* orden guardado silenciosamente */ });
+                // jQuery serializa arrays como ids[]=1&ids[]=2
+                // pero $.ajax con data objeto necesita el truco de arriba.
+                // Usamos fetch para evitar ese problema:
+                const fd = new FormData();
+                fd.append('action', 'reorder');
+                ids.forEach(id => fd.append('ids[]', id));
+                fetch(apiUrl, { method: 'POST', body: fd })
+                    .catch(() => {});   // fallo silencioso — el orden visual ya está
+            }
+        });
+    }
+
+    initSortable('lista-perfiles',    '../api/perfiles.php');
+    initSortable('lista-privilegios', '../api/privilegios.php');
 });
 
-// Limpiar modal al cerrar
+/* ================================================================
+   PERFILES — CRUD
+================================================================ */
+$(document).on('submit', '#formNuevoPerfil', function (e) {
+    e.preventDefault();
+    const nombre = $.trim($('#nombrePerfil').val());
+    const $btn   = $(this).find('button[type="submit"]');
+    if (!nombre) return;
+    $btn.prop('disabled', true);
+
+    apiPost('../api/perfiles.php', { action: 'create', nombre: nombre }, function (res) {
+        $btn.prop('disabled', false);
+        const html = buildRow(res.data.id, res.data.nombre, 'perf', 'btn-eliminar-perfil');
+        const $lista = $('#lista-perfiles');
+        if ($lista.length === 0) {
+            $('#card-perfiles .card-body .msg-empty-perfiles').replaceWith(
+                '<div class="list-group sortable-list" id="lista-perfiles">' + html + '</div>'
+            );
+            initSortableAfterCreate('lista-perfiles', '../api/perfiles.php');
+        } else {
+            $lista.append(html);
+        }
+        bootstrap.Modal.getInstance(document.getElementById('modalNuevoPerfil'))?.hide();
+        APP.showNotification('Perfil "' + res.data.nombre + '" creado', 'success');
+    });
+    $btn.prop('disabled', false);
+});
+
+$(document).on('hidden.bs.modal', '#modalNuevoPerfil', function () {
+    $('#nombrePerfil').val('');
+});
+
+$(document).on('click', '.btn-eliminar-perfil', function () {
+    const id     = $(this).data('id');
+    const nombre = $(this).data('nombre');
+    if (!confirm('¿Eliminar el perfil "' + nombre + '"?\n\nSolo se puede eliminar si ninguna persona lo tiene asignado.')) return;
+
+    apiPost('../api/perfiles.php', { action: 'delete', id: id }, function () {
+        $('#perf-row-' + id).fadeOut(200, function () { $(this).remove(); });
+        APP.showNotification('Perfil eliminado', 'success');
+    });
+});
+
+/* ================================================================
+   PRIVILEGIOS — CRUD
+================================================================ */
+$(document).on('submit', '#formNuevoPrivilegio', function (e) {
+    e.preventDefault();
+    const nombre = $.trim($('#nombrePrivilegio').val());
+    const $btn   = $(this).find('button[type="submit"]');
+    if (!nombre) return;
+    $btn.prop('disabled', true);
+
+    apiPost('../api/privilegios.php', { action: 'create', nombre: nombre }, function (res) {
+        $btn.prop('disabled', false);
+        const html = buildRow(res.data.id, res.data.nombre, 'priv', 'btn-eliminar-privilegio');
+        const $lista = $('#lista-privilegios');
+        if ($lista.length === 0) {
+            $('#card-privilegios .card-body p.text-muted').replaceWith(
+                '<div class="list-group sortable-list" id="lista-privilegios">' + html + '</div>'
+            );
+            initSortableAfterCreate('lista-privilegios', '../api/privilegios.php');
+        } else {
+            $lista.append(html);
+        }
+        bootstrap.Modal.getInstance(document.getElementById('modalNuevoPrivilegio'))?.hide();
+        APP.showNotification('Privilegio "' + res.data.nombre + '" creado', 'success');
+    });
+    $btn.prop('disabled', false);
+});
+
 $(document).on('hidden.bs.modal', '#modalNuevoPrivilegio', function () {
     $('#nombrePrivilegio').val('');
 });
 
-// Eliminar privilegio
 $(document).on('click', '.btn-eliminar-privilegio', function () {
     const id     = $(this).data('id');
     const nombre = $(this).data('nombre');
     if (!confirm('¿Eliminar el privilegio "' + nombre + '"?\n\nSolo se puede eliminar si ninguna persona lo tiene asignado.')) return;
 
-    $.ajax({
-        url     : '../api/privilegios.php',
-        method  : 'POST',
-        dataType: 'json',
-        data    : { action: 'delete', id: id },
-        success : function (res) {
-            if (res.success) {
-                $('#priv-row-' + id).fadeOut(200, function () { $(this).remove(); });
-                APP.showNotification('Privilegio eliminado', 'success');
-            } else {
-                APP.showNotification(res.message, 'danger');
-            }
-        },
-        error   : function () {
-            APP.showNotification('Error al conectar con el servidor', 'danger');
-        }
+    apiPost('../api/privilegios.php', { action: 'delete', id: id }, function () {
+        $('#priv-row-' + id).fadeOut(200, function () { $(this).remove(); });
+        APP.showNotification('Privilegio eliminado', 'success');
     });
 });
+
+/* Inicializar Sortable después de crear la lista dinámicamente */
+function initSortableAfterCreate(listId, apiUrl) {
+    const el = document.getElementById(listId);
+    if (!el || typeof Sortable === 'undefined') return;
+    Sortable.create(el, {
+        handle    : '.drag-handle',
+        animation : 150,
+        ghostClass: 'sortable-ghost',
+        onEnd     : function () {
+            const ids = [...el.querySelectorAll('[data-id]')].map(r => r.dataset.id);
+            const fd  = new FormData();
+            fd.append('action', 'reorder');
+            ids.forEach(id => fd.append('ids[]', id));
+            fetch(apiUrl, { method: 'POST', body: fd }).catch(() => {});
+        }
+    });
+}
 </script>
+
+<!-- SortableJS CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+
+<!-- Modal: nuevo perfil -->
+<div class="modal fade" id="modalNuevoPerfil" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-badge"></i> Nuevo Perfil</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formNuevoPerfil">
+                <div class="modal-body">
+                    <label for="nombrePerfil" class="form-label">Nombre *</label>
+                    <input type="text" class="form-control" id="nombrePerfil"
+                           placeholder="Ej: Publicador" required maxlength="50">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Agregar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Modal: nuevo privilegio -->
 <div class="modal fade" id="modalNuevoPrivilegio" tabindex="-1">

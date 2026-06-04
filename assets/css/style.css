@@ -1571,3 +1571,23 @@ body {
     transition: none !important;
 }
 
+
+
+/* ============================================================
+   38. DRAG & DROP — SortableJS ghost
+   ============================================================ */
+.sortable-ghost {
+    opacity         : 0.4;
+    background-color: var(--vmc-primary-soft) !important;
+    border-color    : var(--vmc-primary) !important;
+}
+
+.drag-handle {
+    opacity   : 0.45;
+    transition: opacity var(--vmc-transition);
+    user-select: none;
+}
+
+.list-group-item:hover .drag-handle {
+    opacity: 1;
+}
