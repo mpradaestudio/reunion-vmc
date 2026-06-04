@@ -73,9 +73,6 @@ $iniciales = mb_strtoupper(mb_substr($config['nombre_congregacion'], 0, 2, 'UTF-
     <!-- Navegación principal -->
     <nav class="sidebar-nav" role="navigation">
 
-        <!-- Sección: Congregación -->
-        <div class="sidebar-section-label">Congregación</div>
-
         <a class="sidebar-item <?php echo navActive('index.php', $currentPage); ?>"
            href="<?php echo BASE_URL; ?>index.php"
            title="Inicio">

@@ -1260,6 +1260,7 @@ body {
 }
 
 /* ── Toggle de tema dentro del sidebar ─────────── */
+/* Mismo modelo de dimensionado que .sidebar-item para no desbordarse */
 .sb-theme-btn {
     display        : flex;
     align-items    : center;
@@ -1272,7 +1273,9 @@ body {
     color          : rgba(255,255,255,.78);
     font-size      : 0.9rem;
     font-weight    : 500;
-    width          : 100%;
+    /* Ancho: ocupa el espacio del contenedor menos los márgenes laterales */
+    width          : calc(100% - 16px);
+    box-sizing     : border-box;
     text-align     : left;
     white-space    : nowrap;
     overflow       : hidden;
