@@ -1095,9 +1095,9 @@ hr {
 
 /* Anchos del sidebar */
 :root {
-    --sb-w-open:     240px;
-    --sb-w-collapsed: 60px;
-    --topbar-h:       56px;
+    --sb-w-open:      240px;
+    --sb-w-collapsed:  72px;   /* fix: 60→72 para que los iconos respiren */
+    --topbar-h:        56px;
 }
 
 /* El body ocupa toda la pantalla en modo app-shell */
@@ -1353,6 +1353,24 @@ body {
     overflow   : hidden;
     text-overflow: ellipsis;
     flex       : 1;
+    /* Oculto cuando el sidebar está abierto en desktop (el nombre ya está en el sidebar) */
+    opacity    : 0;
+    transition : opacity 180ms ease;
+    pointer-events: none;
+}
+
+/* Visible solo cuando el sidebar está colapsado */
+.topbar.sb-collapsed .topbar-title {
+    opacity       : 1;
+    pointer-events: auto;
+}
+
+/* En móvil siempre visible (el sidebar es offcanvas, no compite con el topbar) */
+@media (max-width: 767.98px) {
+    .topbar-title {
+        opacity       : 1;
+        pointer-events: auto;
+    }
 }
 
 /* Acciones derechas */
@@ -1506,6 +1524,16 @@ body {
 
     .sidebar.collapsed.mobile-open {
         transform: translateX(0);
+    }
+
+    /* Fix: cuando está abierto en móvil, forzar labels y nombres visibles
+       aunque .collapsed esté aplicado */
+    .sidebar.mobile-open .sb-name,
+    .sidebar.mobile-open .sb-item-label,
+    .sidebar.mobile-open .sidebar-section-label,
+    .sidebar.mobile-open .sb-theme-btn .sb-item-label {
+        opacity: 1 !important;
+        width  : auto !important;
     }
 
     .content-wrapper,

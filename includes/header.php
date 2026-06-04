@@ -72,6 +72,13 @@ $iniciales = mb_strtoupper(mb_substr($config['nombre_congregacion'], 0, 2, 'UTF-
         <!-- Sección: Congregación -->
         <div class="sidebar-section-label">Congregación</div>
 
+        <a class="sidebar-item <?php echo navActive('index.php', $currentPage); ?>"
+           href="<?php echo BASE_URL; ?>index.php"
+           title="Inicio">
+            <i class="bi bi-house-door sb-item-icon"></i>
+            <span class="sb-item-label">Inicio</span>
+        </a>
+
         <a class="sidebar-item <?php echo navActive('personas.php', $currentPage); ?>"
            href="<?php echo BASE_URL; ?>pages/personas.php"
            title="Personas">
@@ -119,8 +126,8 @@ $iniciales = mb_strtoupper(mb_substr($config['nombre_congregacion'], 0, 2, 'UTF-
         <i class="bi bi-list"></i>
     </button>
 
-    <!-- Nombre de la congregación -->
-    <h1 class="topbar-title">
+    <!-- Nombre de la congregación (se oculta cuando sidebar está abierto en desktop) -->
+    <h1 class="topbar-title" id="topbarTitle">
         <?php echo htmlspecialchars($config['nombre_congregacion']); ?>
     </h1>
 

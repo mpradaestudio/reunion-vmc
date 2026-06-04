@@ -283,71 +283,65 @@ const Scraper = {
 /**
  * Gestión del tema claro/oscuro.
  * El atributo data-bs-theme ya se aplica en <head> (anti-FOUC).
- * Aquí solo gestionamos el botón de alternancia y la persistencia.
+ * Aquí gestionamos el botón y la persistencia.
  */
 const Theme = {
     KEY: 'vmc-theme',
 
-    get: function () {
+    get() {
         return document.documentElement.getAttribute('data-bs-theme') || 'light';
     },
 
-    set: function (theme) {
+    set(theme) {
         document.documentElement.setAttribute('data-bs-theme', theme);
-        try {
-            localStorage.setItem(this.KEY, theme);
-        } catch (e) {
-            /* localStorage no disponible: el tema seguirá aplicado en la sesión */
+        try { localStorage.setItem(this.KEY, theme); } catch(e) {}
+    },
+
+    toggle() {
+        this.set(this.get() === 'dark' ? 'light' : 'dark');
+        // Notificar al Sidebar para que sincronice el label e iconos
+        if (typeof Sidebar !== 'undefined' && Sidebar.syncThemeLabel) {
+            Sidebar.syncThemeLabel();
         }
     },
 
-    toggle: function () {
-        this.set(this.get() === 'dark' ? 'light' : 'dark');
-    },
-
-    init: function () {
+    init() {
         const btn = document.getElementById('themeToggle');
         if (btn) {
-            btn.addEventListener('click', () => Theme.toggle());
+            btn.addEventListener('click', () => this.toggle());
         }
-
-        // Si el usuario no ha elegido un tema manualmente, seguir la preferencia del sistema
+        // Seguir preferencia del sistema si no hay elección manual
         if (window.matchMedia) {
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
                 let stored = null;
-                try { stored = localStorage.getItem(Theme.KEY); } catch (err) {}
+                try { stored = localStorage.getItem(this.KEY); } catch(err) {}
                 if (!stored) {
                     document.documentElement.setAttribute('data-bs-theme', e.matches ? 'dark' : 'light');
+                    if (typeof Sidebar !== 'undefined') Sidebar.syncThemeLabel();
                 }
             });
         }
     }
 };
 
-document.addEventListener('DOMContentLoaded', function () {
-    Theme.init();
-});
-
-
 /* ================================================================
    SIDEBAR — toggle, persistencia, offcanvas móvil, tema label
 ================================================================ */
 const Sidebar = {
-    KEY_COLLAPSED : 'vmc-sb-collapsed',
-    MOBILE_BP     : 768,      // px — por debajo es offcanvas
+    KEY_COLLAPSED: 'vmc-sb-collapsed',
+    MOBILE_BP    : 768,
 
-    sidebar       : null,
-    topbar        : null,
-    wrapper       : null,
-    overlay       : null,
-    toggleBtn     : null,
-    themeLabel    : null,
+    sidebar  : null,
+    topbar   : null,
+    wrapper  : null,
+    overlay  : null,
+    toggleBtn: null,
+    themeLabel: null,
 
     isMobile() {
         return window.innerWidth < this.MOBILE_BP;
     },
 
-    /* Lee el estado guardado (solo desktop) */
     isStoredCollapsed() {
         try { return localStorage.getItem(this.KEY_COLLAPSED) === '1'; } catch(e) { return false; }
     },
@@ -356,7 +350,6 @@ const Sidebar = {
         try { localStorage.setItem(this.KEY_COLLAPSED, v ? '1' : '0'); } catch(e) {}
     },
 
-    /* Aplica estado colapsado/expandido en desktop */
     applyDesktop(collapsed) {
         this.sidebar.classList.toggle('collapsed', collapsed);
         this.topbar.classList.toggle('sb-collapsed', collapsed);
@@ -364,39 +357,37 @@ const Sidebar = {
         this.saveCollapsed(collapsed);
     },
 
-    /* Abre el offcanvas en móvil */
     openMobile() {
         this.sidebar.classList.add('mobile-open');
         this.overlay.classList.add('active');
         document.body.style.overflow = 'hidden';
     },
 
-    /* Cierra el offcanvas en móvil */
     closeMobile() {
         this.sidebar.classList.remove('mobile-open');
         this.overlay.classList.remove('active');
         document.body.style.overflow = '';
     },
 
-    /* Toggle según contexto */
     toggle() {
         if (this.isMobile()) {
             this.sidebar.classList.contains('mobile-open')
                 ? this.closeMobile()
                 : this.openMobile();
         } else {
-            const nowCollapsed = !this.sidebar.classList.contains('collapsed');
-            this.applyDesktop(nowCollapsed);
+            this.applyDesktop(!this.sidebar.classList.contains('collapsed'));
         }
     },
 
-    /* Sincroniza la etiqueta del botón de tema */
     syncThemeLabel() {
-        if (!this.themeLabel) return;
         const dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-        this.themeLabel.textContent = dark ? 'Modo claro' : 'Modo oscuro';
 
-        // Icono luna/sol dentro del sidebar
+        // Etiqueta en el sidebar
+        if (this.themeLabel) {
+            this.themeLabel.textContent = dark ? 'Modo claro' : 'Modo oscuro';
+        }
+
+        // Iconos luna/sol en el botón del sidebar
         const moon = document.querySelector('#themeToggle .icon-moon');
         const sun  = document.querySelector('#themeToggle .icon-sun');
         if (moon) moon.style.display = dark ? 'none'         : 'inline-block';
@@ -411,42 +402,34 @@ const Sidebar = {
         this.toggleBtn  = document.getElementById('sidebarToggle');
         this.themeLabel = document.getElementById('themeLabel');
 
-        if (!this.sidebar) return;   // página sin sidebar (ej. exportar_pdf)
+        if (!this.sidebar) return;
 
-        /* Estado inicial */
+        // Estado inicial desktop
         if (!this.isMobile() && this.isStoredCollapsed()) {
             this.applyDesktop(true);
         }
 
-        /* Botón hamburguesa */
+        // Botón hamburguesa
         this.toggleBtn?.addEventListener('click', () => this.toggle());
 
-        /* Overlay: cerrar en móvil al hacer clic fuera */
+        // Overlay móvil
         this.overlay?.addEventListener('click', () => this.closeMobile());
 
-        /* Reajustar al cambiar tamaño de ventana */
+        // Redimensionado
         window.addEventListener('resize', () => {
             if (!this.isMobile()) {
-                this.closeMobile();          // limpiar estado móvil
-                // restaurar estado desktop persistido
+                this.closeMobile();
                 this.applyDesktop(this.isStoredCollapsed());
             }
         });
 
-        /* Sincronizar etiqueta de tema al inicio */
+        // Etiqueta e iconos de tema al inicio
         this.syncThemeLabel();
     }
 };
 
-/* Inicializar sidebar cuando el DOM esté listo */
+/* ── Inicialización única al cargar el DOM ──────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
+    Theme.init();
     Sidebar.init();
-    Theme.init();      // ya definido más arriba en este archivo
 });
-
-/* Extender Theme.toggle para actualizar la etiqueta del sidebar */
-const _origToggle = Theme.toggle.bind(Theme);
-Theme.toggle = function () {
-    _origToggle();
-    Sidebar.syncThemeLabel();
-};
