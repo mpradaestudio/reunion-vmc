@@ -111,11 +111,7 @@ $stats = [
             </div>
             <div class="card-body">
                 <p class="text-muted">Los siguientes perfiles están disponibles en el sistema:</p>
-                
-                <?php
-                $perfiles = fetchAll("SELECT * FROM perfiles ORDER BY nombre");
-                ?>
-                
+                <?php $perfiles = fetchAll("SELECT * FROM perfiles ORDER BY nombre"); ?>
                 <div class="list-group">
                     <?php foreach ($perfiles as $perfil): ?>
                     <div class="list-group-item">
@@ -134,6 +130,60 @@ $stats = [
                     </div>
                     <?php endforeach; ?>
                 </div>
+            </div>
+        </div>
+
+        <!-- ── Privilegios ─────────────────────────────────────── -->
+        <div class="card mb-4" id="card-privilegios">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-shield-check"></i> Privilegios</h5>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                        data-bs-target="#modalNuevoPrivilegio">
+                    <i class="bi bi-plus-circle"></i> Agregar
+                </button>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Define los privilegios que pueden asignarse a las personas
+                    (p.&nbsp;ej. Acomodador, Vigilancia, Micrófonos).
+                </p>
+
+                <?php
+                $tableExists = true;
+                try {
+                    $privilegios = fetchAll("SELECT * FROM privilegios ORDER BY orden, nombre");
+                } catch (Exception $e) {
+                    $tableExists = false;
+                    $privilegios = [];
+                }
+                ?>
+
+                <?php if (!$tableExists): ?>
+                <div class="alert alert-warning mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Importa <code>database_update_v6.sql</code> en phpMyAdmin para activar esta sección.
+                </div>
+                <?php elseif (empty($privilegios)): ?>
+                <p class="text-muted text-center py-3">
+                    <i class="bi bi-inbox d-block mb-1" style="font-size:2rem;opacity:.5;"></i>
+                    No hay privilegios definidos aún.
+                </p>
+                <?php else: ?>
+                <div class="list-group" id="lista-privilegios">
+                    <?php foreach ($privilegios as $priv): ?>
+                    <div class="list-group-item d-flex justify-content-between align-items-center"
+                         id="priv-row-<?php echo $priv['id']; ?>">
+                        <span class="fw-medium"><?php echo htmlspecialchars($priv['nombre']); ?></span>
+                        <button class="btn btn-sm btn-outline-danger btn-eliminar-privilegio"
+                                data-id="<?php echo $priv['id']; ?>"
+                                data-nombre="<?php echo htmlspecialchars($priv['nombre']); ?>"
+                                title="Eliminar">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -343,6 +393,94 @@ function limpiarProgramasPasados() {
         });
     }
 }
+
+/* ── Privilegios ─────────────────────────────────────────── */
+
+// Agregar nuevo privilegio
+$('#formNuevoPrivilegio').on('submit', function (e) {
+    e.preventDefault();
+    const nombre = $.trim($('#nombrePrivilegio').val());
+    if (!nombre) return;
+
+    $.post('../api/privilegios.php', { action: 'create', nombre: nombre }, function (res) {
+        if (res.success) {
+            // Insertar fila en la lista sin recargar
+            const id = res.data.id;
+            const html = `
+                <div class="list-group-item d-flex justify-content-between align-items-center"
+                     id="priv-row-${id}">
+                    <span class="fw-medium">${$('<span>').text(res.data.nombre).html()}</span>
+                    <button class="btn btn-sm btn-outline-danger btn-eliminar-privilegio"
+                            data-id="${id}" data-nombre="${$('<span>').text(res.data.nombre).html()}"
+                            title="Eliminar">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>`;
+
+            // Si la lista no existe aún, crearla
+            if ($('#lista-privilegios').length === 0) {
+                $('#card-privilegios .card-body').html('<div class="list-group" id="lista-privilegios">' + html + '</div>');
+            } else {
+                $('#lista-privilegios').append(html);
+            }
+
+            $('#modalNuevoPrivilegio').modal('hide');
+            APP.showNotification('Privilegio "' + res.data.nombre + '" creado', 'success');
+        } else {
+            APP.showNotification(res.message, 'danger');
+        }
+    }).fail(function () {
+        APP.showNotification('Error al conectar con el servidor', 'danger');
+    });
+});
+
+// Limpiar modal al cerrar
+$('#modalNuevoPrivilegio').on('hidden.bs.modal', function () {
+    $('#nombrePrivilegio').val('');
+});
+
+// Eliminar privilegio
+$(document).on('click', '.btn-eliminar-privilegio', function () {
+    const id     = $(this).data('id');
+    const nombre = $(this).data('nombre');
+    if (!confirm('¿Eliminar el privilegio "' + nombre + '"?\n\nSolo se puede eliminar si ninguna persona lo tiene asignado.')) return;
+
+    $.post('../api/privilegios.php', { action: 'delete', id: id }, function (res) {
+        if (res.success) {
+            $('#priv-row-' + id).fadeOut(200, function () { $(this).remove(); });
+            APP.showNotification('Privilegio eliminado', 'success');
+        } else {
+            APP.showNotification(res.message, 'danger');
+        }
+    }).fail(function () {
+        APP.showNotification('Error al conectar con el servidor', 'danger');
+    });
+});
 </script>
+
+<!-- Modal: nuevo privilegio -->
+<div class="modal fade" id="modalNuevoPrivilegio" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-shield-check"></i> Nuevo Privilegio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formNuevoPrivilegio">
+                <div class="modal-body">
+                    <label for="nombrePrivilegio" class="form-label">Nombre *</label>
+                    <input type="text" class="form-control" id="nombrePrivilegio"
+                           placeholder="Ej: Acomodador" required maxlength="100">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Agregar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

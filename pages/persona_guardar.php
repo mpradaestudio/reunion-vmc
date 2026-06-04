@@ -97,6 +97,20 @@ try {
                 $stmtParte->execute([$personaId, sanitizeInput($parte)]);
             }
         }
+
+        // --- Privilegios ---
+        $privilegioIds = array_values(array_unique(
+            array_filter(array_map('intval', (array)($_POST['privilegio_ids'] ?? [])))
+        ));
+        $pdo->prepare("DELETE FROM persona_privilegios WHERE persona_id = ?")->execute([$personaId]);
+        if (!empty($privilegioIds)) {
+            $stmtPriv = $pdo->prepare("
+                INSERT IGNORE INTO persona_privilegios (persona_id, privilegio_id) VALUES (?, ?)
+            ");
+            foreach ($privilegioIds as $pvid) {
+                $stmtPriv->execute([$personaId, $pvid]);
+            }
+        }
     }
 
     redirect('personas.php?msg=' . $msg);

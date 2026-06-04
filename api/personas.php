@@ -75,7 +75,19 @@ class PersonasAPI {
                 $perfilIds = [(int)$persona['perfil_id']];
             }
             $persona['perfil_ids'] = $perfilIds;
-            
+
+            // Obtener privilegios asignados
+            $privRows = [];
+            try {
+                $privRows = fetchAll(
+                    "SELECT privilegio_id FROM persona_privilegios WHERE persona_id = ?",
+                    [$id]
+                );
+            } catch (Exception $e) { /* tabla aún no existe */ }
+            $persona['privilegio_ids'] = array_map(
+                fn($r) => (int)$r['privilegio_id'], $privRows
+            );
+
             return ['success' => true, 'data' => $persona];
             
         } catch (Exception $e) {

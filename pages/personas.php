@@ -60,7 +60,14 @@ if (isset($_GET['msg'])) {
     }
 }
 
-// Definición de las partes por sección (para el modal)
+// Obtener privilegios para el modal
+$privilegiosModal = [];
+try {
+    $privilegiosModal = fetchAll("SELECT id, nombre FROM privilegios WHERE activo = 1 ORDER BY orden, nombre");
+} catch (Exception $e) {
+    // Tabla aún no existe (migración pendiente)
+    $privilegiosModal = [];
+}
 $seccionesPartes = [
     'tesoros' => [
         'titulo' => 'TESOROS DE LA BIBLIA',
@@ -338,6 +345,24 @@ $seccionesPartes = [
                     </div>
                     <?php endforeach; ?>
 
+                    <!-- Privilegios -->
+                    <?php if (!empty($privilegiosModal)): ?>
+                    <hr>
+                    <h6 class="fw-bold mb-3"><i class="bi bi-shield-check"></i> Privilegios</h6>
+                    <div class="d-flex flex-wrap gap-3 border rounded p-2 mb-3">
+                        <?php foreach ($privilegiosModal as $priv): ?>
+                        <div class="form-check">
+                            <input class="form-check-input chk-privilegio" type="checkbox"
+                                   name="privilegio_ids[]" value="<?php echo $priv['id']; ?>"
+                                   id="priv_<?php echo $priv['id']; ?>">
+                            <label class="form-check-label" for="priv_<?php echo $priv['id']; ?>">
+                                <?php echo htmlspecialchars($priv['nombre']); ?>
+                            </label>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
+
                     <!-- Notas -->
                     <div class="mb-2 mt-3">
                         <label for="notas" class="form-label">Notas</label>
@@ -419,6 +444,14 @@ $('.btn-editar').on('click', function () {
         }
         sincronizarTodosLosMasters();
 
+        // Privilegios
+        $('.chk-privilegio').prop('checked', false);
+        if (p.privilegio_ids) {
+            p.privilegio_ids.forEach(function (pvid) {
+                $('#priv_' + pvid).prop('checked', true);
+            });
+        }
+
         $('#modalPersona').modal('show');
     });
 });
@@ -455,6 +488,7 @@ $('#modalPersona').on('hidden.bs.modal', function () {
     $('#persona_id').val('');
     $('#persona_action').val('create');
     $('.chk-todos').prop('checked', false);
+    $('.chk-privilegio').prop('checked', false);
     $('#modalPersonaTitulo').html('<i class="bi bi-person-plus"></i> Agregar Persona');
 });
 </script>
