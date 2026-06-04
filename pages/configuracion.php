@@ -256,11 +256,16 @@ $stats = [
                 </div>
                 <?php else: ?>
 
-                <!-- Toolbar: solo buscador -->
+                <!-- Toolbar: buscador con X para limpiar -->
                 <div class="input-group input-group-sm mb-3">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
                     <input type="text" class="form-control" id="filtroBosquejos"
-                           placeholder="Filtrar por número o título…">
+                           placeholder="Filtrar por número o título…"
+                           autocomplete="off">
+                    <button class="btn btn-outline-secondary" type="button" id="limpiarFiltroBosquejos"
+                            title="Limpiar búsqueda" style="display:none;">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
                 </div>
 
                 <!-- Info: total y rango visible -->
@@ -512,7 +517,7 @@ function limpiarProgramasPasados() {
 /* ================================================================
    HELPER genérico: petición AJAX a una API
 ================================================================ */
-function apiPost(url, data, onSuccess) {
+function apiPost(url, data, onSuccess, onError) {
     $.ajax({
         url     : url,
         method  : 'POST',
@@ -523,10 +528,12 @@ function apiPost(url, data, onSuccess) {
                 if (onSuccess) onSuccess(res);
             } else {
                 APP.showNotification(res.message || 'Error', 'danger');
+                if (onError) onError(res.message);
             }
         },
         error   : function () {
             APP.showNotification('Error al conectar con el servidor', 'danger');
+            if (onError) onError();
         }
     });
 }
@@ -823,9 +830,17 @@ const Bosquejos = {
         // Búsqueda con debounce
         $(document).on('input', '#filtroBosquejos', (e) => {
             clearTimeout(this.timer);
+            const val = e.target.value.trim();
+            // Mostrar/ocultar botón X
+            $('#limpiarFiltroBosquejos').toggle(val.length > 0);
             this.timer = setTimeout(() => {
-                this.cargar(1, undefined, e.target.value.trim());
+                this.cargar(1, undefined, val);
             }, 350);
+        });
+
+        // Botón X: limpiar buscador
+        $(document).on('click', '#limpiarFiltroBosquejos', () => {
+            $('#filtroBosquejos').val('').trigger('input');
         });
 
         // Clic en página del paginador
@@ -910,6 +925,8 @@ $(document).on('submit', '#formEditarBosquejo', function (e) {
         bootstrap.Modal.getInstance(document.getElementById('modalEditarBosquejo'))?.hide();
         bosquejosRecargar();
         APP.showNotification('Bosquejo actualizado', 'success');
+    }, function () {
+        $btn.prop('disabled', false);  // rehabilitar si hay error
     });
     // NOTA: $btn se rehabilita dentro del callback para evitar doble envío
 });

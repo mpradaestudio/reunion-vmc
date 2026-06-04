@@ -200,7 +200,7 @@ function optionsFds(array $lista, ?int $selId): string {
 
                 <!-- Warning: bosquejo marcado como "No presentar" (fijo, no se oculta) -->
                 <div id="alertNoPresentar" class="alert alert-warning d-flex align-items-start gap-2 mt-2 mb-0"
-                     style="display:none!important;">
+                     style="display:none;">
                     <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
                     <div>
                         <strong>No presentar</strong>
@@ -215,7 +215,7 @@ function optionsFds(array $lista, ?int $selId): string {
                             "SELECT no_presentar, nota_no_presentar FROM bosquejos WHERE id=?",
                             [$bosquejoActual['id']]
                         );
-                        if ($bNota && $bNota['no_presentar']) {
+                        if ($bNota && (int)$bNota['no_presentar'] === 1) {
                             echo '<script>
                                 document.getElementById("alertNoPresentar").style.display="flex";
                                 document.getElementById("alertNoPresentarNota").textContent='
@@ -420,20 +420,21 @@ $(document).ready(function () {
     });
 
     // Al cambiar el bosquejo, guardar dp_bosquejo_id en programas_fds
-    $('#sel_dp_bosquejo').on('select2:select select2:unselect', function (e) {
+    $('#sel_dp_bosquejo').on('select2:select select2:unselect select2:clear', function (e) {
         const bosquejoId = $(this).val() || '';
 
         // Mostrar/ocultar warning "No presentar"
-        if (e.type === 'select2:select' && e.params.data) {
+        if (e.type === 'select2:select' && e.params && e.params.data) {
             const d = e.params.data;
-            if (d.no_presentar) {
+            // Solo mostrar si el bosquejo tiene no_presentar=1 (campo devuelto por la API)
+            if (parseInt(d.no_presentar) === 1) {
                 $('#alertNoPresentarNota').text(d.nota_no_presentar || '');
                 $('#alertNoPresentar').css('display', 'flex');
             } else {
                 $('#alertNoPresentar').css('display', 'none');
             }
         } else {
-            // unselect → ocultar
+            // unselect o clear → ocultar siempre
             $('#alertNoPresentar').css('display', 'none');
         }
 
