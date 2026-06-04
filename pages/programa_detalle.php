@@ -509,8 +509,8 @@ $(document).ready(function () {
     const select2Config = {
         theme        : 'bootstrap-5',
         language     : 'es',
-        allowClear   : true,
-        width        : '100%',
+        allowClear   : false,
+        width        : 'auto',
         placeholder  : function () {
             // Usa el primer option vacío como placeholder
             return $(this).find('option[value=""]').text() || 'Sin asignar';
