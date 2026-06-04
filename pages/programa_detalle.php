@@ -7,28 +7,79 @@ $extraHeadHtml = '
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
     <style>
-        /* Ajuste visual Select2 dentro de input-group */
+        /* ── Layout ─────────────────────────────────────────────────────── */
         .input-group .select2-container { flex: 1 1 auto; min-width: 0; }
-        .select2-container--bootstrap-5 .select2-selection { border-radius: var(--vmc-radius-sm); }
-        /* Dark mode */
+        .select2-container--bootstrap-5 .select2-selection {
+            border-radius: var(--vmc-radius-sm);
+        }
+
+        /* ── Eliminar border y shadow en focus/open ──────────────────────
+           Sustituye el anillo azul del tema Bootstrap-5 por el primario
+           del proyecto, sin sombra extra.                                  */
+        .select2-container--bootstrap-5.select2-container--focus .select2-selection,
+        .select2-container--bootstrap-5.select2-container--open  .select2-selection {
+            border-color: var(--vmc-primary) !important;
+            box-shadow : none !important;
+        }
+
+        /* ── Search field dentro del dropdown ───────────────────────────── */
+        .select2-container--bootstrap-5 .select2-dropdown
+            .select2-search .select2-search__field:focus {
+            border-color: var(--vmc-primary) !important;
+            box-shadow : none !important;
+            outline    : none;
+        }
+
+        /* ── Opción seleccionada (fondo azul del proyecto) ───────────────
+           Reemplaza el azul Bootstrap por --vmc-primary (#4a6da7).         */
+        .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options
+            .select2-results__option.select2-results__option--selected,
+        .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options
+            .select2-results__option[aria-selected=true]:not(.select2-results__option--highlighted) {
+            background-color: var(--vmc-primary-soft) !important;
+            color           : var(--vmc-primary)      !important;
+        }
+
+        /* ── Opción destacada al hacer hover ─────────────────────────────  */
+        .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options
+            .select2-results__option--highlighted {
+            background-color: var(--vmc-primary) !important;
+            color           : #ffffff             !important;
+        }
+
+        /* ── MODO OSCURO ─────────────────────────────────────────────────  */
         [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection,
         [data-bs-theme="dark"] .select2-dropdown {
             background-color: var(--vmc-surface-2);
-            border-color: var(--vmc-border-strong);
+            border-color    : var(--vmc-border-strong);
+            color           : var(--vmc-text);
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection__rendered {
             color: var(--vmc-text);
         }
         [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-results__option {
             background-color: var(--vmc-surface-2);
-            color: var(--vmc-text);
+            color           : var(--vmc-text);
         }
-        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-results__option--highlighted {
-            background-color: var(--vmc-primary);
-            color: #fff;
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options
+            .select2-results__option--highlighted {
+            background-color: var(--vmc-primary) !important;
+            color           : #fff               !important;
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options
+            .select2-results__option[aria-selected=true]:not(.select2-results__option--highlighted) {
+            background-color: rgba(74,109,167,.22) !important;
+            color           : #9bb6e6              !important;
         }
         [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-search__field {
             background-color: var(--vmc-surface-3);
-            border-color: var(--vmc-border-strong);
-            color: var(--vmc-text);
+            border-color    : var(--vmc-border-strong);
+            color           : var(--vmc-text);
         }
     </style>
 ';
