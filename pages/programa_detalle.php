@@ -124,13 +124,7 @@ $fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' d
                 <a href="programas.php" class="btn btn-outline-secondary mb-2">
                     <i class="bi bi-arrow-left"></i> Volver
                 </a>
-                <h1 class="h2 mb-0"><?php echo htmlspecialchars($programa['titulo_semana']); ?></h1>
-                <p class="text-muted mb-0">
-                    <i class="bi bi-calendar3"></i> <?php echo $fechaFormato; ?>
-                    <?php if ($programa['referencia_biblica']): ?>
-                        | <i class="bi bi-book"></i> <?php echo htmlspecialchars($programa['referencia_biblica']); ?>
-                    <?php endif; ?>
-                </p>
+                <h1 class="h2 mb-0"><?php echo htmlspecialchars($programa['titulo_semana']); ?></h1>                
             </div>
             <div>
                 <a href="exportar_pdf.php?programa_id=<?php echo $programaId; ?>" 
