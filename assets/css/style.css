@@ -1157,7 +1157,7 @@ body {
 }
 
 .sidebar-brand .sb-name {
-    font-size  : 1rem;
+    font-size  : 0.9rem;
     font-weight: 700;
     color      : #fff;
     transition : opacity 180ms ease, width 180ms ease;
@@ -1204,7 +1204,7 @@ body {
     align-items    : center;
     gap            : 0.75rem;
     padding        : 0.55rem 0 0.55rem 14px;
-    margin         : 1px 8px;
+    margin         : 5px 8px;
     border-radius  : 8px;
     text-decoration: none;
     color          : rgba(255,255,255,.78);
@@ -1346,7 +1346,7 @@ body {
 /* Nombre de la congregación */
 .topbar-title {
     font-weight: 600;
-    font-size  : 0.95rem;
+    font-size  : 1.1rem;
     color      : var(--vmc-heading);
     margin     : 0;
     white-space: nowrap;
