@@ -396,19 +396,31 @@ $stats = [
 
 <script>
 function limpiarProgramasPasados() {
-    if (confirm('¿Está seguro de eliminar todos los programas pasados?\n\nEsto eliminará programas cuya fecha ya haya transcurrido.')) {
-        $.post('../api/programas.php', { action: 'limpiar_pasados' }, function (response) {
-            if (response.success) {
-                APP.showNotification('Programas pasados eliminados', 'success');
-                setTimeout(() => location.reload(), 2000);
-            } else {
-                APP.showNotification(response.message || 'Error al limpiar programas', 'danger');
-            }
-        }).fail(function () {
-            APP.showNotification('Error al conectar con el servidor', 'danger');
-        });
-    }
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmLimpiar')).show();
 }
+document.getElementById('btnConfirmLimpiar')?.addEventListener('click', function () {
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Limpiando...';
+    $.post('../api/programas.php', { action: 'limpiar_pasados' }, function (response) {
+        bootstrap.Modal.getInstance(document.getElementById('modalConfirmLimpiar'))?.hide();
+        if (response.success) {
+            APP.showNotification('Programas pasados eliminados', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            APP.showNotification(response.message || 'Error al limpiar programas', 'danger');
+        }
+    }).fail(function () {
+        APP.showNotification('Error al conectar con el servidor', 'danger');
+    });
+    const btn = document.getElementById('btnConfirmLimpiar');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-trash me-1"></i>Sí, limpiar';
+});
+document.getElementById('modalConfirmLimpiar')?.addEventListener('hidden.bs.modal', function () {
+    const btn = document.getElementById('btnConfirmLimpiar');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-trash me-1"></i>Sí, limpiar';
+});
 
 function apiPost(url, data, onSuccess, onError) {
     $.ajax({
@@ -608,12 +620,71 @@ $(document).on('submit', '#formEditarBosquejo', function (e) {
 });
 $(document).on('click', '.btn-eliminar-bosquejo', function () {
     const id = $(this).data('id'), numero = $(this).data('numero');
-    if (!confirm('¿Eliminar el bosquejo #' + numero + '?')) return;
+    $('#confirmBosquejoNumero').text('#' + numero);
+    _pendingBosquejoId = id;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmBosquejo')).show();
+});
+$('#btnConfirmBosquejo').on('click', function () {
+    if (!_pendingBosquejoId) return;
+    const id = _pendingBosquejoId;
+    $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>');
     apiPost('../api/bosquejos.php', { action: 'delete', id }, function () {
+        bootstrap.Modal.getInstance(document.getElementById('modalConfirmBosquejo'))?.hide();
         bosquejosRecargar();
         APP.showNotification('Bosquejo eliminado', 'success');
     });
 });
+$('#modalConfirmBosquejo').on('hidden.bs.modal', function () {
+    _pendingBosquejoId = null;
+    $('#btnConfirmBosquejo').prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
+});
+let _pendingBosquejoId = null;
 </script>
+
+<!-- ── Modales de confirmación ────────────────────────────────── -->
+
+<!-- Limpiar programas pasados -->
+<div class="modal fade" id="modalConfirmLimpiar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-warning"><i class="bi bi-exclamation-triangle me-2"></i>Limpiar programas pasados</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Eliminar todos los programas cuya fecha ya haya transcurrido?</p>
+                <p class="text-muted mb-0 small">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" id="btnConfirmLimpiar">
+                    <i class="bi bi-trash me-1"></i>Sí, limpiar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Eliminar bosquejo -->
+<div class="modal fade" id="modalConfirmBosquejo" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar bosquejo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Eliminar el bosquejo <strong id="confirmBosquejoNumero"></strong>?</p>
+                <p class="text-muted mb-0 small">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmBosquejo">
+                    <i class="bi bi-trash me-1"></i>Sí, eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

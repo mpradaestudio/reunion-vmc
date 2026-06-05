@@ -603,13 +603,25 @@ $(document).on('submit', '#formNuevoPerfil', function (e) {
     }, function () { $btn.prop('disabled', false); });
 });
 $(document).on('hidden.bs.modal', '#modalNuevoPerfil', function () { $('#nombrePerfil').val(''); });
+let _pendingPerfil = null;
 $(document).on('click', '.btn-eliminar-perfil', function () {
-    const id = $(this).data('id'), nombre = $(this).data('nombre');
-    if (!confirm('¿Eliminar el perfil "' + nombre + '"?')) return;
-    apiPost('../api/perfiles.php', { action: 'delete', id: id }, function () {
+    _pendingPerfil = { id: $(this).data('id'), nombre: $(this).data('nombre') };
+    $('#confirmPerfilNombre').text(_pendingPerfil.nombre);
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmPerfil')).show();
+});
+$('#btnConfirmPerfil').on('click', function () {
+    if (!_pendingPerfil) return;
+    const { id } = _pendingPerfil;
+    $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>');
+    apiPost('../api/perfiles.php', { action: 'delete', id }, function () {
+        bootstrap.Modal.getInstance(document.getElementById('modalConfirmPerfil'))?.hide();
         $('#perf-row-' + id).fadeOut(200, function () { $(this).remove(); });
         APP.showNotification('Perfil eliminado', 'success');
     });
+});
+$('#modalConfirmPerfil').on('hidden.bs.modal', function () {
+    _pendingPerfil = null;
+    $('#btnConfirmPerfil').prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
 });
 
 /* ── Privilegios CRUD ───────────────────────────────────────── */
@@ -633,13 +645,25 @@ $(document).on('submit', '#formNuevoPrivilegio', function (e) {
     }, function () { $btn.prop('disabled', false); });
 });
 $(document).on('hidden.bs.modal', '#modalNuevoPrivilegio', function () { $('#nombrePrivilegio').val(''); });
+let _pendingPrivilegio = null;
 $(document).on('click', '.btn-eliminar-privilegio', function () {
-    const id = $(this).data('id'), nombre = $(this).data('nombre');
-    if (!confirm('¿Eliminar el privilegio "' + nombre + '"?')) return;
-    apiPost('../api/privilegios.php', { action: 'delete', id: id }, function () {
+    _pendingPrivilegio = { id: $(this).data('id'), nombre: $(this).data('nombre') };
+    $('#confirmPrivilegioNombre').text(_pendingPrivilegio.nombre);
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmPrivilegio')).show();
+});
+$('#btnConfirmPrivilegio').on('click', function () {
+    if (!_pendingPrivilegio) return;
+    const { id } = _pendingPrivilegio;
+    $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>');
+    apiPost('../api/privilegios.php', { action: 'delete', id }, function () {
+        bootstrap.Modal.getInstance(document.getElementById('modalConfirmPrivilegio'))?.hide();
         $('#priv-row-' + id).fadeOut(200, function () { $(this).remove(); });
         APP.showNotification('Privilegio eliminado', 'success');
     });
+});
+$('#modalConfirmPrivilegio').on('hidden.bs.modal', function () {
+    _pendingPrivilegio = null;
+    $('#btnConfirmPrivilegio').prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
 });
 </script>
 
@@ -738,31 +762,107 @@ $(document).on('submit', '#formAgregarEvento', function (e) {
 });
 
 // Eliminar evento
+let _pendingEvento = null;
 $(document).on('click', '.btn-eliminar-evento', function () {
     const id   = $(this).data('id');
     const $row = $(`#evento-row-${id}`);
     const tipo = $row.closest('.card').attr('id').replace('card-evento-', '');
-
-    if (!confirm('¿Eliminar este evento?')) return;
-
+    const fecha = $row.find('span.small').text().trim();
+    _pendingEvento = { id, tipo };
+    $('#confirmEventoFecha').text(fecha);
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmEvento')).show();
+});
+$('#btnConfirmEvento').on('click', function () {
+    if (!_pendingEvento) return;
+    const { id, tipo } = _pendingEvento;
+    const $row = $(`#evento-row-${id}`);
+    $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>');
     apiPost('../api/eventos.php', { action: 'delete', id },
         function () {
+            bootstrap.Modal.getInstance(document.getElementById('modalConfirmEvento'))?.hide();
             $row.fadeOut(200, function () {
                 $(this).remove();
-
-                // Restaurar placeholder si no quedan filas
                 const $lista = $(`#eventos-lista-${tipo}`);
                 if ($lista.find('.evento-row').length === 0) {
                     $lista.html('<p class="text-muted small mb-0 text-center py-2 msg-empty-evento">Sin fechas registradas</p>');
                 }
-
-                // Mostrar botón "+" si estaba oculto por límite
                 $(`#card-evento-${tipo} .btn-agregar-evento`).show();
             });
             APP.showNotification('Evento eliminado', 'success');
         }
     );
 });
-</script>
+$('#modalConfirmEvento').on('hidden.bs.modal', function () {
+    _pendingEvento = null;
+    $('#btnConfirmEvento').prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
+});
+
+<!-- ── Modales de confirmación ────────────────────────────────── -->
+
+<!-- Eliminar perfil -->
+<div class="modal fade" id="modalConfirmPerfil" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar perfil</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Eliminar el perfil <strong id="confirmPerfilNombre"></strong>?</p>
+                <p class="text-muted mb-0 small">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmPerfil">
+                    <i class="bi bi-trash me-1"></i>Sí, eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Eliminar privilegio -->
+<div class="modal fade" id="modalConfirmPrivilegio" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar privilegio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Eliminar el privilegio <strong id="confirmPrivilegioNombre"></strong>?</p>
+                <p class="text-muted mb-0 small">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmPrivilegio">
+                    <i class="bi bi-trash me-1"></i>Sí, eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Eliminar evento -->
+<div class="modal fade" id="modalConfirmEvento" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar evento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Eliminar el evento del <strong id="confirmEventoFecha"></strong>?</p>
+                <p class="text-muted mb-0 small">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmEvento">
+                    <i class="bi bi-trash me-1"></i>Sí, eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

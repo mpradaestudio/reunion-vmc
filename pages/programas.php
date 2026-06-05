@@ -418,8 +418,7 @@ btnElimLote?.addEventListener('click', () => {
     const modal = getConfirmModal();
     if (modal) {
         modal.show();
-    } else if (confirm('¿Eliminar ' + n + ' programa(s) y sus asignaciones?')) {
-        // Respaldo si Bootstrap no estuviera disponible
+    } else {
         btnConfirm.click();
     }
 });
@@ -508,19 +507,51 @@ $('#modalExtraer').on('hidden.bs.modal', function () {
 /* ================================================================
    ELIMINAR INDIVIDUAL
 ================================================================ */
+let _pendingDeletePrograma = null;
 $(document).on('click', '.btn-eliminar-programa', function () {
-    const id     = $(this).data('id');
-    const titulo = $(this).data('titulo');
-    if (confirm('¿Eliminar el programa "' + titulo + '"?\n\nSe eliminarán todas las asignaciones asociadas.')) {
-        $.post('../api/programas.php', { action: 'delete', id: id }, function (response) {
-            if (response.success) {
-                window.location.href = 'programas.php?msg=eliminado';
-            } else {
-                APP.showNotification(response.message, 'danger');
-            }
-        });
-    }
+    _pendingDeletePrograma = $(this).data('id');
+    $('#confirmProgramaTitulo').text($(this).data('titulo'));
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmPrograma')).show();
+});
+$('#btnConfirmPrograma').on('click', function () {
+    if (!_pendingDeletePrograma) return;
+    const id = _pendingDeletePrograma;
+    $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...');
+    $.post('../api/programas.php', { action: 'delete', id }, function (response) {
+        if (response.success) {
+            window.location.href = 'programas.php?msg=eliminado';
+        } else {
+            bootstrap.Modal.getInstance(document.getElementById('modalConfirmPrograma'))?.hide();
+            APP.showNotification(response.message, 'danger');
+        }
+    });
+});
+$('#modalConfirmPrograma').on('hidden.bs.modal', function () {
+    _pendingDeletePrograma = null;
+    $('#btnConfirmPrograma').prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
 });
 </script>
+
+<!-- Modal confirmar eliminar programa individual -->
+<div class="modal fade" id="modalConfirmPrograma" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar programa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Eliminar el programa <strong id="confirmProgramaTitulo"></strong>?</p>
+                <p class="text-muted mb-0 small">Se eliminarán todas las asignaciones asociadas. Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmPrograma">
+                    <i class="bi bi-trash me-1"></i>Sí, eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
