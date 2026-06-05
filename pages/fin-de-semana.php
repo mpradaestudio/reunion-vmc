@@ -94,8 +94,19 @@ $msg = $_GET['msg'] ?? '';
                 ? '<span class="badge bg-secondary">Pasado</span>'
                 : '<span class="badge bg-primary">Próximo</span>');
     ?>
-    <div class="col-md-6 col-lg-4">
-        <div class="card h-100 programa-card <?php echo $estado; ?>">
+    <div class="col-md-6 col-lg-4 semana-item"
+         data-id="<?php echo $semana['id']; ?>">
+        <div class="card h-100 programa-card <?php echo $estado; ?> position-relative">
+
+            <!-- Checkbox de selección -->
+            <label class="programa-select-wrap" title="Seleccionar">
+                <input type="checkbox" class="programa-checkbox"
+                       value="<?php echo $semana['id']; ?>">
+                <span class="programa-select-box">
+                    <i class="bi bi-check2"></i>
+                </span>
+            </label>
+
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <h5 class="card-title mb-0 pe-2 fw-bold"><?php echo $fechaLabel; ?></h5>
@@ -135,8 +146,68 @@ $msg = $_GET['msg'] ?? '';
     </div>
     <?php endforeach; ?>
 </div>
+<!-- Barra de acciones en lote -->
+<div class="d-flex justify-content-center mt-4 d-none" id="batchActions">
+    <div class="batch-actions">
+        <span class="batch-count" id="batchCount">0 seleccionados</span>
+        <button class="btn btn-sm btn-outline-secondary" id="btnDeselAll">
+            <i class="bi bi-x-circle"></i> Deseleccionar todo
+        </button>
+        <button class="btn btn-sm btn-danger" id="btnEliminarLote">
+            <i class="bi bi-trash"></i> Eliminar seleccionados
+        </button>
+    </div>
+</div>
+
 <?php endif; ?>
 
+<!-- Modal confirmación eliminación en lote -->
+<div class="modal fade" id="modalConfirmLote" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Confirmar eliminación
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Vas a eliminar <strong id="confirmLoteCount">0</strong> semana(s) y todas sus asignaciones.</p>
+                <p class="text-muted mb-0"><small>Esta acción no se puede deshacer.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmEliminarLote">
+                    <i class="bi bi-trash"></i> Sí, eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal confirmación eliminar individual -->
+<div class="modal fade" id="modalConfirmIndividual" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Confirmar eliminación
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Vas a eliminar la semana <strong id="confirmIndividualFecha"></strong> y todas sus asignaciones.</p>
+                <p class="text-muted mb-0"><small>Esta acción no se puede deshacer.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmIndividual">
+                    <i class="bi bi-trash"></i> Sí, eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Modal: Nueva Semana -->
 <div class="modal fade" id="modalNuevaSemana" tabindex="-1">
@@ -190,68 +261,152 @@ $msg = $_GET['msg'] ?? '';
 </div>
 
 <script>
-// Crear semana
+/* ── Crear semana ───────────────────────────────────────────── */
 $(document).on('submit', '#formNuevaSemana', function (e) {
     e.preventDefault();
     const $btn = $('#btnCrearSemana').prop('disabled', true);
-
     $.ajax({
-        url     : '../api/programas_fds.php',
-        method  : 'POST',
-        dataType: 'json',
-        data    : $(this).serialize() + '&action=create',
-        success : function (res) {
+        url: '../api/programas_fds.php', method: 'POST', dataType: 'json',
+        data: $(this).serialize() + '&action=create',
+        success(res) {
             $btn.prop('disabled', false);
-            if (res.success) {
-                window.location.href = 'fin-de-semana.php';
-            } else {
-                APP.showNotification(res.message, 'danger');
-            }
+            if (res.success) { window.location.href = 'fin-de-semana.php'; }
+            else { APP.showNotification(res.message, 'danger'); }
         },
-        error   : function () {
-            $btn.prop('disabled', false);
-            APP.showNotification('Error al conectar con el servidor', 'danger');
-        }
+        error() { $btn.prop('disabled', false); APP.showNotification('Error al conectar', 'danger'); }
     });
 });
+$(document).on('hidden.bs.modal', '#modalNuevaSemana', () => $('#formNuevaSemana')[0].reset());
 
-// Limpiar modal al cerrar
-$(document).on('hidden.bs.modal', '#modalNuevaSemana', function () {
-    $('#formNuevaSemana')[0].reset();
-});
-
-// Auto-completar fecha fin (domingo = inicio + 6 días)
+/* ── Auto-completar fecha fin ───────────────────────────────── */
 $('#fds_fecha_inicio').on('change', function () {
     if ($('#fds_fecha_fin').val()) return;
     const d = new Date(this.value + 'T12:00:00');
     if (isNaN(d)) return;
-    // Buscar el domingo de esa semana
-    const dia = d.getDay();   // 0=dom
-    const diff = dia === 0 ? 0 : 7 - dia;
+    const diff = d.getDay() === 0 ? 0 : 7 - d.getDay();
     d.setDate(d.getDate() + diff);
     $('#fds_fecha_fin').val(d.toISOString().slice(0, 10));
 });
 
-// Eliminar semana
-$(document).on('click', '.btn-eliminar-semana', function () {
-    const id    = $(this).data('id');
-    const fecha = $(this).data('fecha');
-    if (!confirm('¿Eliminar la semana "' + fecha + '"?\n\nSe eliminarán todas las asignaciones.')) return;
+/* ── Modales de confirmación (lazy) ────────────────────────── */
+let _modalLote = null, _modalInd = null;
+function getModalLote() {
+    if (!_modalLote && window.bootstrap)
+        _modalLote = new bootstrap.Modal(document.getElementById('modalConfirmLote'));
+    return _modalLote;
+}
+function getModalInd() {
+    if (!_modalInd && window.bootstrap)
+        _modalInd = new bootstrap.Modal(document.getElementById('modalConfirmIndividual'));
+    return _modalInd;
+}
 
-    $.ajax({
-        url     : '../api/programas_fds.php',
-        method  : 'POST',
-        dataType: 'json',
-        data    : { action: 'delete', id: id },
-        success : function (res) {
+/* ── Selección en lote ──────────────────────────────────────── */
+function getChecked() {
+    return [...document.querySelectorAll('.programa-checkbox:checked')];
+}
+function updateBatchBar() {
+    const checked = getChecked();
+    const bar = document.getElementById('batchActions');
+    if (!bar) return;
+    if (checked.length > 0) {
+        document.getElementById('batchCount').textContent =
+            checked.length + ' seleccionada' + (checked.length > 1 ? 's' : '');
+        bar.classList.remove('d-none');
+    } else {
+        bar.classList.add('d-none');
+    }
+}
+
+document.getElementById('semanasGrid')?.addEventListener('change', e => {
+    if (e.target.classList.contains('programa-checkbox')) {
+        e.target.closest('.semana-item').querySelector('.card')
+            .classList.toggle('card-selected', e.target.checked);
+        updateBatchBar();
+    }
+});
+
+document.getElementById('btnDeselAll')?.addEventListener('click', () => {
+    document.querySelectorAll('.programa-checkbox:checked').forEach(cb => {
+        cb.checked = false;
+        cb.closest('.semana-item').querySelector('.card').classList.remove('card-selected');
+    });
+    updateBatchBar();
+});
+
+/* ── Eliminar en lote ───────────────────────────────────────── */
+document.getElementById('btnEliminarLote')?.addEventListener('click', () => {
+    const n = getChecked().length;
+    if (!n) return;
+    document.getElementById('confirmLoteCount').textContent = n;
+    getModalLote()?.show();
+});
+
+document.getElementById('btnConfirmEliminarLote')?.addEventListener('click', function () {
+    const ids = getChecked().map(cb => cb.value);
+    if (!ids.length) return;
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Eliminando...';
+
+    $.post('../api/programas_fds.php', { action: 'delete_batch', ids },
+        function (res) {
             if (res.success) {
                 window.location.href = 'fin-de-semana.php?msg=eliminado';
             } else {
+                getModalLote()?.hide();
+                APP.showNotification(res.message, 'danger');
+                const btn = document.getElementById('btnConfirmEliminarLote');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-trash"></i> Sí, eliminar';
+            }
+        }
+    ).fail(() => {
+        getModalLote()?.hide();
+        APP.showNotification('Error al conectar', 'danger');
+    });
+});
+
+document.getElementById('modalConfirmLote')?.addEventListener('hidden.bs.modal', () => {
+    const btn = document.getElementById('btnConfirmEliminarLote');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-trash"></i> Sí, eliminar';
+});
+
+/* ── Eliminar individual ────────────────────────────────────── */
+let _pendingDeleteId = null;
+
+$(document).on('click', '.btn-eliminar-semana', function () {
+    _pendingDeleteId = $(this).data('id');
+    const fecha = $(this).data('fecha');
+    document.getElementById('confirmIndividualFecha').textContent = fecha;
+    getModalInd()?.show();
+});
+
+document.getElementById('btnConfirmIndividual')?.addEventListener('click', function () {
+    if (!_pendingDeleteId) return;
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Eliminando...';
+
+    $.post('../api/programas_fds.php', { action: 'delete', id: _pendingDeleteId },
+        function (res) {
+            if (res.success) {
+                window.location.href = 'fin-de-semana.php?msg=eliminado';
+            } else {
+                getModalInd()?.hide();
                 APP.showNotification(res.message, 'danger');
             }
-        },
-        error   : function () { APP.showNotification('Error al conectar', 'danger'); }
+        }
+    ).fail(() => {
+        getModalInd()?.hide();
+        APP.showNotification('Error al conectar', 'danger');
     });
+});
+
+document.getElementById('modalConfirmIndividual')?.addEventListener('hidden.bs.modal', () => {
+    _pendingDeleteId = null;
+    const btn = document.getElementById('btnConfirmIndividual');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-trash"></i> Sí, eliminar';
 });
 </script>
 

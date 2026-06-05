@@ -113,8 +113,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         $id = (int)($_POST['id'] ?? 0);
         if (!$id) jsonResponse(['success' => false, 'message' => 'ID no válido']);
+        $pdo->prepare("DELETE FROM asignaciones_fds WHERE programa_fds_id = ?")->execute([$id]);
         $pdo->prepare("DELETE FROM programas_fds WHERE id = ?")->execute([$id]);
         jsonResponse(['success' => true, 'message' => 'Semana eliminada']);
+    }
+
+    // ── Eliminar semanas en lote ──────────────────────────────────
+    if ($action === 'delete_batch') {
+        $ids = $_POST['ids'] ?? [];
+        if (empty($ids)) jsonResponse(['success' => false, 'message' => 'Sin IDs']);
+        $ids = array_map('intval', (array)$ids);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $pdo->prepare("DELETE FROM asignaciones_fds WHERE programa_fds_id IN ($placeholders)")->execute($ids);
+        $pdo->prepare("DELETE FROM programas_fds WHERE id IN ($placeholders)")->execute($ids);
+        jsonResponse(['success' => true, 'message' => count($ids) . ' semana(s) eliminada(s)']);
     }
 
     // ── Guardar asignación ────────────────────────────────────────
