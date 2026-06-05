@@ -1,58 +1,92 @@
 <?php
 $pageTitle = 'Fin de Semana – Detalle';
 
-// Select2 CSS — igual que programa_detalle.php
+// Select2 CSS — idéntico a programa_detalle.php
 $extraHeadHtml = '
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
     <style>
+        /* Ajuste dentro de input-group */
+        .input-group .select2-container { flex: 1 1 auto; min-width: 0; }
+        .select2-container--bootstrap-5 .select2-selection {
+            border-radius: var(--vmc-radius-sm);
+        }
+
+        /* Sin sombra en focus/open — borde primario */
         .select2-container--bootstrap-5.select2-container--focus .select2-selection,
         .select2-container--bootstrap-5.select2-container--open  .select2-selection {
             border-color: var(--vmc-primary) !important;
             box-shadow : none !important;
         }
+
+        /* Campo de búsqueda dentro del dropdown */
         .select2-container--bootstrap-5 .select2-dropdown
             .select2-search .select2-search__field:focus {
             border-color: var(--vmc-primary) !important;
             box-shadow : none !important;
+            outline    : none;
         }
+
+        /* Opción seleccionada */
         .select2-container--bootstrap-5 .select2-dropdown
             .select2-results__options
-            .select2-results__option--highlighted {
-            background-color: var(--vmc-primary) !important;
-            color: #fff !important;
-        }
+            .select2-results__option.select2-results__option--selected,
         .select2-container--bootstrap-5 .select2-dropdown
             .select2-results__options
             .select2-results__option[aria-selected=true]:not(.select2-results__option--highlighted) {
             background-color: var(--vmc-primary-soft) !important;
-            color: var(--vmc-primary) !important;
+            color           : var(--vmc-primary)      !important;
         }
+
+        /* Opción con hover */
+        .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options
+            .select2-results__option--highlighted {
+            background-color: var(--vmc-primary) !important;
+            color           : #ffffff             !important;
+        }
+
+        /* Dark mode */
         [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection,
         [data-bs-theme="dark"] .select2-dropdown {
             background-color: var(--vmc-surface-2);
-            border-color: var(--vmc-border-strong);
+            border-color    : var(--vmc-border-strong);
+            color           : var(--vmc-text);
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection__rendered {
             color: var(--vmc-text);
         }
-        [data-bs-theme="dark"] .select2-results__option {
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-results__option {
             background-color: var(--vmc-surface-2);
-            color: var(--vmc-text);
+            color           : var(--vmc-text);
         }
-        [data-bs-theme="dark"] .select2-search__field {
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options .select2-results__option--highlighted {
+            background-color: var(--vmc-primary) !important;
+            color           : #fff               !important;
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options
+            .select2-results__option[aria-selected=true]:not(.select2-results__option--highlighted) {
+            background-color: rgba(74,109,167,.22) !important;
+            color           : #9bb6e6              !important;
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-search__field {
             background-color: var(--vmc-surface-3);
-            border-color: var(--vmc-border-strong);
-            color: var(--vmc-text);
+            border-color    : var(--vmc-border-strong);
+            color           : var(--vmc-text);
         }
-        /* Resultado del bosquejo: número en badge */
+
+        /* Badge de número en resultados del bosquejo */
         .bosquejo-result-num {
-            display: inline-block;
-            background: var(--vmc-primary);
-            color: #fff;
+            display      : inline-block;
+            background   : var(--vmc-primary);
+            color        : #fff;
             border-radius: 4px;
-            padding: 1px 6px;
-            font-size: .78rem;
-            font-weight: 700;
-            margin-right: 6px;
+            padding      : 1px 6px;
+            font-size    : .78rem;
+            font-weight  : 700;
+            margin-right : 6px;
         }
     </style>
 ';
@@ -382,48 +416,55 @@ $(document).on('input', '.fds-asig-libre', function () {
 <script>
 $(document).ready(function () {
 
-    // ── Select2 para bosquejos ────────────────────────────────
-    $('#sel_dp_bosquejo').select2({
+    /* ── Configuración base compartida ──────────────────────────── */
+    const s2Base = {
         theme      : 'bootstrap-5',
         language   : 'es',
         allowClear : true,
-        placeholder: 'Buscar bosquejo por número o título…',
         width      : '100%',
+        placeholder: 'Sin asignar',
+    };
+
+    /* ── Select2 para bosquejo (búsqueda AJAX) ───────────────────── */
+    $('#sel_dp_bosquejo').select2($.extend({}, s2Base, {
+        placeholder       : 'Buscar bosquejo por número o título…',
         minimumInputLength: 0,
         ajax: {
-            url         : '../api/bosquejos.php',
-            dataType    : 'json',
-            delay       : 300,
-            data        : function (params) {
-                return { action: 'search', q: params.term || '', page: params.page || 1 };
-            },
-            processResults: function (data) {
-                return { results: data.results, pagination: data.pagination };
-            },
-            cache: true,
+            url        : '../api/bosquejos.php',
+            dataType   : 'json',
+            delay      : 300,
+            data       : (p) => ({ action: 'search', q: p.term || '', page: p.page || 1 }),
+            processResults: (d) => ({ results: d.results, pagination: d.pagination }),
+            cache      : true,
         },
         templateResult  : function (b) {
             if (b.loading) return b.text;
             if (!b.numero) return b.text;
-            const $el = $('<span>');
-            $el.append($('<span class="bosquejo-result-num">').text(b.numero));
-            $el.append(document.createTextNode(b.titulo));
-            return $el;
+            return $('<span>').append(
+                $('<span class="bosquejo-result-num">').text(b.numero),
+                document.createTextNode(b.titulo)
+            );
         },
-        templateSelection: function (b) {
-            if (!b.numero) return b.text;
-            return b.numero + ' — ' + b.titulo;
-        },
+        templateSelection: (b) => b.numero ? (b.numero + ' — ' + b.titulo) : b.text,
+    }));
+
+    /* ── Select2 para selectores de personas ────────────────────── */
+    // Incluye .fds-asig-select: Presidente, Orador (selector), Conductor, Lector, Oración
+    $('.fds-asig-select').each(function () {
+        // El placeholder vacío del primer <option value=""> sirve como placeholder de Select2
+        $(this).select2($.extend({}, s2Base, {
+            placeholder: $(this).find('option[value=""]').text() || 'Sin asignar',
+        }));
     });
 
-    // Al cambiar el bosquejo, guardar dp_bosquejo_id en programas_fds
+    /* ── Eventos ────────────────────────────────────────────────── */
+
+    // Bosquejo: warning + guardar
     $('#sel_dp_bosquejo').on('select2:select select2:unselect select2:clear', function (e) {
         const bosquejoId = $(this).val() || '';
 
-        // Mostrar/ocultar warning "No presentar"
         if (e.type === 'select2:select' && e.params && e.params.data) {
             const d = e.params.data;
-            // Solo mostrar si el bosquejo tiene el toggle no_presentar activo
             if (parseInt(d.no_presentar) === 1) {
                 $('#alertNoPresentarNota').text(d.nota_no_presentar || '');
                 $('#alertNoPresentar').css('display', 'block');
@@ -431,7 +472,6 @@ $(document).ready(function () {
                 $('#alertNoPresentar').css('display', 'none');
             }
         } else {
-            // unselect o clear → ocultar siempre
             $('#alertNoPresentar').css('display', 'none');
         }
 
@@ -439,16 +479,20 @@ $(document).ready(function () {
             url     : '../api/programas_fds.php',
             method  : 'POST',
             dataType: 'json',
-            data    : { action: 'update', id: fdsId,
-                        fecha_inicio: '<?php echo $semana['fecha_inicio']; ?>',
-                        fecha_fin   : '<?php echo $semana['fecha_fin']; ?>',
-                        dp_bosquejo_id: bosquejoId,
-                        dp_cancion  : $('#dp_cancion').val() },
-            success : function (res) {
-                if (!res.success) APP.showNotification(res.message, 'danger');
-            }
+            data    : {
+                action        : 'update',
+                id            : fdsId,
+                fecha_inicio  : '<?php echo $semana['fecha_inicio']; ?>',
+                fecha_fin     : '<?php echo $semana['fecha_fin']; ?>',
+                dp_bosquejo_id: bosquejoId,
+                dp_cancion    : $('#dp_cancion').val()
+            },
+            success: (res) => { if (!res.success) APP.showNotification(res.message, 'danger'); }
         });
     });
+
+    // Selectores de personas: Select2 emite 'change' nativo tras seleccionar/limpiar
+    // Los listeners jQuery existentes (.fds-asig-select) siguen funcionando sin cambios.
 
 });
 </script>
