@@ -57,6 +57,8 @@ if (isset($_GET['msg'])) {
 
                     <hr>
 
+                    <p class="fw-bold mb-2"><i class="bi bi-clock me-1 vmc-icon-primary"></i>Horarios de Reunión</p>
+
                     <!-- Horarios — 2 columnas -->
                     <?php $diasSemana = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']; ?>
                     <div class="row g-3 mb-3">
@@ -327,7 +329,6 @@ if (isset($_GET['msg'])) {
                 <span class="fw-bold small">
                     <i class="bi <?php echo $cfg['icon']; ?> me-1 vmc-icon-primary"></i>
                     <?php echo $cfg['label']; ?>
-                    <span class="badge bg-secondary ms-1"><?php echo count($lista); ?>/<?php echo $cfg['limite']; ?></span>
                 </span>
                 <?php if (!$lleno): ?>
                 <button class="btn btn-sm btn-primary py-0 px-2 btn-agregar-evento"
@@ -723,12 +724,7 @@ $(document).on('submit', '#formAgregarEvento', function (e) {
             if ($empty.length) $empty.remove();
             $lista.append(buildEventoRow(res.data));
 
-            // Actualizar badge contador
-            const $badge = $(`#card-evento-${tipo} .badge`);
-            const parts  = $badge.text().split('/');
-            const nuevo  = parseInt(parts[0]) + 1;
-            const limite = parseInt(parts[1]);
-            $badge.text(nuevo + '/' + limite);
+            // Actualizar badge ya no aplica (contador eliminado)
 
             // Si se llegó al límite, ocultar botón agregar
             if (nuevo >= limite) {
@@ -754,12 +750,7 @@ $(document).on('click', '.btn-eliminar-evento', function () {
             $row.fadeOut(200, function () {
                 $(this).remove();
 
-                // Actualizar badge
-                const $badge = $(`#card-evento-${tipo} .badge`);
-                const parts  = $badge.text().split('/');
-                const nuevo  = parseInt(parts[0]) - 1;
-                const limite = parseInt(parts[1]);
-                $badge.text(nuevo + '/' + limite);
+                // Ya no hay badge que actualizar
 
                 // Mostrar botón agregar si ya no está lleno
                 if (nuevo < limite) {
