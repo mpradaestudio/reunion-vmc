@@ -505,6 +505,8 @@ $('.asignar-parte').on('change', function () {
             else APP.showNotification(r.message, 'danger');
         });
     }
+});
+
 // ── Autollenado ──────────────────────────────────────────────
 $('#btnAutollenado').on('click', function () {
     const $btn = $(this).prop('disabled', true)
