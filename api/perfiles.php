@@ -50,24 +50,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             jsonResponse(['success' => false, 'message' => 'ID no válido']);
         }
 
-        // Comprobar personas asignadas (tabla persona_perfiles o campo perfil_id)
-        $usoNuevo = fetchOne(
-            "SELECT COUNT(*) AS total FROM persona_perfiles WHERE perfil_id = ?", [$id]
-        );
-        $usoViejo = fetchOne(
-            "SELECT COUNT(*) AS total FROM personas WHERE perfil_id = ?", [$id]
-        );
-        $total = ((int)($usoNuevo['total'] ?? 0)) + ((int)($usoViejo['total'] ?? 0));
+        // 1. Quitar de persona_perfiles (relación many-to-many)
+        $pdo->prepare("DELETE FROM persona_perfiles WHERE perfil_id = ?")->execute([$id]);
 
-        if ($total > 0) {
-            jsonResponse([
-                'success' => false,
-                'message' => "No se puede eliminar: $total persona(s) tienen este perfil.",
-            ]);
+        // 2. Limpiar personas.perfil_id (columna legacy) — si es el único perfil,
+        //    intentar reasignar al primer perfil restante de persona_perfiles;
+        //    si no queda ninguno, dejar el campo en NULL.
+        $afectadas = $pdo->prepare("SELECT id FROM personas WHERE perfil_id = ?");
+        $afectadas->execute([$id]);
+        $personasAfectadas = $afectadas->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!empty($personasAfectadas)) {
+            $stmtReasig = $pdo->prepare("
+                SELECT perfil_id FROM persona_perfiles
+                WHERE persona_id = ?
+                LIMIT 1
+            ");
+            $stmtUpdate = $pdo->prepare("UPDATE personas SET perfil_id = ? WHERE id = ?");
+
+            foreach ($personasAfectadas as $pid) {
+                $stmtReasig->execute([$pid]);
+                $nuevo = $stmtReasig->fetchColumn(); // false si no queda ninguno
+                $stmtUpdate->execute([$nuevo ?: null, $pid]);
+            }
         }
 
+        // 3. Eliminar el perfil
         $pdo->prepare("DELETE FROM perfiles WHERE id = ?")->execute([$id]);
-        jsonResponse(['success' => true, 'message' => 'Perfil eliminado']);
+        jsonResponse(['success' => true, 'message' => 'Perfil eliminado correctamente']);
     }
 
     // ── Actualizar nombre ─────────────────────────────────────────
