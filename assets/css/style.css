@@ -1779,3 +1779,53 @@ button.sidebar-item {
     border-color: rgba(123, 159, 218, 0.35) !important;
 }
 /* El navegador muestra AM/PM cuando se usa hour12 vía JS */
+
+
+/* ============================================================
+   43. BULK EDIT — Barra flotante
+   ============================================================ */
+.bulk-bar {
+    position        : fixed;
+    bottom          : 28px;
+    left            : 50%;
+    transform       : translateX(-50%);
+    z-index         : 1060;
+    display         : flex;
+    align-items     : center;
+    gap             : 12px;
+    background      : var(--vmc-primary);
+    color           : #fff;
+    padding         : 10px 20px;
+    border-radius   : 40px;
+    box-shadow      : 0 6px 24px rgba(0,0,0,.28);
+    white-space     : nowrap;
+    animation       : bulkBarIn 160ms ease;
+}
+@keyframes bulkBarIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0);    }
+}
+.bulk-bar-count {
+    font-size   : .9rem;
+    padding-right: 8px;
+    border-right: 1px solid rgba(255,255,255,.35);
+}
+.bulk-bar .btn-outline-light {
+    border-color: rgba(255,255,255,.55);
+    color       : #fff;
+    font-size   : .82rem;
+}
+.bulk-bar .btn-outline-light:hover {
+    background-color: rgba(255,255,255,.18);
+    border-color    : #fff;
+}
+.bulk-bar .btn-danger {
+    font-size: .82rem;
+}
+/* Fila seleccionada */
+.persona-row.table-active td {
+    background-color: var(--vmc-primary-soft) !important;
+}
+[data-bs-theme="dark"] .persona-row.table-active td {
+    background-color: rgba(var(--vmc-primary-rgb), 0.18) !important;
+}

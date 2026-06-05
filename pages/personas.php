@@ -169,6 +169,9 @@ $seccionesPartes = [
                     <table class="table table-hover align-middle">
                         <thead>
                             <tr>
+                                <th style="width:40px;">
+                                    <input class="form-check-input" type="checkbox" id="chkSelectAll" title="Seleccionar todo">
+                                </th>
                                 <th>Nombre</th>
                                 <th>Perfil(es)</th>
                                 <th>Teléfono</th>
@@ -178,7 +181,11 @@ $seccionesPartes = [
                         </thead>
                         <tbody>
                             <?php foreach ($personas as $persona): ?>
-                            <tr>
+                            <tr class="persona-row" data-id="<?php echo $persona['id']; ?>">
+                                <td>
+                                    <input class="form-check-input chk-persona" type="checkbox"
+                                           value="<?php echo $persona['id']; ?>">
+                                </td>
                                 <td><strong><?php echo htmlspecialchars($persona['nombre_completo']); ?></strong></td>
                                 <td>
                                     <?php
@@ -425,6 +432,270 @@ $seccionesPartes = [
         </div>
     </div>
 </div>
+
+<!-- ── Barra flotante bulk-edit ──────────────────────────────── -->
+<div id="bulkBar" class="bulk-bar" style="display:none;">
+    <span class="bulk-bar-count">
+        <strong id="bulkCount">0</strong> seleccionado(s)
+    </span>
+    <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-light" id="btnBulkPerfiles">
+            <i class="bi bi-person-badge me-1"></i>Editar Perfiles
+        </button>
+        <button class="btn btn-sm btn-outline-light" id="btnBulkPrivilegios">
+            <i class="bi bi-shield-check me-1"></i>Editar Privilegios
+        </button>
+        <button class="btn btn-sm btn-danger" id="btnBulkEliminar">
+            <i class="bi bi-trash me-1"></i>Eliminar
+        </button>
+    </div>
+    <button class="btn btn-sm btn-link text-white ms-2 p-0" id="btnBulkCancelar" title="Cancelar selección">
+        <i class="bi bi-x-lg"></i>
+    </button>
+</div>
+
+<!-- ── Modal: Editar Perfiles en lote ───────────────────────── -->
+<div class="modal fade" id="modalBulkPerfiles" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Editar Perfiles en lote</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">
+                    Personas seleccionadas: <strong id="bulkPerfilesCount">0</strong>
+                </p>
+                <!-- Toggle Agregar / Reemplazar -->
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="small fw-semibold">Modo:</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="bulkPerfilesMode" id="bpModeAgregar" value="add" checked>
+                        <label class="btn btn-outline-primary" for="bpModeAgregar">Agregar</label>
+                        <input type="radio" class="btn-check" name="bulkPerfilesMode" id="bpModeReemplazar" value="replace">
+                        <label class="btn btn-outline-primary" for="bpModeReemplazar">Reemplazar</label>
+                    </div>
+                </div>
+                <!-- Checkboxes de perfiles -->
+                <div class="d-flex flex-wrap gap-2 border rounded p-2" id="bulkPerfilesLista">
+                    <?php foreach ($perfiles as $pf): ?>
+                    <div class="form-check">
+                        <input class="form-check-input chk-bulk-perfil" type="checkbox"
+                               value="<?php echo $pf['id']; ?>"
+                               id="bpf_<?php echo $pf['id']; ?>">
+                        <label class="form-check-label" for="bpf_<?php echo $pf['id']; ?>">
+                            <?php echo htmlspecialchars($pf['nombre']); ?>
+                        </label>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnBulkPerfilesGuardar">
+                    <i class="bi bi-save me-1"></i>Aplicar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: Editar Privilegios en lote ────────────────────── -->
+<div class="modal fade" id="modalBulkPrivilegios" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-shield-check me-2"></i>Editar Privilegios en lote</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">
+                    Personas seleccionadas: <strong id="bulkPrivilegiosCount">0</strong>
+                </p>
+                <!-- Toggle Agregar / Reemplazar -->
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="small fw-semibold">Modo:</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="bulkPrivilegiosMode" id="bpvModeAgregar" value="add" checked>
+                        <label class="btn btn-outline-primary" for="bpvModeAgregar">Agregar</label>
+                        <input type="radio" class="btn-check" name="bulkPrivilegiosMode" id="bpvModeReemplazar" value="replace">
+                        <label class="btn btn-outline-primary" for="bpvModeReemplazar">Reemplazar</label>
+                    </div>
+                </div>
+                <!-- Checkboxes de privilegios -->
+                <div class="d-flex flex-wrap gap-2 border rounded p-2" id="bulkPrivilegiosLista">
+                    <?php if (!empty($privilegiosModal)): ?>
+                        <?php foreach ($privilegiosModal as $prv): ?>
+                        <div class="form-check">
+                            <input class="form-check-input chk-bulk-privilegio" type="checkbox"
+                                   value="<?php echo $prv['id']; ?>"
+                                   id="bpv_<?php echo $prv['id']; ?>">
+                            <label class="form-check-label" for="bpv_<?php echo $prv['id']; ?>">
+                                <?php echo htmlspecialchars($prv['nombre']); ?>
+                            </label>
+                        </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <p class="text-muted small mb-0">No hay privilegios definidos.</p>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnBulkPrivilegiosGuardar">
+                    <i class="bi bi-save me-1"></i>Aplicar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════════════
+   BULK EDIT
+════════════════════════════════════════════════════════════ */
+const BulkEdit = {
+
+    getIds() {
+        return $('.chk-persona:checked').map(function () {
+            return parseInt(this.value);
+        }).get();
+    },
+
+    updateBar() {
+        const ids = this.getIds();
+        const n   = ids.length;
+        if (n > 0) {
+            $('#bulkCount').text(n);
+            $('#bulkPerfilesCount').text(n);
+            $('#bulkPrivilegiosCount').text(n);
+            $('#bulkBar').fadeIn(150);
+        } else {
+            $('#bulkBar').fadeOut(150);
+        }
+        // Sincronizar "seleccionar todo"
+        const total = $('.chk-persona').length;
+        $('#chkSelectAll').prop('indeterminate', n > 0 && n < total);
+        $('#chkSelectAll').prop('checked', n > 0 && n === total);
+        // Resaltar filas
+        $('.persona-row').each(function () {
+            const checked = $(this).find('.chk-persona').is(':checked');
+            $(this).toggleClass('table-active', checked);
+        });
+    },
+
+    clearSelection() {
+        $('.chk-persona, #chkSelectAll').prop('checked', false);
+        $('#chkSelectAll').prop('indeterminate', false);
+        $('.persona-row').removeClass('table-active');
+        $('#bulkBar').fadeOut(150);
+    },
+
+    init() {
+        // Seleccionar todo
+        $(document).on('change', '#chkSelectAll', function () {
+            $('.chk-persona').prop('checked', this.checked);
+            BulkEdit.updateBar();
+        });
+
+        // Checkbox individual
+        $(document).on('change', '.chk-persona', function () {
+            BulkEdit.updateBar();
+        });
+
+        // Cancelar selección
+        $('#btnBulkCancelar').on('click', () => this.clearSelection());
+
+        // Abrir modales
+        $('#btnBulkPerfiles').on('click', () => {
+            $('.chk-bulk-perfil').prop('checked', false);
+            $('input[name="bulkPerfilesMode"][value="add"]').prop('checked', true);
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalBulkPerfiles')).show();
+        });
+        $('#btnBulkPrivilegios').on('click', () => {
+            $('.chk-bulk-privilegio').prop('checked', false);
+            $('input[name="bulkPrivilegiosMode"][value="add"]').prop('checked', true);
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalBulkPrivilegios')).show();
+        });
+
+        // Eliminar en lote
+        $('#btnBulkEliminar').on('click', () => {
+            const ids = BulkEdit.getIds();
+            if (!ids.length) return;
+            if (!confirm(`¿Eliminar permanentemente a las ${ids.length} persona(s) seleccionada(s)?\n\nEsta acción no se puede deshacer.`)) return;
+            $.ajax({
+                url: '../api/personas.php', method: 'POST', dataType: 'json',
+                data: { action: 'bulk_delete', ids: ids },
+                success(res) {
+                    if (res.success) {
+                        APP.showNotification(res.message, 'success');
+                        setTimeout(() => location.reload(), 900);
+                    } else {
+                        APP.showNotification(res.message || 'Error al eliminar', 'danger');
+                    }
+                },
+                error() { APP.showNotification('Error al conectar con el servidor', 'danger'); }
+            });
+        });
+
+        // Guardar perfiles en lote
+        $('#btnBulkPerfilesGuardar').on('click', () => {
+            const ids        = BulkEdit.getIds();
+            const perfilIds  = $('.chk-bulk-perfil:checked').map(function () { return parseInt(this.value); }).get();
+            const mode       = $('input[name="bulkPerfilesMode"]:checked').val();
+            if (!ids.length) return;
+            if (!perfilIds.length) {
+                APP.showNotification('Selecciona al menos un perfil', 'warning'); return;
+            }
+            const $btn = $('#btnBulkPerfilesGuardar').prop('disabled', true);
+            $.ajax({
+                url: '../api/personas.php', method: 'POST', dataType: 'json',
+                data: { action: 'bulk_perfiles', ids: ids, perfil_ids: perfilIds, mode: mode },
+                success(res) {
+                    $btn.prop('disabled', false);
+                    if (res.success) {
+                        bootstrap.Modal.getInstance(document.getElementById('modalBulkPerfiles'))?.hide();
+                        APP.showNotification(res.message, 'success');
+                        setTimeout(() => location.reload(), 900);
+                    } else {
+                        APP.showNotification(res.message || 'Error', 'danger');
+                    }
+                },
+                error() { $btn.prop('disabled', false); APP.showNotification('Error al conectar con el servidor', 'danger'); }
+            });
+        });
+
+        // Guardar privilegios en lote
+        $('#btnBulkPrivilegiosGuardar').on('click', () => {
+            const ids          = BulkEdit.getIds();
+            const privilegioIds = $('.chk-bulk-privilegio:checked').map(function () { return parseInt(this.value); }).get();
+            const mode          = $('input[name="bulkPrivilegiosMode"]:checked').val();
+            if (!ids.length) return;
+            if (!privilegioIds.length) {
+                APP.showNotification('Selecciona al menos un privilegio', 'warning'); return;
+            }
+            const $btn = $('#btnBulkPrivilegiosGuardar').prop('disabled', true);
+            $.ajax({
+                url: '../api/personas.php', method: 'POST', dataType: 'json',
+                data: { action: 'bulk_privilegios', ids: ids, privilegio_ids: privilegioIds, mode: mode },
+                success(res) {
+                    $btn.prop('disabled', false);
+                    if (res.success) {
+                        bootstrap.Modal.getInstance(document.getElementById('modalBulkPrivilegios'))?.hide();
+                        APP.showNotification(res.message, 'success');
+                        setTimeout(() => location.reload(), 900);
+                    } else {
+                        APP.showNotification(res.message || 'Error', 'danger');
+                    }
+                },
+                error() { $btn.prop('disabled', false); APP.showNotification('Error al conectar con el servidor', 'danger'); }
+            });
+        });
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => BulkEdit.init());
+</script>
 
 <script>
 // ---- Seleccionar todas las partes de una sección ----
