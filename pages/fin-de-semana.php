@@ -48,7 +48,34 @@ $msg = $_GET['msg'] ?? '';
     <h1 class="h2 mb-0">
         <i class="bi bi-calendar2-week me-2"></i>Reunión Fin de Semana
     </h1>
-    <?php if ($tableExists): ?>
+    <?php if ($tableExists && !empty($semanas)): ?>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <!-- Filtro pill-tabs -->
+        <div class="filter-tabs" role="tablist" aria-label="Filtrar semanas">
+            <button class="filter-tab" data-filter="todos" role="tab" aria-selected="false">
+                Todos <span class="filter-count"><?php echo $cntTodos; ?></span>
+            </button>
+            <?php if ($cntActual > 0): ?>
+            <button class="filter-tab" data-filter="actual" role="tab" aria-selected="false">
+                Esta semana <span class="filter-count"><?php echo $cntActual; ?></span>
+            </button>
+            <?php endif; ?>
+            <?php if ($cntProximos > 0): ?>
+            <button class="filter-tab" data-filter="futuro" role="tab" aria-selected="false">
+                Próximos <span class="filter-count"><?php echo $cntProximos; ?></span>
+            </button>
+            <?php endif; ?>
+            <?php if ($cntPasados > 0): ?>
+            <button class="filter-tab" data-filter="pasado" role="tab" aria-selected="false">
+                Pasados <span class="filter-count"><?php echo $cntPasados; ?></span>
+            </button>
+            <?php endif; ?>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaSemana">
+            <i class="bi bi-plus-circle"></i> Nueva Semana
+        </button>
+    </div>
+    <?php elseif ($tableExists): ?>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaSemana">
         <i class="bi bi-plus-circle"></i> Nueva Semana
     </button>
@@ -84,28 +111,6 @@ $msg = $_GET['msg'] ?? '';
 
 <?php else: ?>
 
-<!-- Filtro pill-tabs -->
-<div class="filter-tabs mb-4" role="tablist" aria-label="Filtrar semanas">
-    <button class="filter-tab" data-filter="todos" role="tab" aria-selected="false">
-        Todos <span class="filter-count"><?php echo $cntTodos; ?></span>
-    </button>
-    <?php if ($cntActual > 0): ?>
-    <button class="filter-tab" data-filter="actual" role="tab" aria-selected="false">
-        Esta semana <span class="filter-count"><?php echo $cntActual; ?></span>
-    </button>
-    <?php endif; ?>
-    <?php if ($cntProximos > 0): ?>
-    <button class="filter-tab" data-filter="futuro" role="tab" aria-selected="false">
-        Próximos <span class="filter-count"><?php echo $cntProximos; ?></span>
-    </button>
-    <?php endif; ?>
-    <?php if ($cntPasados > 0): ?>
-    <button class="filter-tab" data-filter="pasado" role="tab" aria-selected="false">
-        Pasados <span class="filter-count"><?php echo $cntPasados; ?></span>
-    </button>
-    <?php endif; ?>
-</div>
-
 <!-- Grid de semanas -->
 <div class="row g-4" id="semanasGrid">
     <?php foreach ($semanas as $semana):
@@ -128,6 +133,7 @@ $msg = $_GET['msg'] ?? '';
                 : '<span class="badge bg-primary">Próximo</span>');
     ?>
     <div class="col-md-6 col-lg-4 semana-item"
+         data-estado="<?php echo $estado; ?>"
          data-id="<?php echo $semana['id']; ?>">
         <div class="card h-100 programa-card <?php echo $estado; ?> position-relative">
 
@@ -342,14 +348,8 @@ function getModalInd() {
 
     function applyFilter(filter) {
         items.forEach(item => {
-            const card  = item.querySelector('.card');
-            const estado = card ? card.classList : null;
-            if (!estado) return;
-            const visible = filter === 'todos'
-                || estado.contains(filter)
-                || (filter === 'actual'  && estado.contains('actual'))
-                || (filter === 'futuro'  && estado.contains('futuro'))
-                || (filter === 'pasado'  && estado.contains('pasado'));
+            const estado = item.dataset.estado;
+            const visible = filter === 'todos' || estado === filter;
             item.style.display = visible ? '' : 'none';
         });
     }
