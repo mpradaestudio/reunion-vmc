@@ -88,18 +88,6 @@ $extraHeadHtml = '
             font-weight  : 700;
             margin-right : 6px;
         }
-
-        /* Igualar altura del input-text del orador con el Select2 */
-        #txt_dp_orador {
-            height : 38px;
-            padding: 0.375rem 0.75rem;
-            line-height: 1.5;
-        }
-        /* Forzar misma altura en el Select2 del orador */
-        #wrapper-orador .select2-container--bootstrap-5 .select2-selection {
-            min-height: 38px;
-            height    : 38px;
-        }
     </style>
 ';
 
