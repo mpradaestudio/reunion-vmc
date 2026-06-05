@@ -3,7 +3,7 @@ $pageTitle = 'Personas';
 require_once __DIR__ . '/../includes/header.php';
 
 // Obtener lista de perfiles (para checkboxes y filtro)
-$perfiles = fetchAll("SELECT * FROM perfiles ORDER BY id");
+$perfiles = fetchAll("SELECT * FROM perfiles ORDER BY orden, nombre");
 
 // Filtros
 $filtroPerfil = (isset($_GET['perfil_id']) && $_GET['perfil_id'] !== '') ? (int)$_GET['perfil_id'] : null;
