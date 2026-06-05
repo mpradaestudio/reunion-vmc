@@ -373,10 +373,8 @@ $('#chkOradorLocal').on('change', function () {
         }
     } else {
         // Mostrar input libre, ocultar selector y limpiar asignación persona
+        $('#sel_dp_orador').val('').trigger('change');
         $('#sel_dp_orador').hide();
-        if ($('#sel_dp_orador').hasClass('select2-hidden-accessible')) {
-            $('#sel_dp_orador').val('').trigger('change.select2');
-        }
         $('#txt_dp_orador').show().val('').focus();
 
         // Desasignar persona en BD
@@ -493,10 +491,17 @@ $(document).ready(function () {
         }));
     });
 
-    // Si Local ya viene marcado al cargar, mantener visibilidad correcta
+    // Estado inicial: forzar visibilidad según checkbox (checked o no)
     if ($('#chkOradorLocal').is(':checked')) {
         $('#txt_dp_orador').hide();
         $('#sel_dp_orador').show();
+    } else {
+        $('#txt_dp_orador').show();
+        $('#sel_dp_orador').hide();
+        // Asegurarse de que Select2 no quede en estado inconsistente
+        if ($('#sel_dp_orador').hasClass('select2-hidden-accessible')) {
+            $('#sel_dp_orador').val('').trigger('change.select2');
+        }
     }
 
     /* ── Eventos ────────────────────────────────────────────────── */
