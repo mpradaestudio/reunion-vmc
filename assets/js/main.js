@@ -283,47 +283,205 @@ const Scraper = {
 /**
  * Gestión del tema claro/oscuro.
  * El atributo data-bs-theme ya se aplica en <head> (anti-FOUC).
- * Aquí solo gestionamos el botón de alternancia y la persistencia.
+ * Aquí gestionamos el botón y la persistencia.
  */
 const Theme = {
     KEY: 'vmc-theme',
 
-    get: function () {
+    get() {
         return document.documentElement.getAttribute('data-bs-theme') || 'light';
     },
 
-    set: function (theme) {
+    set(theme) {
         document.documentElement.setAttribute('data-bs-theme', theme);
-        try {
-            localStorage.setItem(this.KEY, theme);
-        } catch (e) {
-            /* localStorage no disponible: el tema seguirá aplicado en la sesión */
+        try { localStorage.setItem(this.KEY, theme); } catch(e) {}
+    },
+
+    toggle() {
+        this.set(this.get() === 'dark' ? 'light' : 'dark');
+        // Notificar al Sidebar para que sincronice el label e iconos
+        if (typeof Sidebar !== 'undefined' && Sidebar.syncThemeLabel) {
+            Sidebar.syncThemeLabel();
         }
     },
 
-    toggle: function () {
-        this.set(this.get() === 'dark' ? 'light' : 'dark');
-    },
-
-    init: function () {
+    init() {
         const btn = document.getElementById('themeToggle');
         if (btn) {
-            btn.addEventListener('click', () => Theme.toggle());
+            btn.addEventListener('click', () => this.toggle());
         }
-
-        // Si el usuario no ha elegido un tema manualmente, seguir la preferencia del sistema
+        // Seguir preferencia del sistema si no hay elección manual
         if (window.matchMedia) {
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
                 let stored = null;
-                try { stored = localStorage.getItem(Theme.KEY); } catch (err) {}
+                try { stored = localStorage.getItem(this.KEY); } catch(err) {}
                 if (!stored) {
                     document.documentElement.setAttribute('data-bs-theme', e.matches ? 'dark' : 'light');
+                    if (typeof Sidebar !== 'undefined') Sidebar.syncThemeLabel();
                 }
             });
         }
     }
 };
 
+/* ================================================================
+   SIDEBAR — toggle, persistencia, offcanvas móvil, tema label
+================================================================ */
+const Sidebar = {
+    KEY_COLLAPSED: 'vmc-sb-collapsed',
+    MOBILE_BP    : 768,
+
+    sidebar  : null,
+    topbar   : null,
+    wrapper  : null,
+    overlay  : null,
+    toggleBtn: null,
+    themeLabel: null,
+
+    isMobile() {
+        return window.innerWidth < this.MOBILE_BP;
+    },
+
+    isStoredCollapsed() {
+        try { return localStorage.getItem(this.KEY_COLLAPSED) === '1'; } catch(e) { return false; }
+    },
+
+    saveCollapsed(v) {
+        try { localStorage.setItem(this.KEY_COLLAPSED, v ? '1' : '0'); } catch(e) {}
+    },
+
+    applyDesktop(collapsed) {
+        this.sidebar.classList.toggle('collapsed', collapsed);
+        this.topbar.classList.toggle('sb-collapsed', collapsed);
+        this.wrapper.classList.toggle('sb-collapsed', collapsed);
+        this.saveCollapsed(collapsed);
+    },
+
+    openMobile() {
+        this.sidebar.classList.add('mobile-open');
+        this.overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    },
+
+    closeMobile() {
+        this.sidebar.classList.remove('mobile-open');
+        this.overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    },
+
+    toggle() {
+        if (this.isMobile()) {
+            this.sidebar.classList.contains('mobile-open')
+                ? this.closeMobile()
+                : this.openMobile();
+        } else {
+            this.applyDesktop(!this.sidebar.classList.contains('collapsed'));
+        }
+    },
+
+    syncThemeLabel() {
+        const dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+
+        // Etiqueta en el sidebar
+        if (this.themeLabel) {
+            this.themeLabel.textContent = dark ? 'Modo claro' : 'Modo oscuro';
+        }
+
+        // Iconos luna/sol en el botón del sidebar
+        const moon = document.querySelector('#themeToggle .icon-moon');
+        const sun  = document.querySelector('#themeToggle .icon-sun');
+        if (moon) moon.style.display = dark ? 'none'         : 'inline-block';
+        if (sun)  sun.style.display  = dark ? 'inline-block' : 'none';
+    },
+
+    init() {
+        this.sidebar    = document.getElementById('sidebar');
+        this.topbar     = document.getElementById('topbar');
+        this.wrapper    = document.getElementById('contentWrapper');
+        this.overlay    = document.getElementById('sbOverlay');
+        this.toggleBtn  = document.getElementById('sidebarToggle');
+        this.themeLabel = document.getElementById('themeLabel');
+
+        if (!this.sidebar) {
+            // Quitar la clase aunque no haya sidebar (ej. exportar_pdf)
+            document.documentElement.classList.remove('sb-no-transition');
+            return;
+        }
+
+        // Aplicar estado inicial SIN transición (el anti-FOUC ya bloqueó las transitions)
+        if (!this.isMobile() && this.isStoredCollapsed()) {
+            this.applyDesktop(true);
+        }
+
+        // Rehabilitar transiciones después de que el navegador haya pintado
+        // el estado correcto (doble rAF garantiza 2 frames de diferencia)
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                document.documentElement.classList.remove('sb-no-transition');
+            });
+        });
+
+        // Botón hamburguesa
+        this.toggleBtn?.addEventListener('click', () => this.toggle());
+
+        // Overlay móvil
+        this.overlay?.addEventListener('click', () => this.closeMobile());
+
+        // Redimensionado
+        window.addEventListener('resize', () => {
+            if (!this.isMobile()) {
+                this.closeMobile();
+                this.applyDesktop(this.isStoredCollapsed());
+            }
+        });
+
+        // Etiqueta e iconos de tema al inicio
+        this.syncThemeLabel();
+    }
+};
+
+/* ── Sidebar groups: toggle de submenús ─────────────────────── */
+const SidebarGroups = {
+    KEY: 'vmc-sb-groups',   // JSON {groupId: bool (collapsed)}
+
+    load() {
+        try { return JSON.parse(localStorage.getItem(this.KEY) || '{}'); } catch(e) { return {}; }
+    },
+    save(state) {
+        try { localStorage.setItem(this.KEY, JSON.stringify(state)); } catch(e) {}
+    },
+
+    init() {
+        const state = this.load();
+
+        document.querySelectorAll('.sidebar-group-toggle').forEach(btn => {
+            const targetId = btn.dataset.target;
+            const items    = document.getElementById(targetId);
+            if (!items) return;
+
+            // Restaurar estado guardado
+            if (state[targetId]) {
+                items.classList.add('sb-group-collapsed');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+
+            btn.addEventListener('click', () => {
+                // En sidebar colapsado, no colapsar subgrupos (solo iconos visibles)
+                if (document.getElementById('sidebar')?.classList.contains('collapsed')) return;
+
+                const isCollapsed = items.classList.toggle('sb-group-collapsed');
+                btn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+                const s = this.load();
+                s[targetId] = isCollapsed;
+                this.save(s);
+            });
+        });
+    }
+};
+
+/* ── Inicialización única al cargar el DOM ──────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
     Theme.init();
+    Sidebar.init();
+    SidebarGroups.init();
 });

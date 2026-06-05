@@ -37,7 +37,7 @@ $proximosProgramas = fetchAll("
                 Panel de Control
             </h1>
             <div>
-                <a href="pages/programas.php" class="btn btn-primary">
+                <a href="pages/entre-semana.php" class="btn btn-primary">
                     <i class="bi bi-calendar-plus"></i> Ver Programas
                 </a>
             </div>
@@ -105,7 +105,7 @@ $proximosProgramas = fetchAll("
                     <i class="bi bi-calendar-week me-2"></i>
                     Próximos Programas
                 </h5>
-                <a href="pages/programas.php" class="btn btn-sm btn-outline-primary">
+                <a href="pages/entre-semana.php" class="btn btn-sm btn-outline-primary">
                     Ver todos <i class="bi bi-arrow-right"></i>
                 </a>
             </div>
@@ -122,6 +122,9 @@ $proximosProgramas = fetchAll("
                         foreach ($proximosProgramas as $programa):
                             $claseEstado = ($programa['fecha_inicio'] <= $hoy && $programa['fecha_fin'] >= $hoy)
                                            ? 'actual' : 'futuro';
+                            $badgeHtml = $claseEstado === 'actual'
+                                        ? '<span class="badge bg-success">Esta semana</span>'
+                                        : '<span class="badge bg-primary">Próximo</span>';
                             // Días sin cero inicial
                             $fi     = new DateTime($programa['fecha_inicio']);
                             $ff     = new DateTime($programa['fecha_fin']);
@@ -134,13 +137,27 @@ $proximosProgramas = fetchAll("
                             <div class="card programa-card <?php echo $claseEstado; ?> h-100 no-hover">
                                 <div class="card-body">
                                     <!-- Título (ya incluye el rango de fechas) -->
-                                    <h6 class="card-title fw-bold mb-3">
-                                        <?php echo htmlspecialchars($programa['titulo_semana']); ?>
-                                    </h6>
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <h6 class="card-title fw-bold mb-0 pe-2">
+                                            <?php echo htmlspecialchars($programa['titulo_semana']); ?>
+                                        </h6>
+                                        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                                            <?php echo $badgeHtml; ?>
+                                            <?php if (!empty($programa['url_fuente'])): ?>
+                                            <a href="<?php echo htmlspecialchars($programa['url_fuente']); ?>"
+                                            target="_blank" rel="noopener noreferrer"
+                                            class="btn btn-sm btn-light rounded-1 p-1 lh-1"
+                                            title="Ver en JW.ORG">
+                                                <i class="bi bi-box-arrow-up-right" style="font-size:.85rem;"></i>
+                                            </a>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+
 
                                     <!-- Canciones -->
-                                    <p class="mb-2">
-                                        <small class="text-muted">
+                                    <p class="mb-0">
+                                        <small class="">
                                             <i class="bi bi-music-note"></i>
                                             Canciones: <?php echo $programa['cancion_inicial']; ?>,
                                             <?php echo $programa['cancion_media']; ?>,
@@ -150,11 +167,11 @@ $proximosProgramas = fetchAll("
 
                                     <!-- Presidente -->
                                     <p class="mb-3">
-                                        <small class="text-muted">
+                                        <small class="">
                                             <i class="bi bi-person"></i>
-                                            <?php echo $programa['presidente_nombre']
+                                            Presidente: <?php echo $programa['presidente_nombre']
                                                 ? htmlspecialchars($programa['presidente_nombre'])
-                                                : '<span class="text-muted fst-italic">Sin presidente</span>'; ?>
+                                                : '<span>Sin asignar</span>'; ?>
                                         </small>
                                     </p>
 
@@ -171,7 +188,7 @@ $proximosProgramas = fetchAll("
                     <div class="empty-state">
                         <i class="bi bi-calendar-x"></i>
                         <p>No hay programas próximos</p>
-                        <a href="pages/programas.php" class="btn btn-primary">
+                        <a href="pages/entre-semana.php" class="btn btn-primary">
                             <i class="bi bi-cloud-download"></i> Extraer Programas
                         </a>
                     </div>
@@ -200,13 +217,13 @@ $proximosProgramas = fetchAll("
                         </a>
                     </div>
                     <div class="col-md-3 col-sm-6">
-                        <a href="pages/programas.php" class="quick-tile">
+                        <a href="pages/entre-semana.php" class="quick-tile">
                             <i class="bi bi-cloud-download icon-success"></i>
                             <span>Extraer Programas</span>
                         </a>
                     </div>
                     <div class="col-md-3 col-sm-6">
-                        <a href="pages/programas.php" class="quick-tile">
+                        <a href="pages/entre-semana.php" class="quick-tile">
                             <i class="bi bi-person-check icon-warning"></i>
                             <span>Asignar Partes</span>
                         </a>

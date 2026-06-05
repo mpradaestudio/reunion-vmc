@@ -137,13 +137,24 @@ $mesNombre = [
             </label>
 
             <div class="card-body">
-                <!-- Título + badge estado -->
+                <!-- Título + badge estado + enlace jw.org -->
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <h5 class="card-title mb-0 pe-2">
                         <?php echo htmlspecialchars($programa['titulo_semana']); ?>
                     </h5>
-                    <?php echo $badgeHtml; ?>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <?php echo $badgeHtml; ?>
+                        <?php if (!empty($programa['url_fuente'])): ?>
+                        <a href="<?php echo htmlspecialchars($programa['url_fuente']); ?>"
+                        target="_blank" rel="noopener noreferrer"
+                        class="btn btn-sm btn-light rounded-1 p-1 lh-1"
+                        title="Ver en JW.ORG">
+                            <i class="bi bi-box-arrow-up-right" style="font-size:.85rem;"></i>
+                        </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
+
 
                 <!-- Fecha (oculta — título ya la incluye; se conserva para PDF) -->
                 <p class="text-muted mb-2 d-none" data-fecha="<?php echo htmlspecialchars($fechaFormato); ?>">
@@ -159,10 +170,10 @@ $mesNombre = [
                 </p>
                 <?php endif; ?>
 
-                <!-- Canciones  + Presidente -->
+                <!-- Canciones + Presidente -->
                 <div class="mb-3">
                     <small class="d-block">
-                        <i class="bi bi-music-note-beamed"></i>
+                        <i class="bi bi-music-note"></i>
                         Canciones: <?php echo $programa['cancion_inicial']; ?>,
                         <?php echo $programa['cancion_media']; ?>,
                         <?php echo $programa['cancion_final']; ?>
@@ -171,7 +182,7 @@ $mesNombre = [
                         <i class="bi bi-person"></i>
                         Presidente: <?php echo $programa['presidente_nombre']
                             ? htmlspecialchars($programa['presidente_nombre'])
-                            : '<span class="text-muted">Sin asignar</span>'; ?>
+                            : '<span>Sin asignar</span>'; ?>
                     </small>
                 </div>
 
@@ -179,7 +190,7 @@ $mesNombre = [
                 <div class="mb-3">
                     <small>
                         <i class="bi bi-list-check"></i>
-                        <?php echo $programa['total_secciones']; ?> partes
+                        <?php echo $programa['total_secciones']; ?> partes                        
                     </small>
                 </div>
 
@@ -258,7 +269,7 @@ $mesNombre = [
                 <input type="text" class="form-control" id="urlSemana"
                        placeholder="https://www.jw.org/es/">
                 <small class="text-muted d-block mt-1">
-                    Ejemplo: <a href="https://www.jw.org/es/biblioteca/guia-actividades-reunion-testigos-jehova/" target="_blank">https://www.jw.org/es/biblioteca/guia-actividades-reunion-testigos-jehova</a>
+                    Fuente: <a href="https://www.jw.org/es/biblioteca/guia-actividades-reunion-testigos-jehova/" target="_blank" rel="noopener">https://www.jw.org/es/biblioteca/guia-actividades-reunion-testigos-jehova/</a>
                 </small>
                 <div id="extraerEstado" class="mt-3"></div>
             </div>

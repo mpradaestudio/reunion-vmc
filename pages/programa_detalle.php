@@ -1,18 +1,102 @@
 <?php
 $pageTitle = 'Detalle del Programa';
+
+// Select2: CSS en el <head> vía buffer de salida antes de que header.php escriba el HTML
+$extraHeadHtml = '
+    <!-- Select2 CSS (solo programa_detalle) -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    <style>
+        /* ── Layout ─────────────────────────────────────────────────────── */
+        .input-group .select2-container { flex: 1 1 auto; min-width: 0; }
+        .select2-container--bootstrap-5 .select2-selection {
+            border-radius: var(--vmc-radius-sm);
+        }
+
+        /* ── Eliminar border y shadow en focus/open ──────────────────────
+           Sustituye el anillo azul del tema Bootstrap-5 por el primario
+           del proyecto, sin sombra extra.                                  */
+        .select2-container--bootstrap-5.select2-container--focus .select2-selection,
+        .select2-container--bootstrap-5.select2-container--open  .select2-selection {
+            border-color: var(--vmc-primary) !important;
+            box-shadow : none !important;
+        }
+
+        /* ── Search field dentro del dropdown ───────────────────────────── */
+        .select2-container--bootstrap-5 .select2-dropdown
+            .select2-search .select2-search__field:focus {
+            border-color: var(--vmc-primary) !important;
+            box-shadow : none !important;
+            outline    : none;
+        }
+
+        /* ── Opción seleccionada (fondo azul del proyecto) ───────────────
+           Reemplaza el azul Bootstrap por --vmc-primary (#4a6da7).         */
+        .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options
+            .select2-results__option.select2-results__option--selected,
+        .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options
+            .select2-results__option[aria-selected=true]:not(.select2-results__option--highlighted) {
+            background-color: var(--vmc-primary-soft) !important;
+            color           : var(--vmc-primary)      !important;
+        }
+
+        /* ── Opción destacada al hacer hover ─────────────────────────────  */
+        .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options
+            .select2-results__option--highlighted {
+            background-color: var(--vmc-primary) !important;
+            color           : #ffffff             !important;
+        }
+
+        /* ── MODO OSCURO ─────────────────────────────────────────────────  */
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection,
+        [data-bs-theme="dark"] .select2-dropdown {
+            background-color: var(--vmc-surface-2);
+            border-color    : var(--vmc-border-strong);
+            color           : var(--vmc-text);
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-selection__rendered {
+            color: var(--vmc-text);
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-results__option {
+            background-color: var(--vmc-surface-2);
+            color           : var(--vmc-text);
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options
+            .select2-results__option--highlighted {
+            background-color: var(--vmc-primary) !important;
+            color           : #fff               !important;
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-dropdown
+            .select2-results__options
+            .select2-results__option[aria-selected=true]:not(.select2-results__option--highlighted) {
+            background-color: rgba(74,109,167,.22) !important;
+            color           : #9bb6e6              !important;
+        }
+        [data-bs-theme="dark"] .select2-container--bootstrap-5 .select2-search__field {
+            background-color: var(--vmc-surface-3);
+            border-color    : var(--vmc-border-strong);
+            color           : var(--vmc-text);
+        }
+    </style>
+';
+
 require_once __DIR__ . '/../includes/header.php';
 
 $programaId = $_GET['id'] ?? null;
 
 if (!$programaId) {
-    redirect('programas.php');
+    redirect('entre-semana.php');
 }
 
 // Obtener programa completo
 $programa = fetchOne("SELECT * FROM programas_semanales WHERE id = ?", [$programaId]);
 
 if (!$programa) {
-    redirect('programas.php');
+    redirect('entre-semana.php');
 }
 
 // Obtener secciones
@@ -107,39 +191,70 @@ function renderOpciones($lista, $selId, $selNombre = '') {
 
 // Formatear fecha
 $fecha_inicio = new DateTime($programa['fecha_inicio']);
-$fecha_fin = new DateTime($programa['fecha_fin']);
+$fecha_fin    = new DateTime($programa['fecha_fin']);
 $mesNombre = [
-    1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril',
-    5 => 'mayo', 6 => 'junio', 7 => 'julio', 8 => 'agosto',
-    9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre'
+    1=>'enero', 2=>'febrero',  3=>'marzo',    4=>'abril',
+    5=>'mayo',  6=>'junio',    7=>'julio',    8=>'agosto',
+    9=>'septiembre', 10=>'octubre', 11=>'noviembre', 12=>'diciembre'
 ];
-$mes = $mesNombre[(int)$fecha_inicio->format('n')];
-$fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' de ' . $mes . ' ' . $fecha_inicio->format('Y');
+$mes        = $mesNombre[(int)$fecha_inicio->format('n')];
+$fechaFormato = (int)$fecha_inicio->format('d') . '-' . (int)$fecha_fin->format('d')
+              . ' de ' . $mes . ' ' . $fecha_inicio->format('Y');
+
+// Navegación: semana anterior y siguiente (por fecha_inicio)
+$semanaAnterior = fetchOne(
+    "SELECT id FROM programas_semanales WHERE fecha_inicio < ? ORDER BY fecha_inicio DESC LIMIT 1",
+    [$programa['fecha_inicio']]
+);
+$semanaSiguiente = fetchOne(
+    "SELECT id FROM programas_semanales WHERE fecha_inicio > ? ORDER BY fecha_inicio ASC LIMIT 1",
+    [$programa['fecha_inicio']]
+);
 ?>
 
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <a href="programas.php" class="btn btn-outline-secondary mb-2">
-                    <i class="bi bi-arrow-left"></i> Volver
-                </a>
-                <h1 class="h2 mb-0"><?php echo htmlspecialchars($programa['titulo_semana']); ?></h1>
-                <p class="text-muted mb-0">
-                    <i class="bi bi-calendar3"></i> <?php echo $fechaFormato; ?>
-                    <?php if ($programa['referencia_biblica']): ?>
-                        | <i class="bi bi-book"></i> <?php echo htmlspecialchars($programa['referencia_biblica']); ?>
-                    <?php endif; ?>
-                </p>
-            </div>
-            <div>
-                <a href="exportar_pdf.php?programa_id=<?php echo $programaId; ?>" 
-                   class="btn btn-danger" target="_blank">
-                    <i class="bi bi-file-pdf"></i> Exportar PDF
-                </a>
-            </div>
-        </div>
+<!-- ── Fila 1: Volver | ← semana anterior · siguiente → | Exportar PDF ── -->
+<div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
+
+    <!-- Extremo izquierdo -->
+    <a href="entre-semana.php" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+
+    <!-- Centro: navegación entre semanas -->
+    <div class="d-flex gap-2">
+        <?php if ($semanaAnterior): ?>
+        <a href="programa_detalle.php?id=<?php echo $semanaAnterior['id']; ?>"
+           class="btn btn-outline-primary" title="Semana anterior">
+            <i class="bi bi-chevron-left"></i> Anterior
+        </a>
+        <?php else: ?>
+        <button class="btn btn-outline-primary" disabled>
+            <i class="bi bi-chevron-left"></i> Anterior
+        </button>
+        <?php endif; ?>
+
+        <?php if ($semanaSiguiente): ?>
+        <a href="programa_detalle.php?id=<?php echo $semanaSiguiente['id']; ?>"
+           class="btn btn-outline-primary" title="Semana siguiente">
+            Siguiente <i class="bi bi-chevron-right"></i>
+        </a>
+        <?php else: ?>
+        <button class="btn btn-outline-primary" disabled>
+            Siguiente <i class="bi bi-chevron-right"></i>
+        </button>
+        <?php endif; ?>
     </div>
+
+    <!-- Extremo derecho -->
+    <a href="exportar_pdf.php?programa_id=<?php echo $programaId; ?>"
+       class="btn btn-danger" target="_blank">
+        <i class="bi bi-file-pdf"></i> Exportar PDF
+    </a>
+</div>
+
+<!-- ── Fila 2: Título de la semana ── -->
+<div class="mb-4">
+    <h1 class="h2 mb-0"><?php echo htmlspecialchars($programa['titulo_semana']); ?></h1>
 </div>
 
 <!-- Roles generales -->
@@ -154,7 +269,7 @@ $fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' d
                     <!-- Presidente -->
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Presidente:</label>
-                        <select class="form-select asignar-rol" data-rol="Presidente">
+                        <select class="form-select asignar-rol" data-rol="Presidente" style="width:100%;">
                             <?php echo renderOpciones(
                                 personasPara('Presidente'),
                                 $rolesAsignados['Presidente']['persona_id'] ?? null,
@@ -162,11 +277,11 @@ $fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' d
                             ); ?>
                         </select>
                     </div>
-                    
+
                     <!-- Oración inicial -->
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Oración inicial:</label>
-                        <select class="form-select asignar-rol" data-rol="Oración inicial">
+                        <select class="form-select asignar-rol" data-rol="Oración inicial" style="width:100%;">
                             <?php echo renderOpciones(
                                 personasPara('Oración'),
                                 $rolesAsignados['Oración inicial']['persona_id'] ?? null,
@@ -174,11 +289,11 @@ $fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' d
                             ); ?>
                         </select>
                     </div>
-                    
+
                     <!-- Oración final -->
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Oración final:</label>
-                        <select class="form-select asignar-rol" data-rol="Oración final">
+                        <select class="form-select asignar-rol" data-rol="Oración final" style="width:100%;">
                             <?php echo renderOpciones(
                                 personasPara('Oración'),
                                 $rolesAsignados['Oración final']['persona_id'] ?? null,
@@ -315,21 +430,13 @@ $fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' d
                         ?>
                             <div class="<?php echo $colClase; ?>">
                                 <label class="form-label small mb-1"><?php echo $etiquetas[$i - 1]; ?></label>
-                                <div class="input-group input-group-sm">
-                                    <select class="form-select asignar-parte"
-                                            data-seccion-id="<?php echo $seccion['id']; ?>"
-                                            data-orden="<?php echo $i; ?>"
-                                            data-tipo="<?php echo htmlspecialchars($seccion['tipo_asignacion']); ?>">
-                                        <?php echo renderOpciones($lista, $selId, $selNombre); ?>
-                                    </select>
-                                    <?php if ($asignacionActual): ?>
-                                    <button class="btn btn-outline-danger btn-desasignar"
-                                            data-seccion-id="<?php echo $seccion['id']; ?>"
-                                            data-orden="<?php echo $i; ?>">
-                                        <i class="bi bi-x"></i>
-                                    </button>
-                                    <?php endif; ?>
-                                </div>
+                                <select class="form-select asignar-parte"
+                                        style="width:100%;"
+                                        data-seccion-id="<?php echo $seccion['id']; ?>"
+                                        data-orden="<?php echo $i; ?>"
+                                        data-tipo="<?php echo htmlspecialchars($seccion['tipo_asignacion']); ?>">
+                                    <?php echo renderOpciones($lista, $selId, $selNombre); ?>
+                                </select>
                                 <?php if ($cap && empty($lista)): ?>
                                     <small class="text-muted">Nadie habilitado para esta parte</small>
                                 <?php endif; ?>
@@ -350,89 +457,71 @@ $fechaFormato = $fecha_inicio->format('d') . '-' . $fecha_fin->format('d') . ' d
 <script>
 const programaId = <?php echo $programaId; ?>;
 
-// Asignar rol general
-$('.asignar-rol').on('change', function() {
-    const rol = $(this).data('rol');
+// ── Roles generales: asignar / desasignar via Select2 (change) ──
+$('.asignar-rol').on('change', function () {
+    const rol       = $(this).data('rol');
     const personaId = $(this).val();
-    
+
     if (!personaId) {
-        // Desasignar
         $.post('../api/asignaciones.php', {
-            action: 'desasignar_rol',
-            programa_id: programaId,
-            rol: rol
-        }, function(response) {
-            if (response.success) {
-                APP.showNotification('Rol desasignado', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                APP.showNotification(response.message, 'danger');
-            }
+            action: 'desasignar_rol', programa_id: programaId, rol
+        }, (r) => {
+            if (r.success) { APP.showNotification('Rol desasignado', 'success'); setTimeout(() => location.reload(), 800); }
+            else APP.showNotification(r.message, 'danger');
         });
     } else {
-        // Asignar
         $.post('../api/asignaciones.php', {
-            action: 'asignar_rol',
-            programa_id: programaId,
-            rol: rol,
-            persona_id: personaId
-        }, function(response) {
-            if (response.success) {
-                APP.showNotification('Rol asignado correctamente', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                APP.showNotification(response.message, 'danger');
-            }
+            action: 'asignar_rol', programa_id: programaId, rol, persona_id: personaId
+        }, (r) => {
+            if (r.success) { APP.showNotification('Rol asignado', 'success'); setTimeout(() => location.reload(), 800); }
+            else APP.showNotification(r.message, 'danger');
         });
     }
 });
 
-// Asignar parte
-$('.asignar-parte').on('change', function() {
+// ── Partes del programa: asignar / desasignar via Select2 (change) ──
+$('.asignar-parte').on('change', function () {
     const seccionId = $(this).data('seccion-id');
-    const orden = $(this).data('orden');
-    const tipo = $(this).data('tipo');
+    const orden     = $(this).data('orden');
+    const tipo      = $(this).data('tipo');
     const personaId = $(this).val();
-    
-    if (!personaId) {
-        return;
-    }
-    
-    $.post('../api/asignaciones.php', {
-        action: 'asignar_parte',
-        seccion_id: seccionId,
-        persona_id: personaId,
-        rol: tipo,
-        orden: orden
-    }, function(response) {
-        if (response.success) {
-            APP.showNotification('Persona asignada correctamente', 'success');
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            APP.showNotification(response.message, 'danger');
-        }
-    });
-});
 
-// Desasignar parte
-$('.btn-desasignar').on('click', function() {
-    const seccionId = $(this).data('seccion-id');
-    const orden = $(this).data('orden');
-    
-    if (confirm('¿Desea quitar esta asignación?')) {
+    if (!personaId) {
+        // X limpia → desasignar
         $.post('../api/asignaciones.php', {
-            action: 'desasignar_parte',
-            seccion_id: seccionId,
-            orden: orden
-        }, function(response) {
-            if (response.success) {
-                APP.showNotification('Asignación eliminada', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                APP.showNotification(response.message, 'danger');
-            }
+            action: 'desasignar_parte', seccion_id: seccionId, orden
+        }, (r) => {
+            if (r.success) { APP.showNotification('Asignación eliminada', 'success'); setTimeout(() => location.reload(), 800); }
+            else APP.showNotification(r.message, 'danger');
+        });
+    } else {
+        $.post('../api/asignaciones.php', {
+            action: 'asignar_parte', seccion_id: seccionId, persona_id: personaId, rol: tipo, orden
+        }, (r) => {
+            if (r.success) { APP.showNotification('Persona asignada', 'success'); setTimeout(() => location.reload(), 800); }
+            else APP.showNotification(r.message, 'danger');
         });
     }
+});
+</script>
+
+<!-- Select2 JS (solo programa_detalle) -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function () {
+
+    const s2Cfg = {
+        theme     : 'bootstrap-5',
+        language  : 'es',
+        allowClear: true,
+        width     : '100%',
+        placeholder: function () {
+            return $(this).find('option[value=""]').text() || 'Sin asignar';
+        }
+    };
+
+    $('.asignar-rol').select2(s2Cfg);
+    $('.asignar-parte').select2(s2Cfg);
 });
 </script>
 
