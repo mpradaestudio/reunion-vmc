@@ -369,12 +369,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Filtro inicial
-    const filtroInicial = <?php
-        if ($cntActual > 0)       echo "'actual'";
-        elseif ($cntProximos > 0) echo "'futuro'";
-        else                      echo "'todos'";
-    ?>;
+    // Filtro inicial: siempre mostrar todos
+    const filtroInicial = 'todos';
     const tabInicial = document.querySelector(`.filter-tab[data-filter="${filtroInicial}"]`)
                     || document.querySelector('.filter-tab[data-filter="todos"]');
     if (tabInicial) {
