@@ -223,10 +223,10 @@ $mesNombre = [
 <div class="d-flex justify-content-center mt-4 d-none" id="batchActions">
     <div class="batch-actions">
         <span class="batch-count" id="batchCount">0 seleccionados</span>
-        <button class="btn btn-sm btn-outline-secondary" id="btnDeselAll">
+        <button class="btn btn-sm btn-outline-secondary rounded-pill" id="btnDeselAll">
             <i class="bi bi-x-circle"></i> Deseleccionar todo
         </button>
-        <button class="btn btn-sm btn-danger" id="btnEliminarLote">
+        <button class="btn btn-sm btn-danger rounded-pill" id="btnEliminarLote">
             <i class="bi bi-trash"></i> Eliminar seleccionados
         </button>
     </div>
