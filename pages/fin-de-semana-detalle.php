@@ -276,19 +276,30 @@ function optionsFds(array $lista, ?int $selId): string {
                                           (int)($asignaciones['DP_Presidente']['persona_id'] ?? 0)); ?>
                 </select>
             </div>
-            <!-- Orador (puede ser persona o texto libre) -->
+            <!-- Orador -->
             <div class="col-md-6">
-                <label class="form-label fw-bold">Orador</label>
-                <div class="mb-1">
-                    <select class="form-select fds-asig-select" data-rol="DP_Orador" id="sel_dp_orador">
-                        <?php echo optionsFds($todasPersonas,
-                                              (int)($asignaciones['DP_Orador']['persona_id'] ?? 0)); ?>
-                    </select>
+                <!-- Label + checkbox "Local" en la misma línea -->
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <label class="form-label fw-bold mb-0">Orador</label>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="checkbox" id="chkOradorLocal"
+                               <?php echo !empty($asignaciones['DP_Orador']['persona_id']) ? 'checked' : ''; ?>>
+                        <label class="form-check-label small" for="chkOradorLocal">Local</label>
+                    </div>
                 </div>
-                <input type="text" class="form-control form-control-sm" id="txt_dp_orador"
-                       placeholder="O escribe el nombre del orador (externo)"
-                       value="<?php echo htmlspecialchars($asignaciones['DP_Orador']['nombre_libre'] ?? ''); ?>">
-                <small class="text-muted">Usa el selector para miembros o escribe un nombre externo</small>
+
+                <!-- Input texto libre (orador externo) — visible por defecto -->
+                <input type="text" class="form-control" id="txt_dp_orador"
+                       placeholder="Escribe el nombre del orador"
+                       value="<?php echo htmlspecialchars($asignaciones['DP_Orador']['nombre_libre'] ?? ''); ?>"
+                       <?php echo !empty($asignaciones['DP_Orador']['persona_id']) ? 'style="display:none;"' : ''; ?>>
+
+                <!-- Selector local (Select2) — visible cuando "Local" está marcado -->
+                <select class="form-select fds-asig-select" data-rol="DP_Orador" id="sel_dp_orador"
+                        style="width:100%; <?php echo empty($asignaciones['DP_Orador']['persona_id']) ? 'display:none;' : ''; ?>">
+                    <?php echo optionsFds($todasPersonas,
+                                         (int)($asignaciones['DP_Orador']['persona_id'] ?? 0)); ?>
+                </select>
             </div>
         </div>
     </div>
@@ -350,24 +361,48 @@ $(document).on('change blur', '.fds-field', function () {
     });
 });
 
+// ── Toggle "Local" del Orador ────────────────────────────────
+$('#chkOradorLocal').on('change', function () {
+    if (this.checked) {
+        // Mostrar selector local, ocultar input libre
+        $('#txt_dp_orador').hide().val('');
+        $('#sel_dp_orador').show();
+        // Reinicializar Select2 (puede estar en display:none al inicializar)
+        if ($('#sel_dp_orador').hasClass('select2-hidden-accessible')) {
+            $('#sel_dp_orador').trigger('change');
+        }
+    } else {
+        // Mostrar input libre, ocultar selector y limpiar asignación persona
+        $('#sel_dp_orador').hide();
+        if ($('#sel_dp_orador').hasClass('select2-hidden-accessible')) {
+            $('#sel_dp_orador').val('').trigger('change.select2');
+        }
+        $('#txt_dp_orador').show().val('').focus();
+
+        // Desasignar persona en BD
+        $.ajax({
+            url     : '../api/programas_fds.php',
+            method  : 'POST',
+            dataType: 'json',
+            data    : { action: 'save_asignacion', programa_fds_id: fdsId,
+                        rol: 'DP_Orador', persona_id: '', nombre_libre: '' },
+        });
+    }
+});
+
 // ── Guardar asignación por selector ─────────────────────────
 $(document).on('change', '.fds-asig-select', function () {
     const rol       = $(this).data('rol');
     const personaId = $(this).val();
-    // Para DP_Orador: limpiar texto libre si se elige persona
-    if (rol === 'DP_Orador' && personaId) $('#txt_dp_orador').val('');
 
     $.ajax({
         url     : '../api/programas_fds.php',
         method  : 'POST',
         dataType: 'json',
-        data    : { action: 'save_asignacion', programa_fds_id: fdsId, rol: rol, persona_id: personaId || '' },
-        success : function (res) {
-            if (res.success) {
-                APP.showNotification(res.nombre ? 'Asignado: ' + res.nombre : 'Sin asignar', 'success');
-            } else {
-                APP.showNotification(res.message, 'danger');
-            }
+        data    : { action: 'save_asignacion', programa_fds_id: fdsId, rol, persona_id: personaId || '' },
+        success : (res) => {
+            if (res.success) APP.showNotification(res.nombre ? 'Asignado: ' + res.nombre : 'Sin asignar', 'success');
+            else APP.showNotification(res.message, 'danger');
         }
     });
 });
@@ -450,12 +485,19 @@ $(document).ready(function () {
 
     /* ── Select2 para selectores de personas ────────────────────── */
     // Incluye .fds-asig-select: Presidente, Orador (selector), Conductor, Lector, Oración
+    // El select del Orador puede estar oculto (display:none) al inicializar —
+    // Select2 funciona en elementos ocultos; width:100% se aplica al mostrarse.
     $('.fds-asig-select').each(function () {
-        // El placeholder vacío del primer <option value=""> sirve como placeholder de Select2
         $(this).select2($.extend({}, s2Base, {
             placeholder: $(this).find('option[value=""]').text() || 'Sin asignar',
         }));
     });
+
+    // Si Local ya viene marcado al cargar, mantener visibilidad correcta
+    if ($('#chkOradorLocal').is(':checked')) {
+        $('#txt_dp_orador').hide();
+        $('#sel_dp_orador').show();
+    }
 
     /* ── Eventos ────────────────────────────────────────────────── */
 
