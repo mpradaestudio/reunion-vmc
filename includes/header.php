@@ -90,12 +90,31 @@ $iniciales = mb_strtoupper(mb_substr($nombreCompleto, 0, 2, 'UTF-8'), 'UTF-8');
             <span class="sb-item-label">Inicio</span>
         </a>
 
-        <a class="sidebar-item <?php echo navActive('personas.php', $currentPage); ?>"
-           href="<?php echo BASE_URL; ?>pages/personas.php"
-           title="Personas">
-            <i class="bi bi-people sb-item-icon"></i>
-            <span class="sb-item-label">Personas</span>
-        </a>
+        <!-- Congregación: grupo colapsable -->
+        <div class="sidebar-group" id="sbGroupCongregacion">
+            <button class="sidebar-item sidebar-group-toggle"
+                    data-target="sbGroupCongregacionItems"
+                    aria-expanded="true"
+                    title="Congregación">
+                <i class="bi bi-building sb-item-icon"></i>
+                <span class="sb-item-label">Congregación</span>
+                <i class="bi bi-chevron-down sb-chevron ms-auto"></i>
+            </button>
+            <div class="sidebar-group-items" id="sbGroupCongregacionItems">
+                <a class="sidebar-item sidebar-subitem <?php echo navActive('general.php', $currentPage); ?>"
+                   href="<?php echo BASE_URL; ?>pages/general.php"
+                   title="General">
+                    <i class="bi bi-sliders sb-item-icon"></i>
+                    <span class="sb-item-label">General</span>
+                </a>
+                <a class="sidebar-item sidebar-subitem <?php echo navActive('personas.php', $currentPage); ?>"
+                   href="<?php echo BASE_URL; ?>pages/personas.php"
+                   title="Personas">
+                    <i class="bi bi-people sb-item-icon"></i>
+                    <span class="sb-item-label">Personas</span>
+                </a>
+            </div>
+        </div>
 
         <!-- Reuniones: grupo colapsable -->
         <div class="sidebar-group" id="sbGroupReuniones">
