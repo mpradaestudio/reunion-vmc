@@ -15,7 +15,7 @@ try {
         FROM programas_fds p
         LEFT JOIN asignaciones_fds a  ON a.programa_fds_id = p.id AND a.rol = 'DP_Orador'
         LEFT JOIN personas pe         ON pe.id = a.persona_id
-        ORDER BY p.fecha_inicio DESC
+        ORDER BY p.fecha_inicio ASC
     ");
 } catch (Exception $e) {
     $tableExists = false;
@@ -23,6 +23,17 @@ try {
 }
 
 $hoy = date('Y-m-d');
+
+// Contadores para los filtros
+$cntTodos    = count($semanas);
+$cntActual   = 0;
+$cntProximos = 0;
+$cntPasados  = 0;
+foreach ($semanas as $s) {
+    if ($s['fecha_fin'] < $hoy)                                  $cntPasados++;
+    elseif ($s['fecha_inicio'] <= $hoy && $s['fecha_fin'] >= $hoy) $cntActual++;
+    else                                                           $cntProximos++;
+}
 $mesNombre = [
     1=>'enero',2=>'febrero',3=>'marzo',4=>'abril',
     5=>'mayo',6=>'junio',7=>'julio',8=>'agosto',
@@ -72,6 +83,28 @@ $msg = $_GET['msg'] ?? '';
 </div>
 
 <?php else: ?>
+
+<!-- Filtro pill-tabs -->
+<div class="filter-tabs mb-4" role="tablist" aria-label="Filtrar semanas">
+    <button class="filter-tab" data-filter="todos" role="tab" aria-selected="false">
+        Todos <span class="filter-count"><?php echo $cntTodos; ?></span>
+    </button>
+    <?php if ($cntActual > 0): ?>
+    <button class="filter-tab" data-filter="actual" role="tab" aria-selected="false">
+        Esta semana <span class="filter-count"><?php echo $cntActual; ?></span>
+    </button>
+    <?php endif; ?>
+    <?php if ($cntProximos > 0): ?>
+    <button class="filter-tab" data-filter="futuro" role="tab" aria-selected="false">
+        Próximos <span class="filter-count"><?php echo $cntProximos; ?></span>
+    </button>
+    <?php endif; ?>
+    <?php if ($cntPasados > 0): ?>
+    <button class="filter-tab" data-filter="pasado" role="tab" aria-selected="false">
+        Pasados <span class="filter-count"><?php echo $cntPasados; ?></span>
+    </button>
+    <?php endif; ?>
+</div>
 
 <!-- Grid de semanas -->
 <div class="row g-4" id="semanasGrid">
@@ -300,6 +333,50 @@ function getModalInd() {
         _modalInd = new bootstrap.Modal(document.getElementById('modalConfirmIndividual'));
     return _modalInd;
 }
+
+/* ── Filtro de tabs ─────────────────────────────────────────── */
+(function () {
+    const tabs  = document.querySelectorAll('.filter-tab');
+    const items = document.querySelectorAll('.semana-item');
+    if (!tabs.length) return;
+
+    function applyFilter(filter) {
+        items.forEach(item => {
+            const card  = item.querySelector('.card');
+            const estado = card ? card.classList : null;
+            if (!estado) return;
+            const visible = filter === 'todos'
+                || estado.contains(filter)
+                || (filter === 'actual'  && estado.contains('actual'))
+                || (filter === 'futuro'  && estado.contains('futuro'))
+                || (filter === 'pasado'  && estado.contains('pasado'));
+            item.style.display = visible ? '' : 'none';
+        });
+    }
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+            tab.classList.add('active');
+            tab.setAttribute('aria-selected','true');
+            applyFilter(tab.dataset.filter);
+        });
+    });
+
+    // Filtro inicial: ocultar pasados automáticamente
+    const filtroInicial = <?php
+        if ($cntActual > 0)       echo "'actual'";
+        elseif ($cntProximos > 0) echo "'futuro'";
+        else                      echo "'todos'";
+    ?>;
+    const tabInicial = document.querySelector(`.filter-tab[data-filter="${filtroInicial}"]`)
+                    || document.querySelector('.filter-tab[data-filter="todos"]');
+    if (tabInicial) {
+        tabInicial.classList.add('active');
+        tabInicial.setAttribute('aria-selected', 'true');
+        applyFilter(filtroInicial);
+    }
+})();
 
 /* ── Selección en lote ──────────────────────────────────────── */
 function getChecked() {
