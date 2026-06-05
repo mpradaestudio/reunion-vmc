@@ -243,7 +243,177 @@ if (isset($_GET['msg'])) {
         </div>
 
     </div><!-- /col-lg-8 -->
+
+    <!-- ── Columna derecha: Eventos Especiales ──────────────── -->
+    <div class="col-lg-4">
+
+        <?php
+        // Cargar eventos agrupados por tipo
+        $eventosPorTipo = ['regional' => [], 'circuito' => [], 'visita' => [], 'conmemoracion' => []];
+        $eventosTableExists = true;
+        try {
+            $eventosRows = fetchAll("SELECT * FROM eventos_especiales ORDER BY fecha_inicio ASC");
+            foreach ($eventosRows as $ev) {
+                $eventosPorTipo[$ev['tipo']][] = $ev;
+            }
+        } catch (Exception $e) {
+            $eventosTableExists = false;
+        }
+
+        // Configuración de cada tipo
+        $eventoConfig = [
+            'regional' => [
+                'label'  => 'Asamblea Regional',
+                'icon'   => 'bi-building-fill',
+                'limite' => 1,
+                'un_dia' => false,
+                'hint'   => '3 días',
+            ],
+            'circuito' => [
+                'label'  => 'Asamblea de Circuito',
+                'icon'   => 'bi-people-fill',
+                'limite' => 2,
+                'un_dia' => true,
+                'hint'   => '1 día',
+            ],
+            'visita' => [
+                'label'  => 'Visita de Circuito',
+                'icon'   => 'bi-person-check-fill',
+                'limite' => 2,
+                'un_dia' => false,
+                'hint'   => 'Martes a domingo',
+            ],
+            'conmemoracion' => [
+                'label'  => 'Conmemoración',
+                'icon'   => 'bi-heart-fill',
+                'limite' => 1,
+                'un_dia' => true,
+                'hint'   => '1 día',
+            ],
+        ];
+
+        $meses = [1=>'ene',2=>'feb',3=>'mar',4=>'abr',5=>'may',6=>'jun',
+                  7=>'jul',8=>'ago',9=>'sep',10=>'oct',11=>'nov',12=>'dic'];
+
+        function fmtFecha(string $fecha, array $meses): string {
+            $d  = new DateTime($fecha);
+            return (int)$d->format('d') . ' ' . $meses[(int)$d->format('n')] . ' ' . $d->format('Y');
+        }
+        function fmtRango(string $ini, string $fin, array $meses): string {
+            if ($ini === $fin) return fmtFecha($ini, $meses);
+            $dI = new DateTime($ini); $dF = new DateTime($fin);
+            $dInum = (int)$dI->format('d'); $dFnum = (int)$dF->format('d');
+            $mI = (int)$dI->format('n'); $mF = (int)$dF->format('n');
+            if ($mI === $mF) {
+                return $dInum . '–' . $dFnum . ' ' . $meses[$mI] . ' ' . $dI->format('Y');
+            }
+            return fmtFecha($ini, $meses) . ' – ' . fmtFecha($fin, $meses);
+        }
+        ?>
+
+        <?php if (!$eventosTableExists): ?>
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            Importa <code>database_update_v12.sql</code> para activar esta sección.
+        </div>
+        <?php else: ?>
+
+        <?php foreach ($eventoConfig as $tipo => $cfg):
+            $lista   = $eventosPorTipo[$tipo];
+            $lleno   = count($lista) >= $cfg['limite'];
+        ?>
+        <div class="card mb-3" id="card-evento-<?php echo $tipo; ?>">
+            <div class="card-header d-flex justify-content-between align-items-center py-2">
+                <span class="fw-bold small">
+                    <i class="bi <?php echo $cfg['icon']; ?> me-1 vmc-icon-primary"></i>
+                    <?php echo $cfg['label']; ?>
+                    <span class="badge bg-secondary ms-1"><?php echo count($lista); ?>/<?php echo $cfg['limite']; ?></span>
+                </span>
+                <?php if (!$lleno): ?>
+                <button class="btn btn-sm btn-primary py-0 px-2 btn-agregar-evento"
+                        data-tipo="<?php echo $tipo; ?>"
+                        data-un-dia="<?php echo $cfg['un_dia'] ? '1' : '0'; ?>"
+                        data-label="<?php echo htmlspecialchars($cfg['label']); ?>"
+                        data-hint="<?php echo htmlspecialchars($cfg['hint']); ?>"
+                        style="font-size:.75rem;">
+                    <i class="bi bi-plus-lg"></i>
+                </button>
+                <?php endif; ?>
+            </div>
+            <div class="card-body p-2" id="eventos-lista-<?php echo $tipo; ?>">
+                <?php if (empty($lista)): ?>
+                <p class="text-muted small mb-0 text-center py-2 msg-empty-evento">
+                    Sin fechas registradas
+                </p>
+                <?php else: ?>
+                <?php foreach ($lista as $ev): ?>
+                <div class="d-flex justify-content-between align-items-center
+                            border rounded px-2 py-1 mb-1 evento-row"
+                     id="evento-row-<?php echo $ev['id']; ?>">
+                    <span class="small">
+                        <i class="bi bi-calendar3 me-1 text-muted"></i>
+                        <?php echo fmtRango($ev['fecha_inicio'], $ev['fecha_fin'], $meses); ?>
+                    </span>
+                    <button class="btn btn-link btn-sm text-danger p-0 ms-2 btn-eliminar-evento"
+                            data-id="<?php echo $ev['id']; ?>"
+                            title="Eliminar">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endforeach; ?>
+
+        <?php endif; ?>
+
+    </div><!-- /col-lg-4 -->
+
 </div><!-- /row -->
+
+<!-- ── Modal: Agregar Evento ────────────────────────────────── -->
+<div class="modal fade" id="modalAgregarEvento" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title fw-bold" id="modalEventoTitulo"></h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formAgregarEvento">
+                <input type="hidden" id="eventoTipo">
+                <input type="hidden" id="eventoUnDia">
+                <div class="modal-body">
+                    <p class="text-muted small mb-3" id="eventoHint"></p>
+
+                    <div class="mb-3">
+                        <label for="eventoFechaInicio" class="form-label fw-semibold small">
+                            Fecha inicio
+                        </label>
+                        <input type="date" class="form-control form-control-sm vmc-select-primary"
+                               id="eventoFechaInicio" required>
+                    </div>
+
+                    <div id="eventoFechaFinWrap" class="mb-3">
+                        <label for="eventoFechaFin" class="form-label fw-semibold small">
+                            Fecha fin
+                        </label>
+                        <input type="date" class="form-control form-control-sm vmc-select-primary"
+                               id="eventoFechaFin">
+                    </div>
+
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-sm btn-secondary"
+                            data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-primary" id="btnEventoGuardar">
+                        <i class="bi bi-save me-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- ── Modales ───────────────────────────────────────────────── -->
 
@@ -474,5 +644,144 @@ $(document).on('click', '.btn-eliminar-privilegio', function () {
 
 <!-- SortableJS -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+
+<script>
+/* ── Eventos Especiales ─────────────────────────────────────── */
+const MESES_CORTOS = ['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+function fmtFechaJS(str) {
+    if (!str) return '';
+    const [y, m, d] = str.split('-');
+    return parseInt(d) + ' ' + MESES_CORTOS[parseInt(m)] + ' ' + y;
+}
+function fmtRangoJS(ini, fin) {
+    if (!fin || ini === fin) return fmtFechaJS(ini);
+    const [yI, mI, dI] = ini.split('-').map(Number);
+    const [yF, mF, dF] = fin.split('-').map(Number);
+    if (mI === mF && yI === yF) return dI + '–' + dF + ' ' + MESES_CORTOS[mI] + ' ' + yI;
+    return fmtFechaJS(ini) + ' – ' + fmtFechaJS(fin);
+}
+
+function buildEventoRow(ev) {
+    const label = fmtRangoJS(ev.fecha_inicio, ev.fecha_fin);
+    return `
+        <div class="d-flex justify-content-between align-items-center
+                    border rounded px-2 py-1 mb-1 evento-row"
+             id="evento-row-${ev.id}">
+            <span class="small">
+                <i class="bi bi-calendar3 me-1 text-muted"></i>${label}
+            </span>
+            <button class="btn btn-link btn-sm text-danger p-0 ms-2 btn-eliminar-evento"
+                    data-id="${ev.id}" title="Eliminar">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>`;
+}
+
+// Abrir modal
+$(document).on('click', '.btn-agregar-evento', function () {
+    const tipo  = $(this).data('tipo');
+    const unDia = $(this).data('un-dia') === 1 || $(this).data('un-dia') === '1';
+    const label = $(this).data('label');
+    const hint  = $(this).data('hint');
+
+    $('#eventoTipo').val(tipo);
+    $('#eventoUnDia').val(unDia ? '1' : '0');
+    $('#modalEventoTitulo').text(label);
+    $('#eventoHint').text(hint);
+    $('#eventoFechaInicio, #eventoFechaFin').val('');
+
+    // Eventos de 1 día: ocultar fecha fin
+    $('#eventoFechaFinWrap').toggle(!unDia);
+
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAgregarEvento')).show();
+});
+
+// Guardar evento
+$(document).on('submit', '#formAgregarEvento', function (e) {
+    e.preventDefault();
+    const tipo      = $('#eventoTipo').val();
+    const unDia     = $('#eventoUnDia').val() === '1';
+    const fechaIni  = $('#eventoFechaInicio').val();
+    const fechaFin  = unDia ? fechaIni : ($('#eventoFechaFin').val() || fechaIni);
+    const $btn      = $('#btnEventoGuardar').prop('disabled', true);
+
+    if (!fechaIni) { APP.showNotification('Ingresa la fecha de inicio', 'warning'); $btn.prop('disabled', false); return; }
+    if (!unDia && fechaFin && fechaFin < fechaIni) {
+        APP.showNotification('La fecha fin no puede ser anterior a la fecha inicio', 'warning');
+        $btn.prop('disabled', false); return;
+    }
+
+    apiPost('../api/eventos.php',
+        { action: 'create', tipo, fecha_inicio: fechaIni, fecha_fin: fechaFin },
+        function (res) {
+            $btn.prop('disabled', false);
+            bootstrap.Modal.getInstance(document.getElementById('modalAgregarEvento'))?.hide();
+
+            const $lista  = $(`#eventos-lista-${tipo}`);
+            const $empty  = $lista.find('.msg-empty-evento');
+            if ($empty.length) $empty.remove();
+            $lista.append(buildEventoRow(res.data));
+
+            // Actualizar badge contador
+            const $badge = $(`#card-evento-${tipo} .badge`);
+            const parts  = $badge.text().split('/');
+            const nuevo  = parseInt(parts[0]) + 1;
+            const limite = parseInt(parts[1]);
+            $badge.text(nuevo + '/' + limite);
+
+            // Si se llegó al límite, ocultar botón agregar
+            if (nuevo >= limite) {
+                $(`#card-evento-${tipo} .btn-agregar-evento`).hide();
+            }
+
+            APP.showNotification('Evento guardado', 'success');
+        },
+        function () { $btn.prop('disabled', false); }
+    );
+});
+
+// Eliminar evento
+$(document).on('click', '.btn-eliminar-evento', function () {
+    const id   = $(this).data('id');
+    const $row = $(`#evento-row-${id}`);
+    const tipo = $row.closest('.card').attr('id').replace('card-evento-', '');
+
+    if (!confirm('¿Eliminar este evento?')) return;
+
+    apiPost('../api/eventos.php', { action: 'delete', id },
+        function () {
+            $row.fadeOut(200, function () {
+                $(this).remove();
+
+                // Actualizar badge
+                const $badge = $(`#card-evento-${tipo} .badge`);
+                const parts  = $badge.text().split('/');
+                const nuevo  = parseInt(parts[0]) - 1;
+                const limite = parseInt(parts[1]);
+                $badge.text(nuevo + '/' + limite);
+
+                // Mostrar botón agregar si ya no está lleno
+                if (nuevo < limite) {
+                    const $card = $(`#card-evento-${tipo}`);
+                    if ($card.find('.btn-agregar-evento').length === 0) {
+                        // Recargar para restaurar el botón (caso edge)
+                        location.reload();
+                    } else {
+                        $card.find('.btn-agregar-evento').show();
+                    }
+                }
+
+                // Mostrar msg vacío si no quedan eventos
+                const $lista = $(`#eventos-lista-${tipo}`);
+                if ($lista.find('.evento-row').length === 0) {
+                    $lista.append('<p class="text-muted small mb-0 text-center py-2 msg-empty-evento">Sin fechas registradas</p>');
+                }
+            });
+            APP.showNotification('Evento eliminado', 'success');
+        }
+    );
+});
+</script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
