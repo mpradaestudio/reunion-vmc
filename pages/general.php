@@ -324,7 +324,8 @@ if (isset($_GET['msg'])) {
             $lista   = $eventosPorTipo[$tipo];
             $lleno   = count($lista) >= $cfg['limite'];
         ?>
-        <div class="card mb-3" id="card-evento-<?php echo $tipo; ?>">
+        <div class="card mb-3" id="card-evento-<?php echo $tipo; ?>"
+             data-limite="<?php echo $cfg['limite']; ?>">
             <div class="card-header d-flex justify-content-between align-items-center py-2">
                 <span class="fw-bold small">
                     <i class="bi <?php echo $cfg['icon']; ?> me-1 vmc-icon-primary"></i>
@@ -725,13 +726,16 @@ $(document).on('click', '.btn-agregar-evento', function () {
 // Guardar evento
 $(document).on('submit', '#formAgregarEvento', function (e) {
     e.preventDefault();
-    const tipo      = $('#eventoTipo').val();
-    const unDia     = $('#eventoUnDia').val() === '1';
-    const fechaIni  = $('#eventoFechaInicio').val();
-    const fechaFin  = unDia ? fechaIni : ($('#eventoFechaFin').val() || fechaIni);
-    const $btn      = $('#btnEventoGuardar').prop('disabled', true);
+    const tipo     = $('#eventoTipo').val();
+    const unDia    = $('#eventoUnDia').val() === '1';
+    const fechaIni = $('#eventoFechaInicio').val();
+    const fechaFin = unDia ? fechaIni : ($('#eventoFechaFin').val() || fechaIni);
+    const $btn     = $('#btnEventoGuardar').prop('disabled', true);
 
-    if (!fechaIni) { APP.showNotification('Ingresa la fecha de inicio', 'warning'); $btn.prop('disabled', false); return; }
+    if (!fechaIni) {
+        APP.showNotification('Ingresa la fecha de inicio', 'warning');
+        $btn.prop('disabled', false); return;
+    }
     if (!unDia && fechaFin && fechaFin < fechaIni) {
         APP.showNotification('La fecha fin no puede ser anterior a la fecha inicio', 'warning');
         $btn.prop('disabled', false); return;
@@ -742,17 +746,17 @@ $(document).on('submit', '#formAgregarEvento', function (e) {
         function (res) {
             $btn.prop('disabled', false);
             bootstrap.Modal.getInstance(document.getElementById('modalAgregarEvento'))?.hide();
+            $('#eventoFechaInicio, #eventoFechaFin').val('');
 
-            const $lista  = $(`#eventos-lista-${tipo}`);
-            const $empty  = $lista.find('.msg-empty-evento');
-            if ($empty.length) $empty.remove();
+            const $lista = $(`#eventos-lista-${tipo}`);
+            $lista.find('.msg-empty-evento').remove();
             $lista.append(buildEventoRow(res.data));
 
-            // Actualizar badge ya no aplica (contador eliminado)
-
-            // Si se llegó al límite, ocultar botón agregar
-            if (nuevo >= limite) {
-                $(`#card-evento-${tipo} .btn-agregar-evento`).hide();
+            // Ocultar botón "+" si se llegó al límite (contar filas actuales)
+            const $card  = $(`#card-evento-${tipo}`);
+            const limite = parseInt($card.data('limite') || 99);
+            if ($lista.find('.evento-row').length >= limite) {
+                $card.find('.btn-agregar-evento').hide();
             }
 
             APP.showNotification('Evento guardado', 'success');
@@ -764,9 +768,9 @@ $(document).on('submit', '#formAgregarEvento', function (e) {
 // Eliminar evento
 let _pendingEvento = null;
 $(document).on('click', '.btn-eliminar-evento', function () {
-    const id   = $(this).data('id');
-    const $row = $(`#evento-row-${id}`);
-    const tipo = $row.closest('.card').attr('id').replace('card-evento-', '');
+    const id    = $(this).data('id');
+    const $row  = $(`#evento-row-${id}`);
+    const tipo  = $row.closest('.card').attr('id').replace('card-evento-', '');
     const fecha = $row.find('span.small').text().trim();
     _pendingEvento = { id, tipo };
     $('#confirmEventoFecha').text(fecha);
@@ -777,25 +781,24 @@ $('#btnConfirmEvento').on('click', function () {
     const { id, tipo } = _pendingEvento;
     const $row = $(`#evento-row-${id}`);
     $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>');
-    apiPost('../api/eventos.php', { action: 'delete', id },
-        function () {
-            bootstrap.Modal.getInstance(document.getElementById('modalConfirmEvento'))?.hide();
-            $row.fadeOut(200, function () {
-                $(this).remove();
-                const $lista = $(`#eventos-lista-${tipo}`);
-                if ($lista.find('.evento-row').length === 0) {
-                    $lista.html('<p class="text-muted small mb-0 text-center py-2 msg-empty-evento">Sin fechas registradas</p>');
-                }
-                $(`#card-evento-${tipo} .btn-agregar-evento`).show();
-            });
-            APP.showNotification('Evento eliminado', 'success');
-        }
-    );
+    apiPost('../api/eventos.php', { action: 'delete', id }, function () {
+        bootstrap.Modal.getInstance(document.getElementById('modalConfirmEvento'))?.hide();
+        $row.fadeOut(200, function () {
+            $(this).remove();
+            const $lista = $(`#eventos-lista-${tipo}`);
+            if ($lista.find('.evento-row').length === 0) {
+                $lista.html('<p class="text-muted small mb-0 text-center py-2 msg-empty-evento">Sin fechas registradas</p>');
+            }
+            $(`#card-evento-${tipo} .btn-agregar-evento`).show();
+        });
+        APP.showNotification('Evento eliminado', 'success');
+    });
 });
 $('#modalConfirmEvento').on('hidden.bs.modal', function () {
     _pendingEvento = null;
     $('#btnConfirmEvento').prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
 });
+</script>
 
 <!-- ── Modales de confirmación ────────────────────────────────── -->
 
