@@ -12,7 +12,7 @@ $programas = fetchAll("
             WHERE ar.programa_id = ps.id AND ar.rol = 'Presidente'
             LIMIT 1) as presidente_nombre
     FROM programas_semanales ps
-    ORDER BY ps.fecha_inicio DESC
+    ORDER BY ps.fecha_inicio ASC
 ");
 
 // Contadores por estado (para las píldoras del filtro)
@@ -54,7 +54,7 @@ $mesNombre = [
         <?php if (count($programas) > 0): ?>
         <!-- Filtro pill-tabs -->
         <div class="filter-tabs" role="tablist" aria-label="Filtrar programas">
-            <button class="filter-tab active" data-filter="todos" role="tab" aria-selected="true">
+            <button class="filter-tab" data-filter="todos" role="tab" aria-selected="false">
                 Todos <span class="filter-count"><?php echo $cntTodos; ?></span>
             </button>
             <?php if ($cntActual > 0): ?>
@@ -353,6 +353,20 @@ $mesNombre = [
             applyFilter(tab.dataset.filter);
         });
     });
+
+    // Filtro inicial: ocultar pasados automáticamente
+    const filtroInicial = <?php
+        if ($cntActual > 0)       echo "'actual'";
+        elseif ($cntProximos > 0) echo "'futuro'";
+        else                      echo "'todos'";
+    ?>;
+    const tabInicial = document.querySelector(`.filter-tab[data-filter="${filtroInicial}"]`)
+                    || document.querySelector('.filter-tab[data-filter="todos"]');
+    if (tabInicial) {
+        tabInicial.classList.add('active');
+        tabInicial.setAttribute('aria-selected', 'true');
+        applyFilter(filtroInicial);
+    }
 })();
 
 /* ================================================================
