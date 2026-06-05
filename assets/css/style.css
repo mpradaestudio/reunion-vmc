@@ -1216,6 +1216,15 @@ body {
     cursor         : pointer;
 }
 
+/* Botón collapsable (button.sidebar-item): necesita box-sizing para no desbordarse */
+button.sidebar-item {
+    box-sizing: border-box;
+    width     : calc(100% - 16px);
+    background: none;
+    border    : none;
+    text-align: left;
+}
+
 .sidebar-item:hover {
     background-color: rgba(255,255,255,.10);
     color           : #fff;

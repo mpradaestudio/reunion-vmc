@@ -99,7 +99,7 @@ $iniciales = mb_strtoupper(mb_substr($nombreCompleto, 0, 2, 'UTF-8'), 'UTF-8');
 
         <!-- Reuniones: grupo colapsable -->
         <div class="sidebar-group" id="sbGroupReuniones">
-            <button class="sidebar-item sidebar-group-toggle w-100"
+            <button class="sidebar-item sidebar-group-toggle"
                     data-target="sbGroupReunionesItems"
                     aria-expanded="true"
                     title="Reuniones">
