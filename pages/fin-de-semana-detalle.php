@@ -292,14 +292,16 @@ function optionsFds(array $lista, ?int $selId): string {
                 <input type="text" class="form-control" id="txt_dp_orador"
                        placeholder="Escribe el nombre del orador"
                        value="<?php echo htmlspecialchars($asignaciones['DP_Orador']['nombre_libre'] ?? ''); ?>"
-                       <?php echo !empty($asignaciones['DP_Orador']['persona_id']) ? 'style="display:none;"' : ''; ?>>
+                       style="<?php echo !empty($asignaciones['DP_Orador']['persona_id']) ? 'display:none;' : ''; ?>">
 
-                <!-- Selector local (Select2) — visible cuando "Local" está marcado -->
-                <select class="form-select fds-asig-select" data-rol="DP_Orador" id="sel_dp_orador"
-                        style="width:100%; <?php echo empty($asignaciones['DP_Orador']['persona_id']) ? 'display:none;' : ''; ?>">
-                    <?php echo optionsFds($todasPersonas,
-                                         (int)($asignaciones['DP_Orador']['persona_id'] ?? 0)); ?>
-                </select>
+                <!-- Wrapper: ocultar el wrapper controla también el contenedor de Select2 -->
+                <div id="wrapper-orador" style="<?php echo empty($asignaciones['DP_Orador']['persona_id']) ? 'display:none;' : ''; ?>">
+                    <select class="form-select fds-asig-select" data-rol="DP_Orador" id="sel_dp_orador"
+                            style="width:100%;">
+                        <?php echo optionsFds($todasPersonas,
+                                             (int)($asignaciones['DP_Orador']['persona_id'] ?? 0)); ?>
+                    </select>
+                </div>
             </div>
         </div>
     </div>
@@ -364,17 +366,13 @@ $(document).on('change blur', '.fds-field', function () {
 // ── Toggle "Local" del Orador ────────────────────────────────
 $('#chkOradorLocal').on('change', function () {
     if (this.checked) {
-        // Mostrar selector local, ocultar input libre
+        // Ocultar input libre, mostrar wrapper (y con él el contenedor Select2)
         $('#txt_dp_orador').hide().val('');
-        $('#sel_dp_orador').show();
-        // Reinicializar Select2 (puede estar en display:none al inicializar)
-        if ($('#sel_dp_orador').hasClass('select2-hidden-accessible')) {
-            $('#sel_dp_orador').trigger('change');
-        }
+        $('#wrapper-orador').show();
     } else {
-        // Mostrar input libre, ocultar selector y limpiar asignación persona
+        // Ocultar wrapper completo (oculta el <select> Y el .select2-container generado)
+        $('#wrapper-orador').hide();
         $('#sel_dp_orador').val('').trigger('change');
-        $('#sel_dp_orador').hide();
         $('#txt_dp_orador').show().val('').focus();
 
         // Desasignar persona en BD
@@ -494,14 +492,10 @@ $(document).ready(function () {
     // Estado inicial: forzar visibilidad según checkbox (checked o no)
     if ($('#chkOradorLocal').is(':checked')) {
         $('#txt_dp_orador').hide();
-        $('#sel_dp_orador').show();
+        $('#wrapper-orador').show();
     } else {
         $('#txt_dp_orador').show();
-        $('#sel_dp_orador').hide();
-        // Asegurarse de que Select2 no quede en estado inconsistente
-        if ($('#sel_dp_orador').hasClass('select2-hidden-accessible')) {
-            $('#sel_dp_orador').val('').trigger('change.select2');
-        }
+        $('#wrapper-orador').hide();
     }
 
     /* ── Eventos ────────────────────────────────────────────────── */
