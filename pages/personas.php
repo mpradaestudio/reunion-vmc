@@ -433,6 +433,54 @@ $seccionesPartes = [
     </div>
 </div>
 
+<!-- Modal confirmación eliminar individual -->
+<div class="modal fade" id="modalConfirmEliminar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Confirmar eliminación
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Vas a eliminar a <strong id="confirmEliminarNombre"></strong>.</p>
+                <p class="text-muted mb-0"><small>Esta acción no se puede deshacer.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmEliminar">
+                    <i class="bi bi-trash me-1"></i>Sí, eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal confirmación eliminar en lote -->
+<div class="modal fade" id="modalConfirmBulkEliminar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Confirmar eliminación en lote
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Vas a eliminar permanentemente a <strong id="confirmBulkCount">0</strong> persona(s).</p>
+                <p class="text-muted mb-0"><small>Esta acción no se puede deshacer.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmBulkEliminar">
+                    <i class="bi bi-trash me-1"></i>Sí, eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ── Barra flotante bulk-edit ──────────────────────────────── -->
 <div id="bulkBar" class="bulk-bar" style="display:none;">
     <span class="bulk-bar-count">
@@ -622,11 +670,21 @@ const BulkEdit = {
         $('#btnBulkEliminar').on('click', () => {
             const ids = BulkEdit.getIds();
             if (!ids.length) return;
-            if (!confirm(`¿Eliminar permanentemente a las ${ids.length} persona(s) seleccionada(s)?\n\nEsta acción no se puede deshacer.`)) return;
+            $('#confirmBulkCount').text(ids.length);
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmBulkEliminar')).show();
+        });
+
+        $('#btnConfirmBulkEliminar').on('click', function () {
+            const ids = BulkEdit.getIds();
+            if (!ids.length) return;
+            const $btn = $(this).prop('disabled', true)
+                .html('<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...');
             $.ajax({
                 url: '../api/personas.php', method: 'POST', dataType: 'json',
                 data: { action: 'bulk_delete', ids: ids },
                 success(res) {
+                    $btn.prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
+                    bootstrap.Modal.getInstance(document.getElementById('modalConfirmBulkEliminar'))?.hide();
                     if (res.success) {
                         APP.showNotification(res.message, 'success');
                         setTimeout(() => location.reload(), 900);
@@ -634,7 +692,10 @@ const BulkEdit = {
                         APP.showNotification(res.message || 'Error al eliminar', 'danger');
                     }
                 },
-                error() { APP.showNotification('Error al conectar con el servidor', 'danger'); }
+                error() {
+                    $btn.prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
+                    APP.showNotification('Error al conectar con el servidor', 'danger');
+                }
             });
         });
 
@@ -698,6 +759,39 @@ document.addEventListener('DOMContentLoaded', () => BulkEdit.init());
 </script>
 
 <script>
+// ---- Modales de confirmación eliminación ----
+let _pendingDeleteId = null;
+
+$(document).on('click', '.btn-eliminar', function () {
+    _pendingDeleteId = $(this).data('id');
+    $('#confirmEliminarNombre').text($(this).data('nombre'));
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmEliminar')).show();
+});
+
+$('#btnConfirmEliminar').on('click', function () {
+    if (!_pendingDeleteId) return;
+    const $btn = $(this).prop('disabled', true)
+        .html('<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...');
+    $.post('../api/personas.php', { action: 'delete', id: _pendingDeleteId }, function (res) {
+        $btn.prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
+        if (res.success) {
+            bootstrap.Modal.getInstance(document.getElementById('modalConfirmEliminar'))?.hide();
+            APP.showNotification('Persona eliminada', 'success');
+            setTimeout(() => location.reload(), 900);
+        } else {
+            bootstrap.Modal.getInstance(document.getElementById('modalConfirmEliminar'))?.hide();
+            APP.showNotification(res.message || 'Error al eliminar', 'danger');
+        }
+    }).fail(function () {
+        $btn.prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
+        APP.showNotification('Error al conectar con el servidor', 'danger');
+    });
+});
+
+$('#modalConfirmEliminar').on('hidden.bs.modal', function () {
+    _pendingDeleteId = null;
+});
+
 // ---- Seleccionar todas las partes de una sección ----
 $(document).on('change', '.chk-todos', function () {
     const grupo = $(this).data('grupo');
@@ -772,21 +866,12 @@ $('.btn-editar').on('click', function () {
     });
 });
 
-// ---- Eliminar persona ----
+// ---- Eliminar persona (ahora delegado al modal) ----
 $('.btn-eliminar').on('click', function () {
-    const id = $(this).data('id');
-    const nombre = $(this).data('nombre');
-    if (confirm('¿Está seguro de eliminar a ' + nombre + '?')) {
-        $.post('../api/personas.php', { action: 'delete', id: id }, function (response) {
-            if (response.success) {
-                window.location.href = 'personas.php?msg=eliminada';
-            } else {
-                APP.showNotification(response.message, 'danger');
-            }
-        });
-    }
+    _pendingDeleteId = $(this).data('id');
+    $('#confirmEliminarNombre').text($(this).data('nombre'));
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmEliminar')).show();
 });
-
 // ---- Validar al menos un perfil antes de enviar ----
 $('#formPersona').on('submit', function (e) {
     if ($('.chk-perfil:checked').length === 0) {
