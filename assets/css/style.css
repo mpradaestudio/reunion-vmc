@@ -1633,9 +1633,10 @@ button.sidebar-item {
 }
 
 .sb-chevron {
-    flex-shrink: 0;
-    font-size: 0.7rem;
-    transition: transform 220ms ease, opacity 180ms ease;
+    flex-shrink  : 0;
+    font-size    : 0.7rem;
+    padding-right: 10px;
+    transition   : transform 220ms ease, opacity 180ms ease;
 }
 .sidebar-group-toggle[aria-expanded="false"] .sb-chevron {
     transform: rotate(-90deg);
