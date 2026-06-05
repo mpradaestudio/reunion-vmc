@@ -393,7 +393,10 @@ if (isset($_GET['msg'])) {
                             Fecha inicio
                         </label>
                         <input type="date" class="form-control form-control-sm vmc-select-primary"
-                               id="eventoFechaInicio" required>
+                               id="eventoFechaInicio"
+                               data-fp-mode="single"
+                               data-fp-linked="eventoFechaFin"
+                               required>
                     </div>
 
                     <div id="eventoFechaFinWrap" class="mb-3">
@@ -401,7 +404,8 @@ if (isset($_GET['msg'])) {
                             Fecha fin
                         </label>
                         <input type="date" class="form-control form-control-sm vmc-select-primary"
-                               id="eventoFechaFin">
+                               id="eventoFechaFin"
+                               data-fp-mode="single">
                     </div>
 
                 </div>

@@ -264,12 +264,17 @@ $msg = $_GET['msg'] ?? '';
                         <div class="col-md-6">
                             <label class="form-label">Fecha inicio *</label>
                             <input type="date" class="form-control" id="fds_fecha_inicio"
-                                   name="fecha_inicio" required>
+                                   name="fecha_inicio"
+                                   data-fp-mode="single"
+                                   data-fp-linked="fds_fecha_fin"
+                                   required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Fecha fin *</label>
                             <input type="date" class="form-control" id="fds_fecha_fin"
-                                   name="fecha_fin" required>
+                                   name="fecha_fin"
+                                   data-fp-mode="single"
+                                   required>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Tema del discurso</label>
@@ -324,7 +329,11 @@ $('#fds_fecha_inicio').on('change', function () {
     if (isNaN(d)) return;
     const diff = d.getDay() === 0 ? 0 : 7 - d.getDay();
     d.setDate(d.getDate() + diff);
-    $('#fds_fecha_fin').val(d.toISOString().slice(0, 10));
+    const isoFin = d.toISOString().slice(0, 10);
+    // Actualizar tanto el input nativo como la instancia de Flatpickr
+    const fpFin = document.getElementById('fds_fecha_fin')._flatpickr;
+    if (fpFin) fpFin.setDate(isoFin, true);
+    else $('#fds_fecha_fin').val(isoFin);
 });
 
 /* ── Modales de confirmación (lazy) ────────────────────────── */

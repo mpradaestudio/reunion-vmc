@@ -1873,3 +1873,114 @@ button.sidebar-item {
     line-height: calc(38px - 0.75rem - 2px) !important;
     padding    : 0 !important;
 }
+
+
+/* ============================================================
+   45. FLATPICKR — Tema personalizado VMC
+   ============================================================ */
+
+/* Contenedor del calendario */
+.flatpickr-calendar {
+    font-family    : var(--vmc-font), sans-serif;
+    border-radius  : var(--vmc-radius);
+    border         : 1px solid var(--vmc-border-strong);
+    box-shadow     : 0 8px 24px rgba(0,0,0,.12);
+    background     : var(--vmc-surface);
+    color          : var(--vmc-text);
+}
+
+/* Header del calendario (mes/año + flechas) */
+.flatpickr-calendar .flatpickr-months {
+    background     : var(--vmc-primary);
+    border-radius  : var(--vmc-radius) var(--vmc-radius) 0 0;
+    padding        : 4px 0;
+}
+.flatpickr-calendar .flatpickr-month,
+.flatpickr-calendar .flatpickr-monthDropdown-months,
+.flatpickr-calendar .flatpickr-current-month input.cur-year,
+.flatpickr-calendar .flatpickr-monthDropdown-months option {
+    color          : #fff !important;
+    background     : transparent;
+    fill           : #fff;
+}
+.flatpickr-calendar .flatpickr-prev-month,
+.flatpickr-calendar .flatpickr-next-month {
+    color          : #fff;
+    fill           : #fff;
+}
+.flatpickr-calendar .flatpickr-prev-month:hover svg,
+.flatpickr-calendar .flatpickr-next-month:hover svg {
+    fill           : rgba(255,255,255,.75);
+}
+
+/* Días de la semana */
+.flatpickr-calendar .flatpickr-weekdays {
+    background     : var(--vmc-primary-soft);
+}
+.flatpickr-calendar span.flatpickr-weekday {
+    background     : transparent;
+    color          : var(--vmc-primary);
+    font-weight    : 600;
+    font-size      : .78rem;
+}
+
+/* Días del mes */
+.flatpickr-calendar .flatpickr-day {
+    color          : var(--vmc-text);
+    border-radius  : var(--vmc-radius-sm);
+}
+.flatpickr-calendar .flatpickr-day:hover {
+    background     : var(--vmc-primary-soft);
+    border-color   : transparent;
+}
+.flatpickr-calendar .flatpickr-day.selected,
+.flatpickr-calendar .flatpickr-day.startRange,
+.flatpickr-calendar .flatpickr-day.endRange {
+    background     : var(--vmc-primary) !important;
+    border-color   : var(--vmc-primary) !important;
+    color          : #fff !important;
+}
+.flatpickr-calendar .flatpickr-day.inRange {
+    background     : var(--vmc-primary-soft) !important;
+    border-color   : transparent !important;
+    color          : var(--vmc-primary) !important;
+    box-shadow     : -5px 0 0 var(--vmc-primary-soft), 5px 0 0 var(--vmc-primary-soft);
+}
+.flatpickr-calendar .flatpickr-day.today {
+    border-color   : var(--vmc-primary);
+    font-weight    : 700;
+}
+.flatpickr-calendar .flatpickr-day.today:hover {
+    background     : var(--vmc-primary-soft);
+}
+.flatpickr-calendar .flatpickr-day.flatpickr-disabled,
+.flatpickr-calendar .flatpickr-day.prevMonthDay,
+.flatpickr-calendar .flatpickr-day.nextMonthDay {
+    opacity        : .35;
+}
+
+/* Input: mostrar ícono de calendario */
+.flatpickr-input {
+    cursor         : pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%234a6da7' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM2 2a1 1 0 0 0-1 1v1h14V3a1 1 0 0 0-1-1H2zm13 3H1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5z'/%3E%3C/svg%3E");
+    background-repeat : no-repeat;
+    background-position: calc(100% - 10px) center;
+    background-size: 14px 14px;
+    padding-right  : 34px !important;
+}
+
+/* Dark mode */
+[data-bs-theme="dark"] .flatpickr-calendar {
+    background     : var(--vmc-surface-2);
+    border-color   : var(--vmc-border-strong);
+    color          : var(--vmc-text);
+}
+[data-bs-theme="dark"] .flatpickr-calendar .flatpickr-day {
+    color          : var(--vmc-text);
+}
+[data-bs-theme="dark"] .flatpickr-calendar .flatpickr-day:hover {
+    background     : rgba(var(--vmc-primary-rgb), 0.20);
+}
+[data-bs-theme="dark"] .flatpickr-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%239bb6e6' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM2 2a1 1 0 0 0-1 1v1h14V3a1 1 0 0 0-1-1H2zm13 3H1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5z'/%3E%3C/svg%3E");
+}
