@@ -750,24 +750,14 @@ $(document).on('click', '.btn-eliminar-evento', function () {
             $row.fadeOut(200, function () {
                 $(this).remove();
 
-                // Ya no hay badge que actualizar
-
-                // Mostrar botón agregar si ya no está lleno
-                if (nuevo < limite) {
-                    const $card = $(`#card-evento-${tipo}`);
-                    if ($card.find('.btn-agregar-evento').length === 0) {
-                        // Recargar para restaurar el botón (caso edge)
-                        location.reload();
-                    } else {
-                        $card.find('.btn-agregar-evento').show();
-                    }
-                }
-
-                // Mostrar msg vacío si no quedan eventos
+                // Restaurar placeholder si no quedan filas
                 const $lista = $(`#eventos-lista-${tipo}`);
                 if ($lista.find('.evento-row').length === 0) {
-                    $lista.append('<p class="text-muted small mb-0 text-center py-2 msg-empty-evento">Sin fechas registradas</p>');
+                    $lista.html('<p class="text-muted small mb-0 text-center py-2 msg-empty-evento">Sin fechas registradas</p>');
                 }
+
+                // Mostrar botón "+" si estaba oculto por límite
+                $(`#card-evento-${tipo} .btn-agregar-evento`).show();
             });
             APP.showNotification('Evento eliminado', 'success');
         }
