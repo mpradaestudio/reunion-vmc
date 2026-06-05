@@ -1721,3 +1721,61 @@ button.sidebar-item {
     border-color    : var(--vmc-primary);
     box-shadow      : 0 0 0 3px rgba(var(--bs-primary-rgb), 0.20);
 }
+
+
+
+/* ============================================================
+   42. CONFIGURACIÓN — Cajas de horario de reuniones
+   ============================================================ */
+
+/* Fondo suave azul para los bloques de reunión */
+.vmc-reunion-box {
+    background-color: var(--vmc-primary-soft);
+    border           : 1px solid rgba(var(--vmc-primary-rgb), 0.18);
+}
+[data-bs-theme="dark"] .vmc-reunion-box {
+    background-color: rgba(var(--vmc-primary-rgb), 0.10);
+    border-color    : rgba(var(--vmc-primary-rgb), 0.25);
+}
+
+/* Ícono primario */
+.vmc-icon-primary {
+    color    : var(--vmc-primary);
+    font-size: 1.05rem;
+}
+[data-bs-theme="dark"] .vmc-icon-primary {
+    color: #9bb6e6;
+}
+
+/* Select con acento primario */
+.vmc-select-primary {
+    border-color: rgba(var(--vmc-primary-rgb), 0.40) !important;
+    color       : var(--vmc-primary) !important;
+    font-weight : 500;
+}
+.vmc-select-primary:focus {
+    border-color: var(--vmc-primary) !important;
+    box-shadow  : 0 0 0 3px rgba(var(--bs-primary-rgb), 0.15) !important;
+    color       : var(--vmc-primary) !important;
+}
+[data-bs-theme="dark"] .vmc-select-primary {
+    color      : #9bb6e6 !important;
+    border-color: rgba(123, 159, 218, 0.35) !important;
+}
+
+/* Input time con acento primario + forzar formato 12h (AM/PM) */
+.vmc-time-primary {
+    border-color: rgba(var(--vmc-primary-rgb), 0.40) !important;
+    color       : var(--vmc-primary) !important;
+    font-weight : 500;
+}
+.vmc-time-primary:focus {
+    border-color: var(--vmc-primary) !important;
+    box-shadow  : 0 0 0 3px rgba(var(--bs-primary-rgb), 0.15) !important;
+    color       : var(--vmc-primary) !important;
+}
+[data-bs-theme="dark"] .vmc-time-primary {
+    color      : #9bb6e6 !important;
+    border-color: rgba(123, 159, 218, 0.35) !important;
+}
+/* El navegador muestra AM/PM cuando se usa hour12 vía JS */

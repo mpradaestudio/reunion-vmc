@@ -75,59 +75,66 @@ $stats = [
                     
                     <hr>
 
-                    <!-- Reunión Entre Semana -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">
-                            <i class="bi bi-calendar-week"></i> Reunión Entre Semana
-                        </label>
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <label for="dia_entre_semana" class="form-label small text-muted">Día</label>
-                                <select class="form-select" id="dia_entre_semana" name="dia_entre_semana">
-                                    <option value="">— Sin definir —</option>
-                                    <?php
-                                    $diasSemana = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
-                                    foreach ($diasSemana as $d):
-                                        $sel = (($config['dia_entre_semana'] ?? '') === $d) ? 'selected' : '';
-                                    ?>
-                                    <option value="<?php echo $d; ?>" <?php echo $sel; ?>><?php echo $d; ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="hora_entre_semana" class="form-label small text-muted">Hora</label>
-                                <input type="time" class="form-control" id="hora_entre_semana"
-                                       name="hora_entre_semana"
-                                       value="<?php echo htmlspecialchars($config['hora_entre_semana'] ?? ''); ?>">
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Horario de Reuniones — 2 columnas -->
+                    <?php
+                    $diasSemana = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+                    ?>
+                    <div class="row g-3 mb-3">
 
-                    <!-- Reunión Fin de Semana -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">
-                            <i class="bi bi-calendar-heart"></i> Reunión Fin de Semana
-                        </label>
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <label for="dia_fin_semana" class="form-label small text-muted">Día</label>
-                                <select class="form-select" id="dia_fin_semana" name="dia_fin_semana">
-                                    <option value="">— Sin definir —</option>
-                                    <?php
-                                    foreach ($diasSemana as $d):
-                                        $sel = (($config['dia_fin_semana'] ?? '') === $d) ? 'selected' : '';
-                                    ?>
-                                    <option value="<?php echo $d; ?>" <?php echo $sel; ?>><?php echo $d; ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="hora_fin_semana" class="form-label small text-muted">Hora</label>
-                                <input type="time" class="form-control" id="hora_fin_semana"
-                                       name="hora_fin_semana"
-                                       value="<?php echo htmlspecialchars($config['hora_fin_semana'] ?? ''); ?>">
+                        <!-- Reunión Entre Semana -->
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3 vmc-reunion-box">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <i class="bi bi-calendar-week vmc-icon-primary"></i>
+                                    <span class="fw-bold">Entre Semana</span>
+                                </div>
+                                <div class="mb-2">
+                                    <label for="dia_entre_semana" class="form-label small text-muted mb-1">Día</label>
+                                    <select class="form-select vmc-select-primary" id="dia_entre_semana" name="dia_entre_semana">
+                                        <option value="">— Sin definir —</option>
+                                        <?php foreach ($diasSemana as $d):
+                                            $sel = (($config['dia_entre_semana'] ?? '') === $d) ? 'selected' : '';
+                                        ?>
+                                        <option value="<?php echo $d; ?>" <?php echo $sel; ?>><?php echo $d; ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="hora_entre_semana" class="form-label small text-muted mb-1">Hora</label>
+                                    <input type="time" class="form-control vmc-time-primary"
+                                           id="hora_entre_semana" name="hora_entre_semana"
+                                           value="<?php echo htmlspecialchars($config['hora_entre_semana'] ?? ''); ?>">
+                                </div>
                             </div>
                         </div>
+
+                        <!-- Reunión Fin de Semana -->
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3 vmc-reunion-box">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <i class="bi bi-calendar-heart vmc-icon-primary"></i>
+                                    <span class="fw-bold">Fin de Semana</span>
+                                </div>
+                                <div class="mb-2">
+                                    <label for="dia_fin_semana" class="form-label small text-muted mb-1">Día</label>
+                                    <select class="form-select vmc-select-primary" id="dia_fin_semana" name="dia_fin_semana">
+                                        <option value="">— Sin definir —</option>
+                                        <?php foreach ($diasSemana as $d):
+                                            $sel = (($config['dia_fin_semana'] ?? '') === $d) ? 'selected' : '';
+                                        ?>
+                                        <option value="<?php echo $d; ?>" <?php echo $sel; ?>><?php echo $d; ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="hora_fin_semana" class="form-label small text-muted mb-1">Hora</label>
+                                    <input type="time" class="form-control vmc-time-primary"
+                                           id="hora_fin_semana" name="hora_fin_semana"
+                                           value="<?php echo htmlspecialchars($config['hora_fin_semana'] ?? ''); ?>">
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
                     <hr>
@@ -554,6 +561,96 @@ $stats = [
 </div>
 
 <script>
+/* ── Convertir inputs time a formato 12h (AM/PM) ─────────────
+   Los inputs type="time" nativos guardan HH:MM (24h) en el value
+   pero podemos forzar la visualización 12h usando Intl en el placeholder
+   y convirtiendo el valor al mostrar/guardar.
+   Truco: cambiamos el type a "text" visualmente con un picker 12h. ── */
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.vmc-time-primary').forEach(function (input) {
+        // Leer valor 24h almacenado
+        const val24 = input.value; // ej. "19:00"
+
+        // Crear un input auxiliar visible tipo text con formato 12h
+        const wrapper = document.createElement('div');
+        wrapper.className = 'input-group';
+
+        const selHora = document.createElement('select');
+        selHora.className = 'form-select vmc-select-primary vmc-time-h';
+
+        const selMin = document.createElement('select');
+        selMin.className = 'form-select vmc-select-primary vmc-time-m';
+
+        const selAmPm = document.createElement('select');
+        selAmPm.className = 'form-select vmc-select-primary vmc-time-ampm';
+
+        // Horas 1–12
+        for (let h = 1; h <= 12; h++) {
+            const o = document.createElement('option');
+            o.value = String(h);
+            o.textContent = String(h).padStart(2, '0');
+            selHora.appendChild(o);
+        }
+
+        // Minutos 00–59 de 5 en 5
+        ['00','05','10','15','20','25','30','35','40','45','50','55'].forEach(function (m) {
+            const o = document.createElement('option');
+            o.value = m;
+            o.textContent = m;
+            selMin.appendChild(o);
+        });
+
+        // AM / PM
+        ['AM','PM'].forEach(function (ap) {
+            const o = document.createElement('option');
+            o.value = ap;
+            o.textContent = ap;
+            selAmPm.appendChild(o);
+        });
+
+        // Pre-seleccionar según el valor 24h existente
+        if (val24) {
+            const parts = val24.split(':');
+            let h = parseInt(parts[0], 10);
+            const m = parts[1] || '00';
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            if (h === 0) h = 12;
+            else if (h > 12) h -= 12;
+            selHora.value  = String(h);
+            selMin.value   = m;
+            selAmPm.value  = ampm;
+        }
+
+        // Ocultar el input original y mantenerlo sincronizado (lo envía el form)
+        input.type  = 'hidden';
+        input.style.display = 'none';
+
+        function syncHidden() {
+            let h = parseInt(selHora.value, 10);
+            const m = selMin.value;
+            const ap = selAmPm.value;
+            if (ap === 'AM') {
+                if (h === 12) h = 0;
+            } else {
+                if (h !== 12) h += 12;
+            }
+            input.value = String(h).padStart(2, '0') + ':' + m;
+        }
+
+        selHora.addEventListener('change',  syncHidden);
+        selMin.addEventListener('change',   syncHidden);
+        selAmPm.addEventListener('change',  syncHidden);
+        syncHidden();
+
+        // Insertar los tres selects en el wrapper y reemplazar el input
+        wrapper.appendChild(selHora);
+        wrapper.appendChild(selMin);
+        wrapper.appendChild(selAmPm);
+        input.parentNode.insertBefore(wrapper, input);
+        wrapper.appendChild(input); // mantener el hidden dentro
+    });
+});
+
 function limpiarProgramasPasados() {
     if (confirm('¿Está seguro de eliminar todos los programas pasados?\n\nEsto eliminará programas cuya fecha ya haya transcurrido.')) {
         $.post('../api/programas.php', {
