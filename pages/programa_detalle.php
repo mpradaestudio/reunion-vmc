@@ -269,7 +269,7 @@ $semanaSiguiente = fetchOne(
                     <!-- Presidente -->
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Presidente:</label>
-                        <select class="form-select asignar-rol" data-rol="Presidente">
+                        <select class="form-select asignar-rol" data-rol="Presidente" style="width:100%;">
                             <?php echo renderOpciones(
                                 personasPara('Presidente'),
                                 $rolesAsignados['Presidente']['persona_id'] ?? null,
@@ -277,11 +277,11 @@ $semanaSiguiente = fetchOne(
                             ); ?>
                         </select>
                     </div>
-                    
+
                     <!-- Oración inicial -->
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Oración inicial:</label>
-                        <select class="form-select asignar-rol" data-rol="Oración inicial">
+                        <select class="form-select asignar-rol" data-rol="Oración inicial" style="width:100%;">
                             <?php echo renderOpciones(
                                 personasPara('Oración'),
                                 $rolesAsignados['Oración inicial']['persona_id'] ?? null,
@@ -289,11 +289,11 @@ $semanaSiguiente = fetchOne(
                             ); ?>
                         </select>
                     </div>
-                    
+
                     <!-- Oración final -->
                     <div class="col-md-4">
                         <label class="form-label fw-bold">Oración final:</label>
-                        <select class="form-select asignar-rol" data-rol="Oración final">
+                        <select class="form-select asignar-rol" data-rol="Oración final" style="width:100%;">
                             <?php echo renderOpciones(
                                 personasPara('Oración'),
                                 $rolesAsignados['Oración final']['persona_id'] ?? null,
@@ -430,21 +430,13 @@ $semanaSiguiente = fetchOne(
                         ?>
                             <div class="<?php echo $colClase; ?>">
                                 <label class="form-label small mb-1"><?php echo $etiquetas[$i - 1]; ?></label>
-                                <div class="input-group input-group-sm">
-                                    <select class="form-select asignar-parte"
-                                            data-seccion-id="<?php echo $seccion['id']; ?>"
-                                            data-orden="<?php echo $i; ?>"
-                                            data-tipo="<?php echo htmlspecialchars($seccion['tipo_asignacion']); ?>">
-                                        <?php echo renderOpciones($lista, $selId, $selNombre); ?>
-                                    </select>
-                                    <?php if ($asignacionActual): ?>
-                                    <button class="btn btn-outline-danger btn-desasignar"
-                                            data-seccion-id="<?php echo $seccion['id']; ?>"
-                                            data-orden="<?php echo $i; ?>">
-                                        <i class="bi bi-x"></i>
-                                    </button>
-                                    <?php endif; ?>
-                                </div>
+                                <select class="form-select asignar-parte"
+                                        style="width:100%;"
+                                        data-seccion-id="<?php echo $seccion['id']; ?>"
+                                        data-orden="<?php echo $i; ?>"
+                                        data-tipo="<?php echo htmlspecialchars($seccion['tipo_asignacion']); ?>">
+                                    <?php echo renderOpciones($lista, $selId, $selNombre); ?>
+                                </select>
                                 <?php if ($cap && empty($lista)): ?>
                                     <small class="text-muted">Nadie habilitado para esta parte</small>
                                 <?php endif; ?>
@@ -465,87 +457,49 @@ $semanaSiguiente = fetchOne(
 <script>
 const programaId = <?php echo $programaId; ?>;
 
-// Asignar rol general
-$('.asignar-rol').on('change', function() {
-    const rol = $(this).data('rol');
+// ── Roles generales: asignar / desasignar via Select2 (change) ──
+$('.asignar-rol').on('change', function () {
+    const rol       = $(this).data('rol');
     const personaId = $(this).val();
-    
+
     if (!personaId) {
-        // Desasignar
         $.post('../api/asignaciones.php', {
-            action: 'desasignar_rol',
-            programa_id: programaId,
-            rol: rol
-        }, function(response) {
-            if (response.success) {
-                APP.showNotification('Rol desasignado', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                APP.showNotification(response.message, 'danger');
-            }
+            action: 'desasignar_rol', programa_id: programaId, rol
+        }, (r) => {
+            if (r.success) { APP.showNotification('Rol desasignado', 'success'); setTimeout(() => location.reload(), 800); }
+            else APP.showNotification(r.message, 'danger');
         });
     } else {
-        // Asignar
         $.post('../api/asignaciones.php', {
-            action: 'asignar_rol',
-            programa_id: programaId,
-            rol: rol,
-            persona_id: personaId
-        }, function(response) {
-            if (response.success) {
-                APP.showNotification('Rol asignado correctamente', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                APP.showNotification(response.message, 'danger');
-            }
+            action: 'asignar_rol', programa_id: programaId, rol, persona_id: personaId
+        }, (r) => {
+            if (r.success) { APP.showNotification('Rol asignado', 'success'); setTimeout(() => location.reload(), 800); }
+            else APP.showNotification(r.message, 'danger');
         });
     }
 });
 
-// Asignar parte
-$('.asignar-parte').on('change', function() {
+// ── Partes del programa: asignar / desasignar via Select2 (change) ──
+$('.asignar-parte').on('change', function () {
     const seccionId = $(this).data('seccion-id');
-    const orden = $(this).data('orden');
-    const tipo = $(this).data('tipo');
+    const orden     = $(this).data('orden');
+    const tipo      = $(this).data('tipo');
     const personaId = $(this).val();
-    
-    if (!personaId) {
-        return;
-    }
-    
-    $.post('../api/asignaciones.php', {
-        action: 'asignar_parte',
-        seccion_id: seccionId,
-        persona_id: personaId,
-        rol: tipo,
-        orden: orden
-    }, function(response) {
-        if (response.success) {
-            APP.showNotification('Persona asignada correctamente', 'success');
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            APP.showNotification(response.message, 'danger');
-        }
-    });
-});
 
-// Desasignar parte
-$('.btn-desasignar').on('click', function() {
-    const seccionId = $(this).data('seccion-id');
-    const orden = $(this).data('orden');
-    
-    if (confirm('¿Desea quitar esta asignación?')) {
+    if (!personaId) {
+        // X limpia → desasignar
         $.post('../api/asignaciones.php', {
-            action: 'desasignar_parte',
-            seccion_id: seccionId,
-            orden: orden
-        }, function(response) {
-            if (response.success) {
-                APP.showNotification('Asignación eliminada', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                APP.showNotification(response.message, 'danger');
-            }
+            action: 'desasignar_parte', seccion_id: seccionId, orden
+        }, (r) => {
+            if (r.success) { APP.showNotification('Asignación eliminada', 'success'); setTimeout(() => location.reload(), 800); }
+            else APP.showNotification(r.message, 'danger');
+        });
+    } else {
+        $.post('../api/asignaciones.php', {
+            action: 'asignar_parte', seccion_id: seccionId, persona_id: personaId, rol: tipo, orden
+        }, (r) => {
+            if (r.success) { APP.showNotification('Persona asignada', 'success'); setTimeout(() => location.reload(), 800); }
+            else APP.showNotification(r.message, 'danger');
         });
     }
 });
@@ -556,39 +510,18 @@ $('.btn-desasignar').on('click', function() {
 <script>
 $(document).ready(function () {
 
-    // Configuración base de Select2
-    const select2Config = {
-        theme        : 'bootstrap-5',
-        language     : 'es',
-        allowClear   : false,
-        width        : 'auto',
-        placeholder  : function () {
-            // Usa el primer option vacío como placeholder
+    const s2Cfg = {
+        theme     : 'bootstrap-5',
+        language  : 'es',
+        allowClear: true,
+        width     : '100%',
+        placeholder: function () {
             return $(this).find('option[value=""]').text() || 'Sin asignar';
         }
     };
 
-    // Inicializar en los selects de roles generales (Presidente, Oración)
-    $('.asignar-rol').select2(select2Config);
-
-    // Inicializar en los selects de partes del programa
-    $('.asignar-parte').select2(select2Config);
-
-    // Select2 dispara 'select2:select' y 'select2:unselect' además de 'change'.
-    // Los listeners jQuery 'change' existentes se siguen disparando correctamente
-    // porque Select2 emite un evento 'change' nativo después de cada selección.
-    // No se necesita ningún ajuste adicional en la lógica de asignación.
-
-    // Sincronizar tema oscuro/claro cuando el usuario lo cambia
-    document.getElementById('themeToggle')?.addEventListener('click', function () {
-        // Pequeño delay para que data-bs-theme ya esté actualizado
-        setTimeout(function () {
-            // Re-renderizar dropdowns abiertos si los hay
-            if ($('.select2-container--open').length) {
-                $('body').trigger('click'); // cierra el dropdown abierto
-            }
-        }, 50);
-    });
+    $('.asignar-rol').select2(s2Cfg);
+    $('.asignar-parte').select2(s2Cfg);
 });
 </script>
 
