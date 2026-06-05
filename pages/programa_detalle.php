@@ -252,9 +252,12 @@ $semanaSiguiente = fetchOne(
     </a>
 </div>
 
-<!-- ── Fila 2: Título de la semana ── -->
-<div class="mb-4">
+<!-- ── Fila 2: Título de la semana + botón Autollenado ── -->
+<div class="d-flex justify-content-between align-items-center mb-4 gap-2">
     <h1 class="h2 mb-0"><?php echo htmlspecialchars($programa['titulo_semana']); ?></h1>
+    <button class="btn btn-outline-primary" id="btnAutollenado">
+        <i class="bi bi-magic me-1"></i> Autollenado
+    </button>
 </div>
 
 <!-- Roles generales -->
@@ -502,6 +505,28 @@ $('.asignar-parte').on('change', function () {
             else APP.showNotification(r.message, 'danger');
         });
     }
+// ── Autollenado ──────────────────────────────────────────────
+$('#btnAutollenado').on('click', function () {
+    const $btn = $(this).prop('disabled', true)
+        .html('<span class="spinner-border spinner-border-sm me-1"></span> Llenando…');
+
+    $.post('../api/programas.php',
+        { action: 'autofill', programa_id: programaId },
+        function (res) {
+            if (res.success) {
+                APP.showNotification('Autollenado completado', 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                APP.showNotification(res.message || 'Error en autollenado', 'danger');
+                $btn.prop('disabled', false)
+                    .html('<i class="bi bi-magic me-1"></i> Autollenado');
+            }
+        }
+    ).fail(function () {
+        APP.showNotification('Error al conectar con el servidor', 'danger');
+        $btn.prop('disabled', false)
+            .html('<i class="bi bi-magic me-1"></i> Autollenado');
+    });
 });
 </script>
 

@@ -148,6 +148,136 @@ class ProgramasAPI {
     }
     
     /**
+     * Autollenar asignaciones vacías con personas aleatorias
+     * respetando partes_disponibles de cada persona.
+     */
+    public function autofill(int $programaId): array {
+        try {
+            // ── 1. Roles generales vacíos ────────────────────────────────
+            $rolesConfig = [
+                'Presidente'    => 'Presidente',
+                'Oración inicial' => 'Oración',
+                'Oración final'   => 'Oración',
+            ];
+
+            foreach ($rolesConfig as $rol => $capacidad) {
+                // ¿Ya asignado?
+                $existing = fetchOne(
+                    "SELECT id FROM asignaciones_roles WHERE programa_id = ? AND rol = ?",
+                    [$programaId, $rol]
+                );
+                if ($existing) continue;
+
+                // Personas con esa capacidad
+                $candidatos = fetchAll("
+                    SELECT ppd.persona_id
+                    FROM persona_partes_disponibles ppd
+                    INNER JOIN personas p ON p.id = ppd.persona_id
+                    WHERE p.activo = 1
+                      AND ppd.puede_presentar = 1
+                      AND ppd.tipo_parte = ?
+                    ORDER BY RAND()
+                    LIMIT 1
+                ", [$capacidad]);
+
+                if (empty($candidatos)) continue;
+
+                $personaId = $candidatos[0]['persona_id'];
+
+                // Upsert
+                $existe = fetchOne(
+                    "SELECT id FROM asignaciones_roles WHERE programa_id = ? AND rol = ?",
+                    [$programaId, $rol]
+                );
+                if ($existe) {
+                    $this->pdo->prepare("UPDATE asignaciones_roles SET persona_id = ? WHERE programa_id = ? AND rol = ?")
+                        ->execute([$personaId, $programaId, $rol]);
+                } else {
+                    $this->pdo->prepare("INSERT INTO asignaciones_roles (programa_id, rol, persona_id) VALUES (?, ?, ?)")
+                        ->execute([$programaId, $rol, $personaId]);
+                }
+            }
+
+            // ── 2. Partes de secciones vacías ───────────────────────────
+            $secciones = fetchAll(
+                "SELECT * FROM programa_secciones WHERE programa_id = ? ORDER BY orden",
+                [$programaId]
+            );
+
+            foreach ($secciones as $sec) {
+                $tipo      = $sec['tipo_asignacion'];
+                $titulo    = $sec['titulo'];
+                $seccionNom = $sec['seccion'];
+                $dosPersonas = in_array($tipo, ['Estudiante/Ayudante', 'Conductor/Lector']);
+                $slots = $dosPersonas ? [1, 2] : [1];
+
+                foreach ($slots as $orden) {
+                    // ¿Ya asignado?
+                    $existing = fetchOne(
+                        "SELECT id FROM asignaciones_partes WHERE seccion_id = ? AND orden_presentador = ?",
+                        [$sec['id'], $orden]
+                    );
+                    if ($existing) continue;
+
+                    // Determinar capacidad
+                    $cap = $this->capacidadRequerida($seccionNom, $titulo, $orden);
+                    if (!$cap) continue;
+
+                    $candidatos = fetchAll("
+                        SELECT ppd.persona_id
+                        FROM persona_partes_disponibles ppd
+                        INNER JOIN personas p ON p.id = ppd.persona_id
+                        WHERE p.activo = 1
+                          AND ppd.puede_presentar = 1
+                          AND ppd.tipo_parte = ?
+                        ORDER BY RAND()
+                        LIMIT 1
+                    ", [$cap]);
+
+                    if (empty($candidatos)) continue;
+
+                    $personaId = $candidatos[0]['persona_id'];
+
+                    $this->pdo->prepare("
+                        INSERT INTO asignaciones_partes (seccion_id, persona_id, rol, orden_presentador)
+                        VALUES (?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE persona_id = VALUES(persona_id)
+                    ")->execute([$sec['id'], $personaId, $tipo, $orden]);
+                }
+            }
+
+            return ['success' => true, 'message' => 'Autollenado completado'];
+
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => 'Error en autollenado: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Replica la lógica de capacidadRequerida() de programa_detalle.php
+     */
+    private function capacidadRequerida(string $seccion, string $titulo, int $orden): ?string {
+        $t = mb_strtolower($titulo, 'UTF-8');
+
+        if ($seccion === 'TESOROS DE LA BIBLIA') {
+            if (mb_strpos($t, 'perlas')   !== false) return 'Busquemos perlas escondidas';
+            if (mb_strpos($t, 'lectura')  !== false) return 'Lectura de la Biblia';
+            return 'Discurso Tesoros';
+        }
+        if ($seccion === 'SEAMOS MEJORES MAESTROS') {
+            return ($orden == 1) ? 'Estudiante' : 'Ayudante';
+        }
+        if ($seccion === 'NUESTRA VIDA CRISTIANA') {
+            if (mb_strpos($t, 'estudio b') !== false) {
+                return ($orden == 1) ? 'Conductor' : 'Lector';
+            }
+            if (mb_strpos($t, 'necesidades') !== false) return 'Necesidades';
+            return 'Partes';
+        }
+        return null;
+    }
+
+    /**
      * Obtener programas de un mes específico
      */
     public function obtenerPorMes($mes, $anio) {
@@ -211,6 +341,9 @@ if ($method === 'GET') {
     } elseif ($action === 'delete_batch' && !empty($datos['ids'])) {
         $ids = is_array($datos['ids']) ? $datos['ids'] : explode(',', $datos['ids']);
         $resultado = $api->eliminarLote($ids);
+
+    } elseif ($action === 'autofill' && !empty($datos['programa_id'])) {
+        $resultado = $api->autofill((int)$datos['programa_id']);
 
     } else {
         $resultado = ['success' => false, 'message' => 'Acción no válida'];
