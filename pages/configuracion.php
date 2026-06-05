@@ -74,6 +74,63 @@ $stats = [
                     </div>
                     
                     <hr>
+
+                    <!-- Reunión Entre Semana -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-calendar-week"></i> Reunión Entre Semana
+                        </label>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label for="dia_entre_semana" class="form-label small text-muted">Día</label>
+                                <select class="form-select" id="dia_entre_semana" name="dia_entre_semana">
+                                    <option value="">— Sin definir —</option>
+                                    <?php
+                                    $diasSemana = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+                                    foreach ($diasSemana as $d):
+                                        $sel = (($config['dia_entre_semana'] ?? '') === $d) ? 'selected' : '';
+                                    ?>
+                                    <option value="<?php echo $d; ?>" <?php echo $sel; ?>><?php echo $d; ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="hora_entre_semana" class="form-label small text-muted">Hora</label>
+                                <input type="time" class="form-control" id="hora_entre_semana"
+                                       name="hora_entre_semana"
+                                       value="<?php echo htmlspecialchars($config['hora_entre_semana'] ?? ''); ?>">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reunión Fin de Semana -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-calendar-heart"></i> Reunión Fin de Semana
+                        </label>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label for="dia_fin_semana" class="form-label small text-muted">Día</label>
+                                <select class="form-select" id="dia_fin_semana" name="dia_fin_semana">
+                                    <option value="">— Sin definir —</option>
+                                    <?php
+                                    foreach ($diasSemana as $d):
+                                        $sel = (($config['dia_fin_semana'] ?? '') === $d) ? 'selected' : '';
+                                    ?>
+                                    <option value="<?php echo $d; ?>" <?php echo $sel; ?>><?php echo $d; ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="hora_fin_semana" class="form-label small text-muted">Hora</label>
+                                <input type="time" class="form-control" id="hora_fin_semana"
+                                       name="hora_fin_semana"
+                                       value="<?php echo htmlspecialchars($config['hora_fin_semana'] ?? ''); ?>">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
                     
                     <div class="mb-3">
                         <h6><i class="bi bi-info-circle"></i> Información del Sistema</h6>
