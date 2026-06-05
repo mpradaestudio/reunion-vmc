@@ -485,3 +485,35 @@ document.addEventListener('DOMContentLoaded', function () {
     Sidebar.init();
     SidebarGroups.init();
 });
+
+
+/* ── Select2: ocultar X cuando no hay valor (placeholder) ──────
+   Aplica a todas las páginas. La X solo debe verse cuando hay
+   una persona/valor asignado, no cuando muestra "Sin asignar".
+   ─────────────────────────────────────────────────────────────── */
+$(document).on('select2:open select2:select select2:clear select2:unselect', function () {
+    // pequeño delay para que Select2 actualice el DOM
+    setTimeout(s2SyncClearButtons, 10);
+});
+
+$(document).ready(function () {
+    // Estado inicial al cargar la página
+    setTimeout(s2SyncClearButtons, 200);
+});
+
+function s2SyncClearButtons() {
+    document.querySelectorAll('.select2-container--bootstrap-5').forEach(function (container) {
+        const clearBtn = container.querySelector('.select2-selection__clear');
+        if (!clearBtn) return;
+
+        // Si el rendered muestra el placeholder → ocultar X
+        const rendered = container.querySelector('.select2-selection__rendered');
+        const isPlaceholder = rendered &&
+            (rendered.classList.contains('select2-selection__placeholder') ||
+             rendered.querySelector('.select2-selection__placeholder') !== null ||
+             (rendered.getAttribute('title') || '').trim() === '' ||
+             (rendered.textContent || '').trim() === '');
+
+        clearBtn.style.setProperty('display', isPlaceholder ? 'none' : '', 'important');
+    });
+}

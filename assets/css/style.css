@@ -1834,13 +1834,19 @@ button.sidebar-item {
 /* ============================================================
    44. SELECT2 — Ocultar X cuando no hay valor (placeholder)
    ============================================================
-   El botón .select2-selection__clear solo debe aparecer cuando
-   hay una persona asignada, no cuando muestra "Sin asignar".
-   Select2 bootstrap-5 renderiza el placeholder con la clase
-   .select2-selection__placeholder en el elemento rendered.
+   El botón clear solo debe verse cuando hay un valor real.
+   Se controla via JS (s2SyncClearButtons en main.js) y
+   también via CSS como respaldo.
    ============================================================ */
+
+/* Respaldo CSS: :has() para navegadores modernos */
 .select2-container--bootstrap-5 .select2-selection--single:has(
     .select2-selection__placeholder
+) .select2-selection__clear,
+.select2-container--bootstrap-5 .select2-selection--single:has(
+    .select2-selection__rendered[title=""]
 ) .select2-selection__clear {
     display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
 }
