@@ -52,6 +52,15 @@ foreach ($semanas as &$s) {
             : ($a['nombre_libre']    ?? '');
         $s['asig'][$a['rol']] = $nombre;
     }
+
+    // Obtener título del bosquejo (sin número) desde dp_bosquejo_id
+    $s['dp_titulo_bosquejo'] = '';
+    if (!empty($s['dp_bosquejo_id'])) {
+        try {
+            $b = fetchOne("SELECT titulo FROM bosquejos WHERE id = ?", [$s['dp_bosquejo_id']]);
+            $s['dp_titulo_bosquejo'] = $b['titulo'] ?? '';
+        } catch (Exception $e) {}
+    }
 }
 unset($s);
 
@@ -182,10 +191,10 @@ foreach ($semanas as $idx => $s) {
 
     $altBg = ($idx % 2 === 1) ? $C_ROW_ALT : [255,255,255];
 
-    dataCell($pdf, $wFecha,   $rowH, (string)$dia,                  $FNT_BOLD, $styleBold, 9,  true, $C_HEADER_BG, 'C');
-    dataCell($pdf, $wTema,    $rowH, $s['dp_tema']    ?? '',         $FNT_REG,  $styleReg,  8.5, true, $altBg, 'L');
-    dataCell($pdf, $wCancion, $rowH, $s['dp_cancion'] ?? '',         $FNT_REG,  $styleReg,  8.5, true, $altBg, 'C');
-    dataCell($pdf, $wOrador,  $rowH, $s['asig']['DP_Orador']    ?? '', $FNT_REG, $styleReg, 8.5, true, $altBg, 'L');
+    dataCell($pdf, $wFecha,   $rowH, (string)$dia,                    $FNT_BOLD, $styleBold, 9,   true, $C_HEADER_BG, 'C');
+    dataCell($pdf, $wTema,    $rowH, $s['dp_titulo_bosquejo'] ?? '',   $FNT_REG,  $styleReg,  8.5, true, $altBg, 'L');
+    dataCell($pdf, $wCancion, $rowH, $s['dp_cancion'] ?? '',           $FNT_REG,  $styleReg,  8.5, true, $altBg, 'C');
+    dataCell($pdf, $wOrador,  $rowH, $s['asig']['DP_Orador']    ?? '', $FNT_REG,  $styleReg,  8.5, true, $altBg, 'C');
     $pdf->Ln();
 }
 
@@ -227,10 +236,10 @@ foreach ($semanas as $idx => $s) {
     $hosp  = $s['asig']['EA_Hospitalidad'] ?? '';
 
     dataCell($pdf, $wF, $rowH, (string)$dia, $FNT_BOLD, $styleBold, 9,   true, $C_HEADER_BG, 'C');
-    dataCell($pdf, $wP, $rowH, $pres,        $FNT_REG,  $styleReg,  8.5, true, $altBg, 'L');
-    dataCell($pdf, $wL, $rowH, $lect,        $FNT_REG,  $styleReg,  8.5, true, $altBg, 'L');
-    dataCell($pdf, $wO, $rowH, $orac,        $FNT_REG,  $styleReg,  8.5, true, $altBg, 'L');
-    dataCell($pdf, $wH, $rowH, $hosp,        $FNT_REG,  $styleReg,  8.5, true, $altBg, 'L');
+    dataCell($pdf, $wP, $rowH, $pres,        $FNT_REG,  $styleReg,  8.5, true, $altBg, 'C');
+    dataCell($pdf, $wL, $rowH, $lect,        $FNT_REG,  $styleReg,  8.5, true, $altBg, 'C');
+    dataCell($pdf, $wO, $rowH, $orac,        $FNT_REG,  $styleReg,  8.5, true, $altBg, 'C');
+    dataCell($pdf, $wH, $rowH, $hosp,        $FNT_REG,  $styleReg,  8.5, true, $altBg, 'C');
     $pdf->Ln();
 }
 
