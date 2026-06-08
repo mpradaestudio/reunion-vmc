@@ -71,22 +71,24 @@ try {
     $privilegiosModal = [];
 }
 
-// Filtro por privilegio
+// Filtro por privilegio — reconstruir la query completa (con privilegios en SELECT)
 $filtroPrivilegio = (isset($_GET['privilegio_id']) && $_GET['privilegio_id'] !== '') ? (int)$_GET['privilegio_id'] : null;
 if ($filtroPrivilegio !== null) {
     $where[]  = "EXISTS (SELECT 1 FROM persona_privilegios pv2 WHERE pv2.persona_id = p.id AND pv2.privilegio_id = ?)";
     $params[] = $filtroPrivilegio;
-    // Reconstruir la query con el nuevo filtro
     $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
     try {
         $personas = fetchAll("
             SELECT p.id, p.nombre, p.apellido,
                    CONCAT(p.nombre, ' ', p.apellido) AS nombre_completo,
                    p.telefono, p.activo,
-                   GROUP_CONCAT(DISTINCT pf.nombre ORDER BY pf.id SEPARATOR '|') AS perfiles
+                   GROUP_CONCAT(DISTINCT pf.nombre  ORDER BY pf.id        SEPARATOR '|') AS perfiles,
+                   GROUP_CONCAT(DISTINCT prv.nombre ORDER BY prv.orden     SEPARATOR '|') AS privilegios
             FROM personas p
-            LEFT JOIN persona_perfiles pp ON pp.persona_id = p.id
-            LEFT JOIN perfiles pf ON pf.id = pp.perfil_id
+            LEFT JOIN persona_perfiles   pp  ON pp.persona_id  = p.id
+            LEFT JOIN perfiles           pf  ON pf.id          = pp.perfil_id
+            LEFT JOIN persona_privilegios ppv ON ppv.persona_id = p.id
+            LEFT JOIN privilegios         prv ON prv.id         = ppv.privilegio_id
             $whereSql
             GROUP BY p.id, p.nombre, p.apellido, p.telefono, p.activo
             ORDER BY p.nombre, p.apellido
@@ -146,10 +148,10 @@ $seccionesPartes = [
     <div class="col-md-12">
         <div class="card">
             <div class="card-body">
-                <form method="GET" class="row g-3">
+                <form method="GET" class="row g-3" id="formFiltros">
                     <div class="col-md-3">
                         <label class="form-label">Perfil</label>
-                        <select name="perfil_id" class="form-select" onchange="this.form.submit()">
+                        <select name="perfil_id" id="filtroPerfil" class="form-select">
                             <option value="">Todos los perfiles</option>
                             <?php foreach ($perfiles as $perfil): ?>
                                 <option value="<?php echo $perfil['id']; ?>"
@@ -161,7 +163,7 @@ $seccionesPartes = [
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Privilegio</label>
-                        <select name="privilegio_id" class="form-select" onchange="this.form.submit()">
+                        <select name="privilegio_id" id="filtroPrivilegio" class="form-select">
                             <option value="">Todos los privilegios</option>
                             <?php foreach ($privilegiosModal as $prv): ?>
                                 <option value="<?php echo $prv['id']; ?>"
@@ -173,7 +175,7 @@ $seccionesPartes = [
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Estado</label>
-                        <select name="activo" class="form-select" onchange="this.form.submit()">
+                        <select name="activo" id="filtroActivo" class="form-select">
                             <option value="">Todos</option>
                             <option value="1" <?php echo ($filtroActivo === 1) ? 'selected' : ''; ?>>Activos</option>
                             <option value="0" <?php echo ($filtroActivo === 0) ? 'selected' : ''; ?>>Inactivos</option>
@@ -248,6 +250,7 @@ $seccionesPartes = [
                                     }
                                     ?>
                                 </td>
+                                <td>
                                     <?php if ($persona['activo']): ?>
                                         <span class="badge bg-success">Activo</span>
                                     <?php else: ?>
@@ -956,6 +959,41 @@ $('#modalPersona').on('hidden.bs.modal', function () {
     $('.chk-privilegio').prop('checked', false);
     $('#chkTodosPrivilegios').prop('checked', false).prop('indeterminate', false);
     $('#modalPersonaTitulo').html('<i class="bi bi-person-plus"></i> Agregar Persona');
+});
+</script>
+
+<!-- Select2 CSS para filtros -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+
+<style>
+/* Toggle "Todos" privilegios — solo azul cuando TODOS están marcados */
+#chkTodosPrivilegios:not(:checked):not(:indeterminate) {
+    background-color: #fff;
+    border-color: #adb5bd;
+}
+</style>
+
+<!-- Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function () {
+    const s2Filtro = {
+        theme                  : 'bootstrap-5',
+        language               : 'es',
+        allowClear             : true,
+        width                  : '100%',
+        minimumResultsForSearch: Infinity,   // sin buscador
+    };
+
+    $('#filtroPerfil').select2($.extend({}, s2Filtro, { placeholder: 'Todos los perfiles' }));
+    $('#filtroPrivilegio').select2($.extend({}, s2Filtro, { placeholder: 'Todos los privilegios' }));
+    $('#filtroActivo').select2($.extend({}, s2Filtro, { placeholder: 'Todos' }));
+
+    // Enviar el formulario al cambiar cualquier select de filtro
+    $('#filtroPerfil, #filtroPrivilegio, #filtroActivo').on('change', function () {
+        document.getElementById('formFiltros').submit();
+    });
 });
 </script>
 
