@@ -369,20 +369,27 @@ if (isset($_GET['msg'])) {
                             <i class="bi bi-x-lg"></i>
                         </button>
                     </div>
-                    <?php if ($tipo === 'visita'): ?>
+                    <?php if ($tipo === 'visita'):
+                        // Decodificar notas como JSON para visita de circuito
+                        $vData      = json_decode($ev['notas'] ?? '', true);
+                        $vNombre    = is_array($vData) ? ($vData['nombre']   ?? '') : ($ev['notas'] ?? '');
+                        $vOriginal  = is_array($vData) ? ($vData['original'] ?? $vNombre) : $vNombre;
+                        $vSustituto = is_array($vData) ? !empty($vData['sustituto']) : false;
+                    ?>
                     <!-- Input Super de Circuito + checkbox Sustituto -->
                     <div class="mt-1 input-group input-group-sm">
                         <input type="text"
                                class="form-control super-circuito-input"
                                data-evento-id="<?php echo $ev['id']; ?>"
-                               data-nombre-original="<?php echo htmlspecialchars($ev['notas'] ?? ''); ?>"
-                               value="<?php echo htmlspecialchars($ev['notas'] ?? ''); ?>"
+                               data-nombre-original="<?php echo htmlspecialchars($vOriginal); ?>"
+                               value="<?php echo htmlspecialchars($vNombre); ?>"
                                placeholder="Nombre del superintendente">
                         <div class="input-group-text gap-1">
                             <input class="form-check-input mt-0 chk-sustituto"
                                    type="checkbox"
                                    id="chkSustituto_<?php echo $ev['id']; ?>"
-                                   data-evento-id="<?php echo $ev['id']; ?>">
+                                   data-evento-id="<?php echo $ev['id']; ?>"
+                                   <?php echo $vSustituto ? 'checked' : ''; ?>>
                             <label class="form-check-label small"
                                    for="chkSustituto_<?php echo $ev['id']; ?>">
                                 Sustituto
@@ -747,26 +754,45 @@ function fmtRangoJS(ini, fin) {
 function buildEventoRow(ev) {
     const label    = fmtRangoJS(ev.fecha_inicio, ev.fecha_fin);
     const esVisita = ev.tipo === 'visita';
+
+    // Decodificar notas: JSON para visita, texto plano para otros
+    let vNombre = '', vOriginal = '', vSustituto = false;
+    if (esVisita) {
+        try {
+            const d = typeof ev.notas === 'string' && ev.notas.startsWith('{')
+                ? JSON.parse(ev.notas) : {};
+            vNombre    = d.nombre   !== undefined ? d.nombre   : (ev.notas || '');
+            vOriginal  = d.original !== undefined ? d.original : vNombre;
+            vSustituto = !!d.sustituto;
+        } catch (e) {
+            vNombre = vOriginal = ev.notas || '';
+        }
+    }
+
     const notaBadge = (ev.notas && !esVisita)
         ? `<span class="badge bg-info-subtle text-info ms-1" style="font-size:.7rem;">${$('<span>').text(ev.notas).html()}</span>`
         : '';
-    const nombreEsc = (ev.notas || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
     const superInput = esVisita ? `
         <div class="mt-1 input-group input-group-sm">
             <input type="text"
                    class="form-control super-circuito-input"
                    data-evento-id="${ev.id}"
-                   data-nombre-original="${nombreEsc}"
-                   value="${nombreEsc}"
+                   data-nombre-original="${esc(vOriginal)}"
+                   value="${esc(vNombre)}"
                    placeholder="Nombre del superintendente">
             <div class="input-group-text gap-1">
                 <input class="form-check-input mt-0 chk-sustituto"
                        type="checkbox"
                        id="chkSustituto_${ev.id}"
-                       data-evento-id="${ev.id}">
+                       data-evento-id="${ev.id}"
+                       ${vSustituto ? 'checked' : ''}>
                 <label class="form-check-label small" for="chkSustituto_${ev.id}">Sustituto</label>
             </div>
         </div>` : '';
+
     return `
         <div class="border rounded px-2 py-1 mb-1 evento-row"
              id="evento-row-${ev.id}">
@@ -890,12 +916,13 @@ let superCircuitoTimers = {};
 $(document).on('input', '.super-circuito-input', function () {
     const eventoId = $(this).data('evento-id');
     const val      = $(this).val().trim();
+    const original = $(this).data('nombre-original') || val;
+    const sustituto = $(`#chkSustituto_${eventoId}`).is(':checked');
     clearTimeout(superCircuitoTimers[eventoId]);
     superCircuitoTimers[eventoId] = setTimeout(() => {
-        apiPost('../api/eventos.php',
-            { action: 'update_notas', id: eventoId, notas: val },
-            () => {},
-            () => APP.showNotification('Error al guardar el nombre', 'danger')
+        const notas = JSON.stringify({ nombre: val, original: original, sustituto: sustituto });
+        apiPost('../api/eventos.php', { action: 'update_notas', id: eventoId, notas },
+            () => {}, () => APP.showNotification('Error al guardar el nombre', 'danger')
         );
     }, 600);
 });
@@ -906,22 +933,18 @@ $(document).on('change', '.chk-sustituto', function () {
     const $input   = $(`.super-circuito-input[data-evento-id="${eventoId}"]`);
 
     if (this.checked) {
-        // Guardar el nombre original antes de borrar
-        $input.data('nombre-original', $input.val());
+        // Guardar nombre actual como original, limpiar input
+        const nombreActual = $input.val().trim();
+        $input.data('nombre-original', nombreActual);
         $input.val('').focus();
-        // Limpiar en BD también
-        apiPost('../api/eventos.php',
-            { action: 'update_notas', id: eventoId, notas: '' },
-            () => {}
-        );
+        const notas = JSON.stringify({ nombre: '', original: nombreActual, sustituto: true });
+        apiPost('../api/eventos.php', { action: 'update_notas', id: eventoId, notas }, () => {});
     } else {
         // Restaurar nombre original
         const original = $input.data('nombre-original') || '';
         $input.val(original);
-        apiPost('../api/eventos.php',
-            { action: 'update_notas', id: eventoId, notas: original },
-            () => {}
-        );
+        const notas = JSON.stringify({ nombre: original, original: original, sustituto: false });
+        apiPost('../api/eventos.php', { action: 'update_notas', id: eventoId, notas }, () => {});
     }
 });
 
