@@ -821,11 +821,20 @@ $(document).on('click', '.btn-agregar-evento', function () {
     $('#modalEventoTitulo').text(label);
     $('#eventoHint').text(hint);
 
-    // Limpiar campos y Flatpickr
+    // Limpiar Flatpickr
     const fpIni = document.getElementById('eventoFechaInicio')._flatpickr;
     const fpFin = document.getElementById('eventoFechaFin')._flatpickr;
     if (fpIni) fpIni.clear(); else $('#eventoFechaInicio').val('');
     if (fpFin) fpFin.clear(); else $('#eventoFechaFin').val('');
+
+    // Para Visita de Circuito: bloquear lunes (getDay() === 1)
+    if (fpIni) {
+        if (tipo === 'visita') {
+            fpIni.set('disable', [date => date.getDay() === 1]);
+        } else {
+            fpIni.set('disable', []);
+        }
+    }
 
     // Eventos de 1 día: ocultar fecha fin
     $('#eventoFechaFinWrap').toggle(!unDia);
