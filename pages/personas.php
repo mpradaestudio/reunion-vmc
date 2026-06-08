@@ -21,21 +21,35 @@ if ($filtroPerfil !== null) {
 }
 $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 
-// Consultar personas con sus perfiles múltiples. Si la tabla persona_perfiles
-// aún no existe (falta correr la migración), usamos el respaldo de la vista.
+// Obtener privilegios para el modal y filtro
+$privilegiosModal = [];
+try {
+    $privilegiosModal = fetchAll("SELECT id, nombre FROM privilegios ORDER BY orden, nombre");
+} catch (Exception $e) {
+    $privilegiosModal = [];
+}
+
+// Filtro por privilegio — reconstruir la query completa (con privilegios en SELECT)
+$filtroPrivilegio = (isset($_GET['privilegio_id']) && $_GET['privilegio_id'] !== '') ? (int)$_GET['privilegio_id'] : null;
+if ($filtroPrivilegio !== null) {
+    $where[]  = "EXISTS (SELECT 1 FROM persona_privilegios pv2 WHERE pv2.persona_id = p.id AND pv2.privilegio_id = ?)";
+    $params[] = $filtroPrivilegio;
+    $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
+}
+
 $necesitaMigracion = false;
 try {
     $personas = fetchAll("
         SELECT p.id, p.nombre, p.apellido,
                CONCAT(p.nombre, ' ', p.apellido) AS nombre_completo,
                p.telefono, p.activo,
-               GROUP_CONCAT(DISTINCT pf.nombre ORDER BY pf.id SEPARATOR '|') AS perfiles,
-               GROUP_CONCAT(DISTINCT prv.nombre ORDER BY prv.orden SEPARATOR '|') AS privilegios
+               GROUP_CONCAT(DISTINCT pf.nombre  ORDER BY pf.id        SEPARATOR '|') AS perfiles,
+               GROUP_CONCAT(DISTINCT prv.nombre ORDER BY prv.orden     SEPARATOR '|') AS privilegios
         FROM personas p
-        LEFT JOIN persona_perfiles pp ON pp.persona_id = p.id
-        LEFT JOIN perfiles pf ON pf.id = pp.perfil_id
+        LEFT JOIN persona_perfiles   pp  ON pp.persona_id  = p.id
+        LEFT JOIN perfiles           pf  ON pf.id          = pp.perfil_id
         LEFT JOIN persona_privilegios ppv ON ppv.persona_id = p.id
-        LEFT JOIN privilegios prv ON prv.id = ppv.privilegio_id
+        LEFT JOIN privilegios         prv ON prv.id         = ppv.privilegio_id
         $whereSql
         GROUP BY p.id, p.nombre, p.apellido, p.telefono, p.activo
         ORDER BY p.nombre, p.apellido
@@ -45,7 +59,7 @@ try {
     $personas = fetchAll("
         SELECT id, nombre, apellido,
                CONCAT(nombre, ' ', apellido) AS nombre_completo,
-               telefono, activo, perfil AS perfiles
+               telefono, activo, perfil AS perfiles, NULL AS privilegios
         FROM vista_personas_completa
         ORDER BY nombre, apellido
     ");
@@ -63,38 +77,6 @@ if (isset($_GET['msg'])) {
     }
 }
 
-// Obtener privilegios para el modal y filtro
-$privilegiosModal = [];
-try {
-    $privilegiosModal = fetchAll("SELECT id, nombre FROM privilegios ORDER BY orden, nombre");
-} catch (Exception $e) {
-    $privilegiosModal = [];
-}
-
-// Filtro por privilegio — reconstruir la query completa (con privilegios en SELECT)
-$filtroPrivilegio = (isset($_GET['privilegio_id']) && $_GET['privilegio_id'] !== '') ? (int)$_GET['privilegio_id'] : null;
-if ($filtroPrivilegio !== null) {
-    $where[]  = "EXISTS (SELECT 1 FROM persona_privilegios pv2 WHERE pv2.persona_id = p.id AND pv2.privilegio_id = ?)";
-    $params[] = $filtroPrivilegio;
-    $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
-    try {
-        $personas = fetchAll("
-            SELECT p.id, p.nombre, p.apellido,
-                   CONCAT(p.nombre, ' ', p.apellido) AS nombre_completo,
-                   p.telefono, p.activo,
-                   GROUP_CONCAT(DISTINCT pf.nombre  ORDER BY pf.id        SEPARATOR '|') AS perfiles,
-                   GROUP_CONCAT(DISTINCT prv.nombre ORDER BY prv.orden     SEPARATOR '|') AS privilegios
-            FROM personas p
-            LEFT JOIN persona_perfiles   pp  ON pp.persona_id  = p.id
-            LEFT JOIN perfiles           pf  ON pf.id          = pp.perfil_id
-            LEFT JOIN persona_privilegios ppv ON ppv.persona_id = p.id
-            LEFT JOIN privilegios         prv ON prv.id         = ppv.privilegio_id
-            $whereSql
-            GROUP BY p.id, p.nombre, p.apellido, p.telefono, p.activo
-            ORDER BY p.nombre, p.apellido
-        ", $params);
-    } catch (Exception $e) { }
-}
 $seccionesPartes = [
     'tesoros' => [
         'titulo' => 'TESOROS DE LA BIBLIA',
@@ -132,7 +114,7 @@ $seccionesPartes = [
 <div class="alert alert-warning">
     <i class="bi bi-exclamation-triangle"></i>
     <strong>Falta un paso:</strong> importa el archivo <code>database_update_v2.sql</code> en phpMyAdmin
-    para activar los perfiles múltiples. Mientras tanto se muestra el perfil principal.
+    para activar los perfiles múltiples.
 </div>
 <?php endif; ?>
 
@@ -352,7 +334,7 @@ $seccionesPartes = [
                         </div>
                     </div>
 
-                    <!-- 4. Privilegios (inmediatamente después de Perfil) -->
+                    <!-- 4. Privilegios -->
                     <?php if (!empty($privilegiosModal)): ?>
                     <div class="mb-3">
                         <div class="d-flex align-items-center justify-content-between mb-1">
@@ -379,12 +361,11 @@ $seccionesPartes = [
 
                     <hr>
 
-                    <!-- 5. Reunión entre semana (renombrado) -->
+                    <!-- 5. Reunión entre semana -->
                     <h6 class="fw-bold mb-3">
                         <i class="bi bi-calendar-week"></i> Reunión entre semana
                     </h6>
 
-                    <!-- Presidente / Oración (partes sueltas) -->
                     <div class="d-flex flex-wrap gap-4 mb-3">
                         <div class="form-check">
                             <input class="form-check-input chk-parte-suelta" type="checkbox"
@@ -398,7 +379,6 @@ $seccionesPartes = [
                         </div>
                     </div>
 
-                    <!-- Secciones Entre Semana -->
                     <?php foreach ($seccionesPartes as $key => $sec):
                         $grupoId = 'grupo_' . $key;
                     ?>
@@ -571,7 +551,6 @@ $seccionesPartes = [
                 <p class="text-muted small mb-3">
                     Personas seleccionadas: <strong id="bulkPerfilesCount">0</strong>
                 </p>
-                <!-- Toggle Agregar / Reemplazar -->
                 <div class="d-flex align-items-center gap-2 mb-3">
                     <span class="small fw-semibold">Modo:</span>
                     <div class="btn-group btn-group-sm" role="group">
@@ -581,7 +560,6 @@ $seccionesPartes = [
                         <label class="btn btn-outline-primary" for="bpModeReemplazar">Reemplazar</label>
                     </div>
                 </div>
-                <!-- Checkboxes de perfiles -->
                 <div class="d-flex flex-wrap gap-2 border rounded p-2" id="bulkPerfilesLista">
                     <?php foreach ($perfiles as $pf): ?>
                     <div class="form-check">
@@ -617,7 +595,6 @@ $seccionesPartes = [
                 <p class="text-muted small mb-3">
                     Personas seleccionadas: <strong id="bulkPrivilegiosCount">0</strong>
                 </p>
-                <!-- Toggle Agregar / Reemplazar -->
                 <div class="d-flex align-items-center gap-2 mb-3">
                     <span class="small fw-semibold">Modo:</span>
                     <div class="btn-group btn-group-sm" role="group">
@@ -627,7 +604,6 @@ $seccionesPartes = [
                         <label class="btn btn-outline-primary" for="bpvModeReemplazar">Reemplazar</label>
                     </div>
                 </div>
-                <!-- Checkboxes de privilegios -->
                 <div class="d-flex flex-wrap gap-2 border rounded p-2" id="bulkPrivilegiosLista">
                     <?php if (!empty($privilegiosModal)): ?>
                         <?php foreach ($privilegiosModal as $prv): ?>
@@ -660,13 +636,9 @@ $seccionesPartes = [
    BULK EDIT
 ════════════════════════════════════════════════════════════ */
 const BulkEdit = {
-
     getIds() {
-        return $('.chk-persona:checked').map(function () {
-            return parseInt(this.value);
-        }).get();
+        return $('.chk-persona:checked').map(function () { return parseInt(this.value); }).get();
     },
-
     updateBar() {
         const ids = this.getIds();
         const n   = ids.length;
@@ -678,40 +650,26 @@ const BulkEdit = {
         } else {
             $('#bulkBar').fadeOut(150);
         }
-        // Sincronizar "seleccionar todo"
         const total = $('.chk-persona').length;
         $('#chkSelectAll').prop('indeterminate', n > 0 && n < total);
         $('#chkSelectAll').prop('checked', n > 0 && n === total);
-        // Resaltar filas
         $('.persona-row').each(function () {
-            const checked = $(this).find('.chk-persona').is(':checked');
-            $(this).toggleClass('table-active', checked);
+            $(this).toggleClass('table-active', $(this).find('.chk-persona').is(':checked'));
         });
     },
-
     clearSelection() {
         $('.chk-persona, #chkSelectAll').prop('checked', false);
         $('#chkSelectAll').prop('indeterminate', false);
         $('.persona-row').removeClass('table-active');
         $('#bulkBar').fadeOut(150);
     },
-
     init() {
-        // Seleccionar todo
         $(document).on('change', '#chkSelectAll', function () {
             $('.chk-persona').prop('checked', this.checked);
             BulkEdit.updateBar();
         });
-
-        // Checkbox individual
-        $(document).on('change', '.chk-persona', function () {
-            BulkEdit.updateBar();
-        });
-
-        // Cancelar selección
-        $('#btnBulkCancelar').on('click', () => this.clearSelection());
-
-        // Abrir modales
+        $(document).on('change', '.chk-persona', function () { BulkEdit.updateBar(); });
+        $('#btnBulkCancelar').on('click', () => BulkEdit.clearSelection());
         $('#btnBulkPerfiles').on('click', () => {
             $('.chk-bulk-perfil').prop('checked', false);
             $('input[name="bulkPerfilesMode"][value="add"]').prop('checked', true);
@@ -722,96 +680,66 @@ const BulkEdit = {
             $('input[name="bulkPrivilegiosMode"][value="add"]').prop('checked', true);
             bootstrap.Modal.getOrCreateInstance(document.getElementById('modalBulkPrivilegios')).show();
         });
-
-        // Eliminar en lote
         $('#btnBulkEliminar').on('click', () => {
             const ids = BulkEdit.getIds();
             if (!ids.length) return;
             $('#confirmBulkCount').text(ids.length);
             bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmBulkEliminar')).show();
         });
-
         $('#btnConfirmBulkEliminar').on('click', function () {
             const ids = BulkEdit.getIds();
             if (!ids.length) return;
-            const $btn = $(this).prop('disabled', true)
-                .html('<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...');
+            const $btn = $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...');
             $.ajax({
                 url: '../api/personas.php', method: 'POST', dataType: 'json',
                 data: { action: 'bulk_delete', ids: ids },
                 success(res) {
                     $btn.prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
                     bootstrap.Modal.getInstance(document.getElementById('modalConfirmBulkEliminar'))?.hide();
-                    if (res.success) {
-                        APP.showNotification(res.message, 'success');
-                        setTimeout(() => location.reload(), 900);
-                    } else {
-                        APP.showNotification(res.message || 'Error al eliminar', 'danger');
-                    }
+                    if (res.success) { APP.showNotification(res.message, 'success'); setTimeout(() => location.reload(), 900); }
+                    else APP.showNotification(res.message || 'Error al eliminar', 'danger');
                 },
-                error() {
-                    $btn.prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
-                    APP.showNotification('Error al conectar con el servidor', 'danger');
-                }
+                error() { $btn.prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar'); APP.showNotification('Error al conectar', 'danger'); }
             });
         });
-
-        // Guardar perfiles en lote
         $('#btnBulkPerfilesGuardar').on('click', () => {
-            const ids        = BulkEdit.getIds();
-            const perfilIds  = $('.chk-bulk-perfil:checked').map(function () { return parseInt(this.value); }).get();
-            const mode       = $('input[name="bulkPerfilesMode"]:checked').val();
+            const ids       = BulkEdit.getIds();
+            const perfilIds = $('.chk-bulk-perfil:checked').map(function () { return parseInt(this.value); }).get();
+            const mode      = $('input[name="bulkPerfilesMode"]:checked').val();
             if (!ids.length) return;
-            if (!perfilIds.length) {
-                APP.showNotification('Selecciona al menos un perfil', 'warning'); return;
-            }
+            if (!perfilIds.length) { APP.showNotification('Selecciona al menos un perfil', 'warning'); return; }
             const $btn = $('#btnBulkPerfilesGuardar').prop('disabled', true);
             $.ajax({
                 url: '../api/personas.php', method: 'POST', dataType: 'json',
-                data: { action: 'bulk_perfiles', ids: ids, perfil_ids: perfilIds, mode: mode },
+                data: { action: 'bulk_perfiles', ids, perfil_ids: perfilIds, mode },
                 success(res) {
                     $btn.prop('disabled', false);
-                    if (res.success) {
-                        bootstrap.Modal.getInstance(document.getElementById('modalBulkPerfiles'))?.hide();
-                        APP.showNotification(res.message, 'success');
-                        setTimeout(() => location.reload(), 900);
-                    } else {
-                        APP.showNotification(res.message || 'Error', 'danger');
-                    }
+                    if (res.success) { bootstrap.Modal.getInstance(document.getElementById('modalBulkPerfiles'))?.hide(); APP.showNotification(res.message, 'success'); setTimeout(() => location.reload(), 900); }
+                    else APP.showNotification(res.message || 'Error', 'danger');
                 },
-                error() { $btn.prop('disabled', false); APP.showNotification('Error al conectar con el servidor', 'danger'); }
+                error() { $btn.prop('disabled', false); APP.showNotification('Error al conectar', 'danger'); }
             });
         });
-
-        // Guardar privilegios en lote
         $('#btnBulkPrivilegiosGuardar').on('click', () => {
             const ids          = BulkEdit.getIds();
             const privilegioIds = $('.chk-bulk-privilegio:checked').map(function () { return parseInt(this.value); }).get();
             const mode          = $('input[name="bulkPrivilegiosMode"]:checked').val();
             if (!ids.length) return;
-            if (!privilegioIds.length) {
-                APP.showNotification('Selecciona al menos un privilegio', 'warning'); return;
-            }
+            if (!privilegioIds.length) { APP.showNotification('Selecciona al menos un privilegio', 'warning'); return; }
             const $btn = $('#btnBulkPrivilegiosGuardar').prop('disabled', true);
             $.ajax({
                 url: '../api/personas.php', method: 'POST', dataType: 'json',
-                data: { action: 'bulk_privilegios', ids: ids, privilegio_ids: privilegioIds, mode: mode },
+                data: { action: 'bulk_privilegios', ids, privilegio_ids: privilegioIds, mode },
                 success(res) {
                     $btn.prop('disabled', false);
-                    if (res.success) {
-                        bootstrap.Modal.getInstance(document.getElementById('modalBulkPrivilegios'))?.hide();
-                        APP.showNotification(res.message, 'success');
-                        setTimeout(() => location.reload(), 900);
-                    } else {
-                        APP.showNotification(res.message || 'Error', 'danger');
-                    }
+                    if (res.success) { bootstrap.Modal.getInstance(document.getElementById('modalBulkPrivilegios'))?.hide(); APP.showNotification(res.message, 'success'); setTimeout(() => location.reload(), 900); }
+                    else APP.showNotification(res.message || 'Error', 'danger');
                 },
-                error() { $btn.prop('disabled', false); APP.showNotification('Error al conectar con el servidor', 'danger'); }
+                error() { $btn.prop('disabled', false); APP.showNotification('Error al conectar', 'danger'); }
             });
         });
     }
 };
-
 document.addEventListener('DOMContentLoaded', () => BulkEdit.init());
 </script>
 
@@ -825,10 +753,9 @@ $(document).on('click', '.btn-eliminar', function () {
     bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmEliminar')).show();
 });
 
-$('#btnConfirmEliminar').on('click', function () {
+$(document).on('click', '#btnConfirmEliminar', function () {
     if (!_pendingDeleteId) return;
-    const $btn = $(this).prop('disabled', true)
-        .html('<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...');
+    const $btn = $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...');
     $.post('../api/personas.php', { action: 'delete', id: _pendingDeleteId }, function (res) {
         $btn.prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
         if (res.success) {
@@ -845,20 +772,16 @@ $('#btnConfirmEliminar').on('click', function () {
     });
 });
 
-$('#modalConfirmEliminar').on('hidden.bs.modal', function () {
-    _pendingDeleteId = null;
-});
+$(document).on('hidden.bs.modal', '#modalConfirmEliminar', function () { _pendingDeleteId = null; });
 
 // ---- Toggle "Todos" privilegios en modal ----
 function syncToggleTodos() {
     const total   = $('.chk-privilegio').length;
     const checked = $('.chk-privilegio:checked').length;
     const $toggle = $('#chkTodosPrivilegios');
-
     // Solo checked (azul) cuando TODOS están marcados
-    $toggle.prop('checked',       checked === total && total > 0);
-    $toggle.prop('indeterminate', false); // nunca indeterminate — Bootstrap lo pone azul igual
-
+    $toggle.prop('checked', checked === total && total > 0);
+    $toggle.prop('indeterminate', false);
     // Forzar fondo blanco cuando no están todos marcados
     if (checked < total) {
         $toggle[0].style.setProperty('background-color', '#fff', 'important');
@@ -873,25 +796,21 @@ $(document).on('change', '#chkTodosPrivilegios', function () {
     $('#wrapperPrivilegios .chk-privilegio').prop('checked', this.checked);
     syncToggleTodos();
 });
-$(document).on('change', '.chk-privilegio', function () {
-    syncToggleTodos();
-});
+$(document).on('change', '.chk-privilegio', function () { syncToggleTodos(); });
 
 // ---- Seleccionar todas las partes de una sección ----
 $(document).on('change', '.chk-todos', function () {
     const grupo = $(this).data('grupo');
     $('#' + grupo + ' .chk-parte').prop('checked', this.checked);
 });
-
-// Al cambiar una parte, sincronizar el "seleccionar todo" de su sección
 $(document).on('change', '.chk-parte', function () {
     sincronizarMaster($(this).closest('.grupo-partes'));
 });
 
 function sincronizarMaster($grupo) {
     if (!$grupo.length) return;
-    const grupoId = $grupo.attr('id');
-    const total = $grupo.find('.chk-parte').length;
+    const grupoId  = $grupo.attr('id');
+    const total    = $grupo.find('.chk-parte').length;
     const marcados = $grupo.find('.chk-parte:checked').length;
     $('.chk-todos[data-grupo="' + grupoId + '"]').prop('checked', total > 0 && total === marcados);
 }
@@ -903,14 +822,9 @@ function sincronizarTodosLosMasters() {
 // ---- Editar persona ----
 $('.btn-editar').on('click', function () {
     const id = $(this).data('id');
-
     $.get('../api/personas.php?action=get&id=' + id, function (response) {
-        if (!response.success) {
-            APP.showNotification(response.message, 'danger');
-            return;
-        }
+        if (!response.success) { APP.showNotification(response.message, 'danger'); return; }
         const p = response.data;
-
         $('#modalPersonaTitulo').html('<i class="bi bi-pencil"></i> Editar Persona');
         $('#persona_id').val(p.id);
         $('#persona_action').val('update');
@@ -919,45 +833,22 @@ $('.btn-editar').on('click', function () {
         $('#telefono').val(p.telefono || '');
         $('#activo').val(p.activo);
         $('#notas').val(p.notas || '');
-
-        // Perfiles (checkboxes)
         $('.chk-perfil').prop('checked', false);
-        if (p.perfil_ids) {
-            p.perfil_ids.forEach(function (pid) {
-                $('#perfil_' + pid).prop('checked', true);
-            });
-        }
-
-        // Partes que presenta
+        if (p.perfil_ids) { p.perfil_ids.forEach(function (pid) { $('#perfil_' + pid).prop('checked', true); }); }
         $('input[name="partes_disponibles[]"]').prop('checked', false);
         if (p.partes_disponibles) {
             p.partes_disponibles.forEach(function (parte) {
-                $('input[name="partes_disponibles[]"]').filter(function () {
-                    return this.value === parte.tipo_parte;
-                }).prop('checked', true);
+                $('input[name="partes_disponibles[]"]').filter(function () { return this.value === parte.tipo_parte; }).prop('checked', true);
             });
         }
         sincronizarTodosLosMasters();
-
-        // Privilegios
         $('.chk-privilegio').prop('checked', false);
-        if (p.privilegio_ids) {
-            p.privilegio_ids.forEach(function (pvid) {
-                $('#priv_' + pvid).prop('checked', true);
-            });
-        }
+        if (p.privilegio_ids) { p.privilegio_ids.forEach(function (pvid) { $('#priv_' + pvid).prop('checked', true); }); }
         syncToggleTodos();
-
         $('#modalPersona').modal('show');
     });
 });
 
-// ---- Eliminar persona (ahora delegado al modal) ----
-$('.btn-eliminar').on('click', function () {
-    _pendingDeleteId = $(this).data('id');
-    $('#confirmEliminarNombre').text($(this).data('nombre'));
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmEliminar')).show();
-});
 // ---- Validar al menos un perfil antes de enviar ----
 $('#formPersona').on('submit', function (e) {
     if ($('.chk-perfil:checked').length === 0) {
@@ -988,22 +879,34 @@ $('#modalPersona').on('hidden.bs.modal', function () {
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
 
 <style>
-/* Toggle "Todos" privilegios — solo azul cuando TODOS están marcados */
-#chkTodosPrivilegios:not(:checked):not(:indeterminate) {
-    background-color: #fff;
-    border-color: #adb5bd;
+/* Toggle "Todos" privilegios — permanece blanco hasta que TODOS estén marcados */
+#chkTodosPrivilegios {
+    background-color: #fff !important;
+    border-color: #adb5bd !important;
 }
-
-/* Filtro activo — borde y texto en color primario */
-.vmc-filter-active .select2-selection {
+#chkTodosPrivilegios:checked {
+    background-color: var(--vmc-primary) !important;
     border-color: var(--vmc-primary) !important;
 }
-.vmc-filter-active .select2-selection__rendered {
-    color: var(--vmc-primary) !important;
-    font-weight: 600;
+
+/* Filtro activo — solo borde azul, texto por defecto */
+.vmc-filter-active .select2-selection {
+    border-color : var(--vmc-primary) !important;
+    border-width : 2px !important;
 }
-.vmc-filter-active .select2-selection__arrow b {
-    border-color: var(--vmc-primary) transparent transparent transparent;
+.vmc-filter-active .select2-selection__rendered {
+    color        : #212529 !important;
+    font-weight  : 400 !important;
+}
+[data-bs-theme="dark"] .vmc-filter-active .select2-selection__rendered {
+    color        : var(--vmc-text) !important;
+}
+
+/* Opción seleccionada en el dropdown */
+.select2-container--bootstrap-5 .select2-dropdown
+    .select2-results__option[aria-selected=true]:not(.select2-results__option--highlighted) {
+    background-color: var(--vmc-primary-soft) !important;
+    color           : var(--vmc-primary)      !important;
 }
 </style>
 
@@ -1016,40 +919,35 @@ $(document).ready(function () {
         language               : 'es',
         allowClear             : true,
         width                  : '100%',
-        minimumResultsForSearch: Infinity,   // sin buscador
+        minimumResultsForSearch: Infinity,
     };
-
     $('#filtroPerfil').select2($.extend({}, s2Filtro, { placeholder: 'Todos los perfiles' }));
     $('#filtroPrivilegio').select2($.extend({}, s2Filtro, { placeholder: 'Todos los privilegios' }));
     $('#filtroActivo').select2($.extend({}, s2Filtro, { placeholder: 'Todos' }));
 
-    // Enviar el formulario al cambiar cualquier select de filtro
+    // Enviar formulario al cambiar filtro
     $('#filtroPerfil, #filtroPrivilegio, #filtroActivo').on('change', function () {
         document.getElementById('formFiltros').submit();
     });
 
-    // Resaltar selects con filtro activo en azul
+    // Resaltar filtros activos con borde azul
     function resaltarFiltros() {
         ['#filtroPerfil', '#filtroPrivilegio', '#filtroActivo'].forEach(function (sel) {
-            const $s = $(sel);
-            const hasValue = $s.val() !== '' && $s.val() !== null;
-            // Colorear el contenedor Select2 correspondiente
-            const $container = $s.next('.select2-container');
-            $container.toggleClass('vmc-filter-active', hasValue);
+            const $s        = $(sel);
+            const hasValue  = $s.val() !== '' && $s.val() !== null;
+            $s.nextAll('.select2-container').first().toggleClass('vmc-filter-active', hasValue);
         });
     }
     resaltarFiltros();
-    $('#filtroPerfil, #filtroPrivilegio, #filtroActivo').on('change', function () {
-        resaltarFiltros();
-    });
+    $('#filtroPerfil, #filtroPrivilegio, #filtroActivo').on('change', function () { resaltarFiltros(); });
 
-    // Al abrir cualquier modal, inyectar filtros activos para preservarlos al guardar
+    // Inyectar filtros activos al abrir modal de persona
     $(document).on('show.bs.modal', '#modalPersona', function () {
         const params = new URLSearchParams();
-        if ($('#filtroPerfil').val())    params.set('perfil_id',    $('#filtroPerfil').val());
+        if ($('#filtroPerfil').val())     params.set('perfil_id',     $('#filtroPerfil').val());
         if ($('#filtroPrivilegio').val()) params.set('privilegio_id', $('#filtroPrivilegio').val());
-        if ($('#filtroActivo').val() !== '' && $('#filtroActivo').val() !== null)
-            params.set('activo', $('#filtroActivo').val());
+        const actVal = $('#filtroActivo').val();
+        if (actVal !== '' && actVal !== null) params.set('activo', actVal);
         $('#persona_filtros').val(params.toString());
     });
 });
