@@ -745,21 +745,41 @@ function fmtRangoJS(ini, fin) {
 }
 
 function buildEventoRow(ev) {
-    const label = fmtRangoJS(ev.fecha_inicio, ev.fecha_fin);
-    const notaBadge = ev.notas
+    const label    = fmtRangoJS(ev.fecha_inicio, ev.fecha_fin);
+    const esVisita = ev.tipo === 'visita';
+    const notaBadge = (ev.notas && !esVisita)
         ? `<span class="badge bg-info-subtle text-info ms-1" style="font-size:.7rem;">${$('<span>').text(ev.notas).html()}</span>`
         : '';
+    const nombreEsc = (ev.notas || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const superInput = esVisita ? `
+        <div class="mt-1 input-group input-group-sm">
+            <input type="text"
+                   class="form-control super-circuito-input"
+                   data-evento-id="${ev.id}"
+                   data-nombre-original="${nombreEsc}"
+                   value="${nombreEsc}"
+                   placeholder="Nombre del superintendente">
+            <div class="input-group-text gap-1">
+                <input class="form-check-input mt-0 chk-sustituto"
+                       type="checkbox"
+                       id="chkSustituto_${ev.id}"
+                       data-evento-id="${ev.id}">
+                <label class="form-check-label small" for="chkSustituto_${ev.id}">Sustituto</label>
+            </div>
+        </div>` : '';
     return `
-        <div class="d-flex justify-content-between align-items-center
-                    border rounded px-2 py-1 mb-1 evento-row"
+        <div class="border rounded px-2 py-1 mb-1 evento-row"
              id="evento-row-${ev.id}">
-            <span class="small">
-                <i class="bi bi-calendar3 me-1 text-muted"></i>${label}${notaBadge}
-            </span>
-            <button class="btn btn-link btn-sm text-danger p-0 ms-2 btn-eliminar-evento"
-                    data-id="${ev.id}" title="Eliminar">
-                <i class="bi bi-x-lg"></i>
-            </button>
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="small">
+                    <i class="bi bi-calendar3 me-1 text-muted"></i>${label}${notaBadge}
+                </span>
+                <button class="btn btn-link btn-sm text-danger p-0 ms-2 btn-eliminar-evento"
+                        data-id="${ev.id}" title="Eliminar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            ${superInput}
         </div>`;
 }
 

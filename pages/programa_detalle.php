@@ -474,8 +474,10 @@ try {
                         $asigVisita  = $asignacionesPorOrden[1] ?? null;
                         $nombreLibre = $asigVisita['nombre_libre'] ?? '';
                         $selNombre   = $asigVisita['nombre_completo'] ?? '';
-                        // Pre-rellenar desde eventos_especiales.notas si no hay asignación guardada
-                        $valorInicial = $nombreLibre ?: ($selNombre ?: $superCircuitoNombre);
+                        // Prioridad: 1) nombre_libre guardado  2) notas del evento (super)  3) vacío
+                        $valorInicial = ($nombreLibre !== '')
+                                        ? $nombreLibre
+                                        : $superCircuitoNombre;
                         ?>
                         <label class="form-label small mb-1">Super de Circuito:</label>
                         <input type="text"
