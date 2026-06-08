@@ -615,7 +615,7 @@ $(document).on('click', '.btn-eliminar-perfil', function () {
     $('#confirmPerfilNombre').text(_pendingPerfil.nombre);
     bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmPerfil')).show();
 });
-$('#btnConfirmPerfil').on('click', function () {
+$(document).on('click', '#btnConfirmPerfil', function () {
     if (!_pendingPerfil) return;
     const { id } = _pendingPerfil;
     $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>');
@@ -625,7 +625,7 @@ $('#btnConfirmPerfil').on('click', function () {
         APP.showNotification('Perfil eliminado', 'success');
     });
 });
-$('#modalConfirmPerfil').on('hidden.bs.modal', function () {
+$(document).on('hidden.bs.modal', '#modalConfirmPerfil', function () {
     _pendingPerfil = null;
     $('#btnConfirmPerfil').prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
 });
@@ -657,7 +657,7 @@ $(document).on('click', '.btn-eliminar-privilegio', function () {
     $('#confirmPrivilegioNombre').text(_pendingPrivilegio.nombre);
     bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmPrivilegio')).show();
 });
-$('#btnConfirmPrivilegio').on('click', function () {
+$(document).on('click', '#btnConfirmPrivilegio', function () {
     if (!_pendingPrivilegio) return;
     const { id } = _pendingPrivilegio;
     $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>');
@@ -667,7 +667,7 @@ $('#btnConfirmPrivilegio').on('click', function () {
         APP.showNotification('Privilegio eliminado', 'success');
     });
 });
-$('#modalConfirmPrivilegio').on('hidden.bs.modal', function () {
+$(document).on('hidden.bs.modal', '#modalConfirmPrivilegio', function () {
     _pendingPrivilegio = null;
     $('#btnConfirmPrivilegio').prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
 });
@@ -817,7 +817,7 @@ $(document).on('click', '.btn-eliminar-evento', function () {
     $('#confirmEventoFecha').text(fecha);
     bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmEvento')).show();
 });
-$('#btnConfirmEvento').on('click', function () {
+$(document).on('click', '#btnConfirmEvento', function () {
     if (!_pendingEvento) return;
     const { id, tipo } = _pendingEvento;
     const $row = $(`#evento-row-${id}`);
@@ -835,7 +835,7 @@ $('#btnConfirmEvento').on('click', function () {
         APP.showNotification('Evento eliminado', 'success');
     });
 });
-$('#modalConfirmEvento').on('hidden.bs.modal', function () {
+$(document).on('hidden.bs.modal', '#modalConfirmEvento', function () {
     _pendingEvento = null;
     $('#btnConfirmEvento').prop('disabled', false).html('<i class="bi bi-trash me-1"></i>Sí, eliminar');
 });
