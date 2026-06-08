@@ -324,13 +324,13 @@ $(document).on('hidden.bs.modal', '#modalNuevaSemana', () => $('#formNuevaSemana
 
 /* ── Auto-completar fecha fin ───────────────────────────────── */
 $('#fds_fecha_inicio').on('change', function () {
-    if ($('#fds_fecha_fin').val()) return;
     const d = new Date(this.value + 'T12:00:00');
     if (isNaN(d)) return;
+    // Calcular el domingo de esa semana (o el mismo día si ya es domingo)
     const diff = d.getDay() === 0 ? 0 : 7 - d.getDay();
     d.setDate(d.getDate() + diff);
     const isoFin = d.toISOString().slice(0, 10);
-    // Actualizar tanto el input nativo como la instancia de Flatpickr
+    // Siempre actualizar fecha_fin al domingo correspondiente
     const fpFin = document.getElementById('fds_fecha_fin')._flatpickr;
     if (fpFin) fpFin.setDate(isoFin, true);
     else $('#fds_fecha_fin').val(isoFin);

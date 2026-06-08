@@ -1896,12 +1896,36 @@ button.sidebar-item {
     padding        : 4px 0;
 }
 .flatpickr-calendar .flatpickr-month,
-.flatpickr-calendar .flatpickr-monthDropdown-months,
-.flatpickr-calendar .flatpickr-current-month input.cur-year,
-.flatpickr-calendar .flatpickr-monthDropdown-months option {
+.flatpickr-calendar .flatpickr-current-month input.cur-year {
     color          : #fff !important;
     background     : transparent;
     fill           : #fff;
+}
+
+/* Selector de mes: fondo primario en header, opciones con contraste */
+.flatpickr-calendar .flatpickr-monthDropdown-months {
+    background     : var(--vmc-primary) !important;
+    color          : #fff !important;
+    border         : none;
+    border-radius  : 4px;
+    padding        : 2px 4px;
+    cursor         : pointer;
+}
+.flatpickr-calendar .flatpickr-monthDropdown-months option {
+    background     : #fff !important;
+    color          : #1a1a2e !important;
+}
+.flatpickr-calendar .flatpickr-monthDropdown-months option:checked {
+    background     : var(--vmc-primary) !important;
+    color          : #fff !important;
+}
+[data-bs-theme="dark"] .flatpickr-calendar .flatpickr-monthDropdown-months option {
+    background     : #2c3e50 !important;
+    color          : #e0e0e0 !important;
+}
+[data-bs-theme="dark"] .flatpickr-calendar .flatpickr-monthDropdown-months option:checked {
+    background     : var(--vmc-primary) !important;
+    color          : #fff !important;
 }
 .flatpickr-calendar .flatpickr-prev-month,
 .flatpickr-calendar .flatpickr-next-month {
