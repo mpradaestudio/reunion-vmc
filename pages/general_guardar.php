@@ -1,18 +1,18 @@
 <?php
 /**
- * Procesar formulario de configuración
+ * Procesar formulario de configuración general
  */
 
 require_once __DIR__ . '/../config/config.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    redirect('configuracion.php');
+    redirect('general.php');
 }
 
 $nombreCongregacion = $_POST['nombre_congregacion'] ?? '';
 
 if (empty($nombreCongregacion)) {
-    redirect('configuracion.php?msg=error');
+    redirect('general.php?msg=error');
 }
 
 $diasValidos = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
@@ -43,9 +43,9 @@ try {
         $horaFinSemana,
     ]);
 
-    redirect('configuracion.php?msg=actualizada');
+    redirect('general.php?msg=actualizada');
 
 } catch (Exception $e) {
-    error_log("Error al actualizar configuración: " . $e->getMessage());
-    redirect('configuracion.php?msg=error');
+    error_log("Error al actualizar configuración general: " . $e->getMessage());
+    redirect('general.php?msg=error');
 }

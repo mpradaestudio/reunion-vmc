@@ -485,3 +485,124 @@ document.addEventListener('DOMContentLoaded', function () {
     Sidebar.init();
     SidebarGroups.init();
 });
+
+
+/* ── Select2: ocultar X cuando no hay valor (placeholder) ──────
+   Aplica a todas las páginas. La X solo debe verse cuando hay
+   una persona/valor asignado, no cuando muestra "Sin asignar".
+   ─────────────────────────────────────────────────────────────── */
+$(document).on('select2:open select2:select select2:clear select2:unselect', function () {
+    // pequeño delay para que Select2 actualice el DOM
+    setTimeout(s2SyncClearButtons, 10);
+});
+
+$(document).ready(function () {
+    // Estado inicial al cargar la página
+    setTimeout(s2SyncClearButtons, 200);
+});
+
+function s2SyncClearButtons() {
+    document.querySelectorAll('.select2-container--bootstrap-5').forEach(function (container) {
+        const clearBtn = container.querySelector('.select2-selection__clear');
+        if (!clearBtn) return;
+
+        // Si el rendered muestra el placeholder → ocultar X
+        const rendered = container.querySelector('.select2-selection__rendered');
+        const isPlaceholder = rendered &&
+            (rendered.classList.contains('select2-selection__placeholder') ||
+             rendered.querySelector('.select2-selection__placeholder') !== null ||
+             (rendered.getAttribute('title') || '').trim() === '' ||
+             (rendered.textContent || '').trim() === '');
+
+        clearBtn.style.setProperty('display', isPlaceholder ? 'none' : '', 'important');
+    });
+}
+
+
+/* ── Flatpickr — inicialización global ─────────────────────────
+   Se activa en DOMContentLoaded y también al abrir modales de BS
+   para que los inputs dentro de modales se inicialicen bien.
+
+   Convenciones de data-attributes:
+     data-fp-mode="range"   → selector de rango (inicio–fin)
+     data-fp-mode="single"  → día único (default)
+     data-fp-linked="<id>"  → para pares inicio/fin (rango en 2 inputs)
+     data-fp-min-date       → fecha mínima (YYYY-MM-DD o "today")
+   ─────────────────────────────────────────────────────────────── */
+(function () {
+    'use strict';
+
+    const FP_INSTANCES = new WeakMap();
+
+    const BASE_CFG = {
+        locale     : 'es',
+        dateFormat : 'Y-m-d',          // mantiene formato nativo del input
+        altInput   : true,             // muestra formato amigable al usuario
+        altFormat  : 'j M Y',         // ej: "3 ene 2026"
+        allowInput : false,
+        disableMobile: false,
+    };
+
+    function isDark() {
+        return document.documentElement.getAttribute('data-bs-theme') === 'dark';
+    }
+
+    function initInput(el) {
+        if (!el || FP_INSTANCES.has(el)) return;
+        if (typeof flatpickr === 'undefined') return;
+
+        const mode    = el.dataset.fpMode || 'single';
+        const minDate = el.dataset.fpMin   || null;
+        const linkedId = el.dataset.fpLinked || null;
+
+        const cfg = Object.assign({}, BASE_CFG, {
+            mode   : mode === 'range' ? 'range' : 'single',
+        });
+
+        if (minDate) cfg.minDate = minDate;
+
+        // Pares inicio→fin vinculados: al elegir inicio, ajustar minDate del fin
+        if (linkedId) {
+            const linkedEl = document.getElementById(linkedId);
+            if (linkedEl) {
+                cfg.onChange = function (selectedDates) {
+                    if (selectedDates.length > 0 && FP_INSTANCES.has(linkedEl)) {
+                        FP_INSTANCES.get(linkedEl).set('minDate', selectedDates[0]);
+                    }
+                };
+            }
+        }
+
+        const instance = flatpickr(el, cfg);
+        FP_INSTANCES.set(el, instance);
+    }
+
+    function initAll(root) {
+        const ctx = root || document;
+        ctx.querySelectorAll('input[type="date"]:not(.flatpickr-input)').forEach(initInput);
+    }
+
+    // Al cargar la página
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof flatpickr !== 'undefined') {
+            flatpickr.localize(flatpickr.l10ns.es);
+            initAll();
+        } else {
+            // Flatpickr aún no cargó (footer) — esperar
+            window.addEventListener('load', function () {
+                if (typeof flatpickr !== 'undefined') {
+                    flatpickr.localize(flatpickr.l10ns.es);
+                    initAll();
+                }
+            });
+        }
+    });
+
+    // Cuando se abre un modal de Bootstrap (los inputs dentro no existían aún)
+    document.addEventListener('shown.bs.modal', function (e) {
+        if (typeof flatpickr !== 'undefined') initAll(e.target);
+    });
+
+    // Exponer para uso manual si hace falta
+    window.VMC_initFlatpickr = initAll;
+}());

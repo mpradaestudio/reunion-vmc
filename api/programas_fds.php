@@ -113,8 +113,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete') {
         $id = (int)($_POST['id'] ?? 0);
         if (!$id) jsonResponse(['success' => false, 'message' => 'ID no válido']);
+        $pdo->prepare("DELETE FROM asignaciones_fds WHERE programa_fds_id = ?")->execute([$id]);
         $pdo->prepare("DELETE FROM programas_fds WHERE id = ?")->execute([$id]);
         jsonResponse(['success' => true, 'message' => 'Semana eliminada']);
+    }
+
+    // ── Eliminar semanas en lote ──────────────────────────────────
+    if ($action === 'delete_batch') {
+        $ids = $_POST['ids'] ?? [];
+        if (empty($ids)) jsonResponse(['success' => false, 'message' => 'Sin IDs']);
+        $ids = array_map('intval', (array)$ids);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $pdo->prepare("DELETE FROM asignaciones_fds WHERE programa_fds_id IN ($placeholders)")->execute($ids);
+        $pdo->prepare("DELETE FROM programas_fds WHERE id IN ($placeholders)")->execute($ids);
+        jsonResponse(['success' => true, 'message' => count($ids) . ' semana(s) eliminada(s)']);
+    }
+
+    // ── Autollenado ───────────────────────────────────────────────
+    if ($action === 'autofill') {
+        $programaFdsId = (int)($_POST['programa_fds_id'] ?? 0);
+        if (!$programaFdsId) jsonResponse(['success' => false, 'message' => 'ID no válido']);
+
+        // Roles a llenar con su capacidad FDS requerida
+        $rolesConfig = [
+            'DP_Presidente'     => 'FDS_Presidente',
+            'DP_Oracion_Inicial'=> 'FDS_Oración',
+            'DP_Oracion_Final'  => 'FDS_Oración',
+            'EA_Conductor'      => 'FDS_Conductor',
+            'EA_Lector'         => 'FDS_Lector',
+        ];
+
+        foreach ($rolesConfig as $rol => $capacidad) {
+            // ¿Ya asignado?
+            $existing = fetchOne(
+                "SELECT id FROM asignaciones_fds WHERE programa_fds_id = ? AND rol = ? AND persona_id IS NOT NULL AND persona_id != 0",
+                [$programaFdsId, $rol]
+            );
+            if ($existing) continue;
+
+            // Buscar candidato aleatorio con esa capacidad
+            $candidato = fetchOne("
+                SELECT ppd.persona_id
+                FROM persona_partes_disponibles ppd
+                INNER JOIN personas p ON p.id = ppd.persona_id
+                WHERE p.activo = 1
+                  AND ppd.puede_presentar = 1
+                  AND ppd.tipo_parte = ?
+                ORDER BY RAND()
+                LIMIT 1
+            ", [$capacidad]);
+
+            if (!$candidato) continue;
+
+            $personaId = (int)$candidato['persona_id'];
+
+            // Upsert
+            $existe = fetchOne(
+                "SELECT id FROM asignaciones_fds WHERE programa_fds_id = ? AND rol = ?",
+                [$programaFdsId, $rol]
+            );
+            if ($existe) {
+                $pdo->prepare("UPDATE asignaciones_fds SET persona_id = ?, nombre_libre = NULL WHERE programa_fds_id = ? AND rol = ?")
+                    ->execute([$personaId, $programaFdsId, $rol]);
+            } else {
+                $pdo->prepare("INSERT INTO asignaciones_fds (programa_fds_id, rol, persona_id) VALUES (?, ?, ?)")
+                    ->execute([$programaFdsId, $rol, $personaId]);
+            }
+        }
+
+        jsonResponse(['success' => true, 'message' => 'Autollenado completado']);
     }
 
     // ── Guardar asignación ────────────────────────────────────────

@@ -525,12 +525,21 @@ a {
 
 .form-control,
 .form-select {
-    border-radius: var(--vmc-radius-sm);
-    border: 1px solid var(--vmc-border-strong);
+    border-radius   : var(--vmc-radius-sm);
+    border          : 1px solid var(--vmc-border-strong);
     background-color: var(--vmc-surface);
-    color: var(--vmc-text);
-    padding: 0.55rem 0.9rem;
-    transition: border-color var(--vmc-transition), box-shadow var(--vmc-transition);
+    color           : var(--vmc-text);
+    /* Altura canónica 38px — idéntica a Select2 bootstrap-5 */
+    height          : 38px;
+    padding         : 0.375rem 0.75rem;
+    line-height     : 1.5;
+    transition      : border-color var(--vmc-transition), box-shadow var(--vmc-transition);
+}
+
+/* textarea no debe tener altura fija */
+textarea.form-control {
+    height    : auto;
+    min-height: 38px;
 }
 
 .form-control::placeholder {
@@ -1216,6 +1225,15 @@ body {
     cursor         : pointer;
 }
 
+/* Botón collapsable (button.sidebar-item): necesita box-sizing para no desbordarse */
+button.sidebar-item {
+    box-sizing: border-box;
+    width     : calc(100% - 16px);
+    background: none;
+    border    : none;
+    text-align: left;
+}
+
 .sidebar-item:hover {
     background-color: rgba(255,255,255,.10);
     color           : #fff;
@@ -1624,9 +1642,11 @@ body {
 }
 
 .sb-chevron {
-    flex-shrink: 0;
-    font-size: 0.7rem;
-    transition: transform 220ms ease, opacity 180ms ease;
+    flex-shrink     : 0;
+    font-size       : 0.7rem;
+    margin-right    : 10px;
+    transform-origin: center center;
+    transition      : transform 220ms ease, opacity 180ms ease;
 }
 .sidebar-group-toggle[aria-expanded="false"] .sb-chevron {
     transform: rotate(-90deg);
@@ -1709,4 +1729,297 @@ body {
 .bosq-no-presentar-toggle:focus {
     border-color    : var(--vmc-primary);
     box-shadow      : 0 0 0 3px rgba(var(--bs-primary-rgb), 0.20);
+}
+
+
+
+/* ============================================================
+   42. CONFIGURACIÓN — Cajas de horario de reuniones
+   ============================================================ */
+
+/* Fondo suave azul para los bloques de reunión */
+.vmc-reunion-box {
+    background-color: var(--vmc-primary-soft);
+    border           : 1px solid rgba(var(--vmc-primary-rgb), 0.18);
+}
+[data-bs-theme="dark"] .vmc-reunion-box {
+    background-color: rgba(var(--vmc-primary-rgb), 0.10);
+    border-color    : rgba(var(--vmc-primary-rgb), 0.25);
+}
+
+/* Ícono primario */
+.vmc-icon-primary {
+    color    : var(--vmc-primary);
+    font-size: 1.05rem;
+}
+[data-bs-theme="dark"] .vmc-icon-primary {
+    color: #9bb6e6;
+}
+
+/* Select con acento primario */
+.vmc-select-primary {
+    border-color: rgba(var(--vmc-primary-rgb), 0.40) !important;
+    color       : var(--vmc-primary) !important;
+    font-weight : 500;
+}
+.vmc-select-primary:focus {
+    border-color: var(--vmc-primary) !important;
+    box-shadow  : 0 0 0 3px rgba(var(--bs-primary-rgb), 0.15) !important;
+    color       : var(--vmc-primary) !important;
+}
+[data-bs-theme="dark"] .vmc-select-primary {
+    color      : #9bb6e6 !important;
+    border-color: rgba(123, 159, 218, 0.35) !important;
+}
+
+/* Input time con acento primario + forzar formato 12h (AM/PM) */
+.vmc-time-primary {
+    border-color: rgba(var(--vmc-primary-rgb), 0.40) !important;
+    color       : var(--vmc-primary) !important;
+    font-weight : 500;
+}
+.vmc-time-primary:focus {
+    border-color: var(--vmc-primary) !important;
+    box-shadow  : 0 0 0 3px rgba(var(--bs-primary-rgb), 0.15) !important;
+    color       : var(--vmc-primary) !important;
+}
+[data-bs-theme="dark"] .vmc-time-primary {
+    color      : #9bb6e6 !important;
+    border-color: rgba(123, 159, 218, 0.35) !important;
+}
+/* El navegador muestra AM/PM cuando se usa hour12 vía JS */
+
+
+/* ============================================================
+   43. BULK EDIT — Barra flotante
+   ============================================================ */
+.bulk-bar {
+    position        : fixed;
+    bottom          : 28px;
+    left            : 50%;
+    transform       : translateX(-50%);
+    z-index         : 1060;
+    display         : flex;
+    align-items     : center;
+    gap             : 12px;
+    background      : var(--vmc-primary);
+    color           : #fff;
+    padding         : 10px 20px;
+    border-radius   : 40px;
+    box-shadow      : 0 6px 24px rgba(0,0,0,.28);
+    white-space     : nowrap;
+    animation       : bulkBarIn 160ms ease;
+}
+@keyframes bulkBarIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0);    }
+}
+.bulk-bar-count {
+    font-size   : .9rem;
+    padding-right: 8px;
+    border-right: 1px solid rgba(255,255,255,.35);
+}
+.bulk-bar .btn-outline-light {
+    border-color: rgba(255,255,255,.55);
+    color       : #fff;
+    font-size   : .82rem;
+}
+.bulk-bar .btn-outline-light:hover {
+    background-color: rgba(255,255,255,.18);
+    border-color    : #fff;
+}
+.bulk-bar .btn-danger {
+    font-size: .82rem;
+}
+/* Fila seleccionada */
+.persona-row.table-active td {
+    background-color: var(--vmc-primary-soft) !important;
+}
+[data-bs-theme="dark"] .persona-row.table-active td {
+    background-color: rgba(var(--vmc-primary-rgb), 0.18) !important;
+}
+
+
+/* ============================================================
+   44. SELECT2 — Ocultar X cuando no hay valor (placeholder)
+   ============================================================
+   El botón clear solo debe verse cuando hay un valor real.
+   Se controla via JS (s2SyncClearButtons en main.js) y
+   también via CSS como respaldo.
+   ============================================================ */
+
+/* Respaldo CSS: :has() para navegadores modernos */
+.select2-container--bootstrap-5 .select2-selection--single:has(
+    .select2-selection__placeholder
+) .select2-selection__clear,
+.select2-container--bootstrap-5 .select2-selection--single:has(
+    .select2-selection__rendered[title=""]
+) .select2-selection__clear {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+
+/* ── Select2: altura canónica 38px (igual a form-control/form-select) ── */
+.select2-container--bootstrap-5 .select2-selection--single {
+    height    : 38px !important;
+    min-height: 38px !important;
+    padding   : 0.375rem 0.75rem !important;
+    line-height: 1.5 !important;
+}
+.select2-container--bootstrap-5 .select2-selection--single
+    .select2-selection__rendered {
+    line-height: calc(38px - 0.75rem - 2px) !important;
+    padding    : 0 !important;
+}
+
+
+/* ============================================================
+   45. FLATPICKR — Tema personalizado VMC
+   ============================================================ */
+
+/* Contenedor del calendario */
+.flatpickr-calendar {
+    font-family    : var(--vmc-font), sans-serif;
+    border-radius  : var(--vmc-radius);
+    border         : 1px solid var(--vmc-border-strong);
+    box-shadow     : 0 8px 24px rgba(0,0,0,.12);
+    background     : var(--vmc-surface);
+    color          : var(--vmc-text);
+}
+
+/* Header del calendario (mes/año + flechas) */
+.flatpickr-calendar .flatpickr-months {
+    background     : var(--vmc-primary);
+    border-radius  : var(--vmc-radius) var(--vmc-radius) 0 0;
+    padding        : 4px 0;
+}
+.flatpickr-calendar .flatpickr-month,
+.flatpickr-calendar .flatpickr-current-month input.cur-year {
+    color          : #fff !important;
+    background     : transparent;
+    fill           : #fff;
+}
+
+/* Selector de mes: fondo primario en header, opciones con contraste */
+.flatpickr-calendar .flatpickr-monthDropdown-months {
+    background     : var(--vmc-primary) !important;
+    color          : #fff !important;
+    border         : none;
+    border-radius  : 4px;
+    padding        : 2px 4px;
+    cursor         : pointer;
+}
+.flatpickr-calendar .flatpickr-monthDropdown-months:hover,
+.flatpickr-calendar .flatpickr-monthDropdown-months:focus {
+    background     : rgba(255,255,255,.15) !important;
+    outline        : none;
+}
+.flatpickr-calendar .flatpickr-monthDropdown-months option {
+    background     : #fff !important;
+    color          : #1a1a2e !important;
+}
+.flatpickr-calendar .flatpickr-monthDropdown-months option:hover,
+.flatpickr-calendar .flatpickr-monthDropdown-months option:focus {
+    background     : var(--vmc-primary) !important;
+    color          : #fff !important;
+}
+.flatpickr-calendar .flatpickr-monthDropdown-months option:checked {
+    background     : var(--vmc-primary) !important;
+    color          : #fff !important;
+}
+[data-bs-theme="dark"] .flatpickr-calendar .flatpickr-monthDropdown-months option {
+    background     : #2c3e50 !important;
+    color          : #e0e0e0 !important;
+}
+[data-bs-theme="dark"] .flatpickr-calendar .flatpickr-monthDropdown-months option:hover,
+[data-bs-theme="dark"] .flatpickr-calendar .flatpickr-monthDropdown-months option:focus {
+    background     : var(--vmc-primary) !important;
+    color          : #fff !important;
+}
+[data-bs-theme="dark"] .flatpickr-calendar .flatpickr-monthDropdown-months option:checked {
+    background     : var(--vmc-primary) !important;
+    color          : #fff !important;
+}
+.flatpickr-calendar .flatpickr-prev-month,
+.flatpickr-calendar .flatpickr-next-month {
+    color          : #fff;
+    fill           : #fff;
+}
+.flatpickr-calendar .flatpickr-prev-month:hover svg,
+.flatpickr-calendar .flatpickr-next-month:hover svg {
+    fill           : rgba(255,255,255,.75);
+}
+
+/* Días de la semana */
+.flatpickr-calendar .flatpickr-weekdays {
+    background     : var(--vmc-primary-soft);
+}
+.flatpickr-calendar span.flatpickr-weekday {
+    background     : transparent;
+    color          : var(--vmc-primary);
+    font-weight    : 600;
+    font-size      : .78rem;
+}
+
+/* Días del mes */
+.flatpickr-calendar .flatpickr-day {
+    color          : var(--vmc-text);
+    border-radius  : var(--vmc-radius-sm);
+}
+.flatpickr-calendar .flatpickr-day:hover {
+    background     : var(--vmc-primary-soft);
+    border-color   : transparent;
+}
+.flatpickr-calendar .flatpickr-day.selected,
+.flatpickr-calendar .flatpickr-day.startRange,
+.flatpickr-calendar .flatpickr-day.endRange {
+    background     : var(--vmc-primary) !important;
+    border-color   : var(--vmc-primary) !important;
+    color          : #fff !important;
+}
+.flatpickr-calendar .flatpickr-day.inRange {
+    background     : var(--vmc-primary-soft) !important;
+    border-color   : transparent !important;
+    color          : var(--vmc-primary) !important;
+    box-shadow     : -5px 0 0 var(--vmc-primary-soft), 5px 0 0 var(--vmc-primary-soft);
+}
+.flatpickr-calendar .flatpickr-day.today {
+    border-color   : var(--vmc-primary);
+    font-weight    : 700;
+}
+.flatpickr-calendar .flatpickr-day.today:hover {
+    background     : var(--vmc-primary-soft);
+}
+.flatpickr-calendar .flatpickr-day.flatpickr-disabled,
+.flatpickr-calendar .flatpickr-day.prevMonthDay,
+.flatpickr-calendar .flatpickr-day.nextMonthDay {
+    opacity        : .35;
+}
+
+/* Input: mostrar ícono de calendario */
+.flatpickr-input {
+    cursor         : pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%234a6da7' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM2 2a1 1 0 0 0-1 1v1h14V3a1 1 0 0 0-1-1H2zm13 3H1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5z'/%3E%3C/svg%3E");
+    background-repeat : no-repeat;
+    background-position: calc(100% - 10px) center;
+    background-size: 14px 14px;
+    padding-right  : 34px !important;
+}
+
+/* Dark mode */
+[data-bs-theme="dark"] .flatpickr-calendar {
+    background     : var(--vmc-surface-2);
+    border-color   : var(--vmc-border-strong);
+    color          : var(--vmc-text);
+}
+[data-bs-theme="dark"] .flatpickr-calendar .flatpickr-day {
+    color          : var(--vmc-text);
+}
+[data-bs-theme="dark"] .flatpickr-calendar .flatpickr-day:hover {
+    background     : rgba(var(--vmc-primary-rgb), 0.20);
+}
+[data-bs-theme="dark"] .flatpickr-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%239bb6e6' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM2 2a1 1 0 0 0-1 1v1h14V3a1 1 0 0 0-1-1H2zm13 3H1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5z'/%3E%3C/svg%3E");
 }

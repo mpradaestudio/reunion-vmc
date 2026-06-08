@@ -183,6 +183,80 @@ class PersonasAPI {
     }
     
     /**
+     * Eliminar varias personas en lote
+     */
+    public function bulkDelete(array $ids): array {
+        if (empty($ids)) return ['success' => false, 'message' => 'Sin IDs'];
+        $ids = array_map('intval', $ids);
+
+        $eliminadas = 0;
+        $errores    = [];
+        foreach ($ids as $id) {
+            // Verificar asignaciones
+            $asig = fetchOne("SELECT COUNT(*) AS total FROM asignaciones_partes WHERE persona_id = ?", [$id]);
+            if ((int)($asig['total'] ?? 0) > 0) {
+                $p = fetchOne("SELECT CONCAT(nombre,' ',apellido) AS n FROM personas WHERE id = ?", [$id]);
+                $errores[] = ($p['n'] ?? "ID $id") . ' tiene asignaciones activas';
+                continue;
+            }
+            $this->pdo->prepare("DELETE FROM personas WHERE id = ?")->execute([$id]);
+            $eliminadas++;
+        }
+
+        $msg = "Se eliminaron $eliminadas persona(s).";
+        if ($errores) $msg .= ' Omitidas: ' . implode('; ', $errores);
+        return ['success' => true, 'message' => $msg, 'eliminadas' => $eliminadas, 'errores' => $errores];
+    }
+
+    /**
+     * Editar perfiles en lote (add | replace)
+     */
+    public function bulkPerfiles(array $ids, array $perfilIds, string $mode): array {
+        if (empty($ids) || empty($perfilIds)) return ['success' => false, 'message' => 'Sin datos'];
+        $ids       = array_map('intval', $ids);
+        $perfilIds = array_map('intval', $perfilIds);
+
+        $stmtDel = $this->pdo->prepare("DELETE FROM persona_perfiles WHERE persona_id = ?");
+        $stmtIns = $this->pdo->prepare("INSERT IGNORE INTO persona_perfiles (persona_id, perfil_id) VALUES (?, ?)");
+
+        foreach ($ids as $pid) {
+            if ($mode === 'replace') {
+                $stmtDel->execute([$pid]);
+            }
+            foreach ($perfilIds as $pfId) {
+                $stmtIns->execute([$pid, $pfId]);
+            }
+        }
+
+        $accion = $mode === 'replace' ? 'reemplazados' : 'agregados';
+        return ['success' => true, 'message' => "Perfiles $accion en " . count($ids) . " persona(s)."];
+    }
+
+    /**
+     * Editar privilegios en lote (add | replace)
+     */
+    public function bulkPrivilegios(array $ids, array $privilegioIds, string $mode): array {
+        if (empty($ids) || empty($privilegioIds)) return ['success' => false, 'message' => 'Sin datos'];
+        $ids          = array_map('intval', $ids);
+        $privilegioIds = array_map('intval', $privilegioIds);
+
+        $stmtDel = $this->pdo->prepare("DELETE FROM persona_privilegios WHERE persona_id = ?");
+        $stmtIns = $this->pdo->prepare("INSERT IGNORE INTO persona_privilegios (persona_id, privilegio_id) VALUES (?, ?)");
+
+        foreach ($ids as $pid) {
+            if ($mode === 'replace') {
+                $stmtDel->execute([$pid]);
+            }
+            foreach ($privilegioIds as $prvId) {
+                $stmtIns->execute([$pid, $prvId]);
+            }
+        }
+
+        $accion = $mode === 'replace' ? 'reemplazados' : 'agregados';
+        return ['success' => true, 'message' => "Privilegios $accion en " . count($ids) . " persona(s)."];
+    }
+
+    /**
      * Eliminar persona
      */
     public function eliminar($id) {
@@ -298,7 +372,24 @@ if ($method === 'GET') {
         
     } elseif ($action === 'delete' && isset($datos['id'])) {
         $resultado = $api->eliminar($datos['id']);
-        
+
+    } elseif ($action === 'bulk_delete' && !empty($datos['ids'])) {
+        $resultado = $api->bulkDelete((array)$datos['ids']);
+
+    } elseif ($action === 'bulk_perfiles' && !empty($datos['ids']) && !empty($datos['perfil_ids'])) {
+        $resultado = $api->bulkPerfiles(
+            (array)$datos['ids'],
+            (array)$datos['perfil_ids'],
+            $datos['mode'] ?? 'add'
+        );
+
+    } elseif ($action === 'bulk_privilegios' && !empty($datos['ids']) && !empty($datos['privilegio_ids'])) {
+        $resultado = $api->bulkPrivilegios(
+            (array)$datos['ids'],
+            (array)$datos['privilegio_ids'],
+            $datos['mode'] ?? 'add'
+        );
+
     } else {
         $resultado = ['success' => false, 'message' => 'Acción no válida'];
     }

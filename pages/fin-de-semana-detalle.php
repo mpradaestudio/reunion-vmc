@@ -205,9 +205,12 @@ function optionsFds(array $lista, ?int $selId): string {
     </a>
 </div>
 
-<!-- Fila 2: título -->
-<div class="mb-4">
+<!-- Fila 2: título + botón Autollenado -->
+<div class="d-flex justify-content-between align-items-center mb-4 gap-2">
     <h1 class="h2 mb-0"><?php echo $fechaLabel; ?></h1>
+    <button class="btn btn-outline-primary" id="btnAutollenadoFds">
+        <i class="bi bi-magic me-1"></i> Autollenado
+    </button>
 </div>
 
 <!-- ── DISCURSO PÚBLICO ──────────────────────────────────────── -->
@@ -217,9 +220,36 @@ function optionsFds(array $lista, ?int $selId): string {
         <i class="bi bi-mic me-2"></i>DISCURSO PÚBLICO
     </div>
     <div class="card-body">
-        <!-- Tema (Select2 busca por número o palabras) + canción -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-8">
+
+        <!-- Fila 1: Presidente | Oración inicial | Oración final -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Presidente</label>
+                <select class="form-select fds-asig-select" data-rol="DP_Presidente">
+                    <?php echo optionsFds($personasPorRol['Presidente'] ?? $todasPersonas,
+                                          (int)($asignaciones['DP_Presidente']['persona_id'] ?? 0)); ?>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Oración inicial</label>
+                <select class="form-select fds-asig-select" data-rol="DP_Oracion_Inicial">
+                    <?php echo optionsFds($personasPorRol['Oración'] ?? $todasPersonas,
+                                          (int)($asignaciones['DP_Oracion_Inicial']['persona_id'] ?? 0)); ?>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Oración final</label>
+                <select class="form-select fds-asig-select" data-rol="DP_Oracion_Final">
+                    <?php echo optionsFds($personasPorRol['Oración'] ?? $todasPersonas,
+                                          (int)($asignaciones['DP_Oracion_Final']['persona_id'] ?? 0)); ?>
+                </select>
+            </div>
+        </div>
+
+        <!-- Fila 2: Tema | Canción | Orador -->
+        <div class="row g-3">
+            <!-- Tema del discurso -->
+            <div class="col-md-6">
                 <label class="form-label fw-bold">Tema del discurso</label>
                 <select class="form-select" id="sel_dp_bosquejo" style="width:100%;">
                     <?php if ($bosquejoActual): ?>
@@ -231,15 +261,11 @@ function optionsFds(array $lista, ?int $selId): string {
                     <?php endif; ?>
                 </select>
                 <small class="text-muted">Escribe el número o palabras del título para buscar</small>
-
-                <!-- Warning: bosquejo marcado como "No presentar"
-                     alert-permanent evita que main.js lo oculte con fadeOut -->
                 <div id="alertNoPresentar" class="alert alert-warning alert-permanent mt-2 mb-0"
                      style="display:none;">
                     <div id="alertNoPresentarNota" class="small"></div>
                 </div>
                 <?php
-                // Pre-renderizar el warning si el bosquejo ya está seleccionado y tiene no_presentar=1
                 if ($bosquejoActual) {
                     try {
                         $bNota = fetchOne(
@@ -257,28 +283,18 @@ function optionsFds(array $lista, ?int $selId): string {
                 }
                 ?>
             </div>
-            <div class="col-md-4">
+
+            <!-- Canción -->
+            <div class="col-md-2">
                 <label class="form-label fw-bold">Canción</label>
                 <input type="text" class="form-control fds-field" id="dp_cancion"
                        data-campo="dp_cancion"
                        value="<?php echo htmlspecialchars($semana['dp_cancion'] ?? ''); ?>"
                        placeholder="Nº canción">
             </div>
-        </div>
 
-        <!-- Asignaciones Discurso Público -->
-        <div class="row g-3">
-            <!-- Presidente DP -->
-            <div class="col-md-6">
-                <label class="form-label fw-bold">Presidente</label>
-                <select class="form-select fds-asig-select" data-rol="DP_Presidente">
-                    <?php echo optionsFds($personasPorRol['Presidente'] ?? $todasPersonas,
-                                          (int)($asignaciones['DP_Presidente']['persona_id'] ?? 0)); ?>
-                </select>
-            </div>
             <!-- Orador -->
-            <div class="col-md-6">
-                <!-- Label + checkbox "Local" en la misma línea -->
+            <div class="col-md-4">
                 <div class="d-flex align-items-center justify-content-between mb-1">
                     <label class="form-label fw-bold mb-0">Orador</label>
                     <div class="form-check mb-0">
@@ -287,21 +303,20 @@ function optionsFds(array $lista, ?int $selId): string {
                         <label class="form-check-label small" for="chkOradorLocal">Local</label>
                     </div>
                 </div>
-
-                <!-- Input texto libre (orador externo) — visible por defecto -->
                 <input type="text" class="form-control" id="txt_dp_orador"
                        placeholder="Escribe el nombre del orador"
                        value="<?php echo htmlspecialchars($asignaciones['DP_Orador']['nombre_libre'] ?? ''); ?>"
-                       <?php echo !empty($asignaciones['DP_Orador']['persona_id']) ? 'style="display:none;"' : ''; ?>>
-
-                <!-- Selector local (Select2) — visible cuando "Local" está marcado -->
-                <select class="form-select fds-asig-select" data-rol="DP_Orador" id="sel_dp_orador"
-                        style="width:100%; <?php echo empty($asignaciones['DP_Orador']['persona_id']) ? 'display:none;' : ''; ?>">
-                    <?php echo optionsFds($todasPersonas,
-                                         (int)($asignaciones['DP_Orador']['persona_id'] ?? 0)); ?>
-                </select>
+                       style="<?php echo !empty($asignaciones['DP_Orador']['persona_id']) ? 'display:none;' : ''; ?>">
+                <div id="wrapper-orador" style="<?php echo empty($asignaciones['DP_Orador']['persona_id']) ? 'display:none;' : ''; ?>">
+                    <select class="form-select fds-asig-select" data-rol="DP_Orador" id="sel_dp_orador"
+                            style="width:100%;">
+                        <?php echo optionsFds($todasPersonas,
+                                             (int)($asignaciones['DP_Orador']['persona_id'] ?? 0)); ?>
+                    </select>
+                </div>
             </div>
         </div>
+
     </div>
 </div>
 
@@ -313,31 +328,29 @@ function optionsFds(array $lista, ?int $selId): string {
     </div>
     <div class="card-body">
         <div class="row g-3">
-            <?php
-            $rolesEA = [
-                'EA_Conductor'    => ['label' => 'Conductor',    'clave' => 'Conductor'],
-                'EA_Lector'       => ['label' => 'Lector',       'clave' => 'Lector'],
-                'EA_Oracion'      => ['label' => 'Oración',      'clave' => 'Oración'],
-                'EA_Hospitalidad' => ['label' => 'Hospitalidad', 'clave' => null],  // texto libre
-            ];
-            foreach ($rolesEA as $rol => $cfg):
-                $asig = $asignaciones[$rol] ?? null;
-                $lista = $cfg['clave'] ? ($personasPorRol[$cfg['clave']] ?? $todasPersonas) : [];
-            ?>
-            <div class="col-md-6">
-                <label class="form-label fw-bold"><?php echo $cfg['label']; ?></label>
-                <?php if ($cfg['clave']): ?>
-                <select class="form-select fds-asig-select" data-rol="<?php echo $rol; ?>">
-                    <?php echo optionsFds($lista, (int)($asig['persona_id'] ?? 0)); ?>
+            <!-- Conductor -->
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Conductor</label>
+                <select class="form-select fds-asig-select" data-rol="EA_Conductor">
+                    <?php echo optionsFds($personasPorRol['Conductor'] ?? $todasPersonas,
+                                          (int)($asignaciones['EA_Conductor']['persona_id'] ?? 0)); ?>
                 </select>
-                <?php else: ?>
-                <!-- Hospitalidad: texto libre -->
-                <input type="text" class="form-control fds-asig-libre" data-rol="<?php echo $rol; ?>"
-                       value="<?php echo htmlspecialchars($asig['nombre_libre'] ?? ''); ?>"
-                       placeholder="Ej: Familia García">
-                <?php endif; ?>
             </div>
-            <?php endforeach; ?>
+            <!-- Lector -->
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Lector</label>
+                <select class="form-select fds-asig-select" data-rol="EA_Lector">
+                    <?php echo optionsFds($personasPorRol['Lector'] ?? $todasPersonas,
+                                          (int)($asignaciones['EA_Lector']['persona_id'] ?? 0)); ?>
+                </select>
+            </div>
+            <!-- Hospitalidad: texto libre -->
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Hospitalidad</label>
+                <input type="text" class="form-control fds-asig-libre" data-rol="EA_Hospitalidad"
+                       value="<?php echo htmlspecialchars(($asignaciones['EA_Hospitalidad']['nombre_libre'] ?? '')); ?>"
+                       placeholder="Ej: Familia García">
+            </div>
         </div>
     </div>
 </div>
@@ -364,19 +377,13 @@ $(document).on('change blur', '.fds-field', function () {
 // ── Toggle "Local" del Orador ────────────────────────────────
 $('#chkOradorLocal').on('change', function () {
     if (this.checked) {
-        // Mostrar selector local, ocultar input libre
+        // Ocultar input libre, mostrar wrapper (y con él el contenedor Select2)
         $('#txt_dp_orador').hide().val('');
-        $('#sel_dp_orador').show();
-        // Reinicializar Select2 (puede estar en display:none al inicializar)
-        if ($('#sel_dp_orador').hasClass('select2-hidden-accessible')) {
-            $('#sel_dp_orador').trigger('change');
-        }
+        $('#wrapper-orador').show();
     } else {
-        // Mostrar input libre, ocultar selector y limpiar asignación persona
-        $('#sel_dp_orador').hide();
-        if ($('#sel_dp_orador').hasClass('select2-hidden-accessible')) {
-            $('#sel_dp_orador').val('').trigger('change.select2');
-        }
+        // Ocultar wrapper completo (oculta el <select> Y el .select2-container generado)
+        $('#wrapper-orador').hide();
+        $('#sel_dp_orador').val('').trigger('change');
         $('#txt_dp_orador').show().val('').focus();
 
         // Desasignar persona en BD
@@ -444,6 +451,28 @@ $(document).on('input', '.fds-asig-libre', function () {
         });
     }, 600);
 });
+
+// ── Autollenado ──────────────────────────────────────────────
+$('#btnAutollenadoFds').on('click', function () {
+    const $btn = $(this).prop('disabled', true)
+        .html('<span class="spinner-border spinner-border-sm me-1"></span> Llenando…');
+    $.post('../api/programas_fds.php',
+        { action: 'autofill', programa_fds_id: fdsId },
+        function (res) {
+            if (res.success) {
+                APP.showNotification('Autollenado completado', 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                APP.showNotification(res.message || 'Error en autollenado', 'danger');
+                $btn.prop('disabled', false)
+                    .html('<i class="bi bi-magic me-1"></i> Autollenado');
+            }
+        }
+    ).fail(function () {
+        APP.showNotification('Error al conectar con el servidor', 'danger');
+        $btn.prop('disabled', false).html('<i class="bi bi-magic me-1"></i> Autollenado');
+    });
+});
 </script>
 
 <!-- Select2 JS -->
@@ -493,10 +522,13 @@ $(document).ready(function () {
         }));
     });
 
-    // Si Local ya viene marcado al cargar, mantener visibilidad correcta
+    // Estado inicial: forzar visibilidad según checkbox (checked o no)
     if ($('#chkOradorLocal').is(':checked')) {
         $('#txt_dp_orador').hide();
-        $('#sel_dp_orador').show();
+        $('#wrapper-orador').show();
+    } else {
+        $('#txt_dp_orador').show();
+        $('#wrapper-orador').hide();
     }
 
     /* ── Eventos ────────────────────────────────────────────────── */

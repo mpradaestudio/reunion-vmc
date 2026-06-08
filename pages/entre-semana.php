@@ -12,7 +12,7 @@ $programas = fetchAll("
             WHERE ar.programa_id = ps.id AND ar.rol = 'Presidente'
             LIMIT 1) as presidente_nombre
     FROM programas_semanales ps
-    ORDER BY ps.fecha_inicio DESC
+    ORDER BY ps.fecha_inicio ASC
 ");
 
 // Contadores por estado (para las píldoras del filtro)
@@ -47,14 +47,14 @@ $mesNombre = [
 <!-- Cabecera: título + filtro + botón extraer (misma línea) -->
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <h1 class="h2 mb-0">
-        <i class="bi bi-calendar-week me-2"></i>Programas Semanales
+        <i class="bi bi-calendar-week me-2"></i>Reunión entre semana
     </h1>
 
     <div class="d-flex flex-wrap align-items-center gap-2">
         <?php if (count($programas) > 0): ?>
         <!-- Filtro pill-tabs -->
         <div class="filter-tabs" role="tablist" aria-label="Filtrar programas">
-            <button class="filter-tab active" data-filter="todos" role="tab" aria-selected="true">
+            <button class="filter-tab" data-filter="todos" role="tab" aria-selected="false">
                 Todos <span class="filter-count"><?php echo $cntTodos; ?></span>
             </button>
             <?php if ($cntActual > 0): ?>
@@ -310,14 +310,32 @@ $mesNombre = [
 
 <script>
 /* ================================================================
-   FILTRO PILL-TABS
-   Muestra/oculta las tarjetas (.programa-item) animando su opacidad
-   según el data-estado del item.
+   Todo dentro de DOMContentLoaded para que Bootstrap ya esté listo
 ================================================================ */
-(function () {
-    const tabs   = document.querySelectorAll('.filter-tab');
-    const items  = document.querySelectorAll('.programa-item');
-    const empty  = document.getElementById('emptyFilter');
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* ── Helpers ── */
+    function getChecked() {
+        return [...document.querySelectorAll('.programa-checkbox:checked')];
+    }
+
+    function updateBatchBar() {
+        const checked  = getChecked();
+        const bar      = document.getElementById('batchActions');
+        const countEl  = document.getElementById('batchCount');
+        if (!bar) return;
+        if (checked.length > 0) {
+            countEl.textContent = checked.length + ' seleccionado' + (checked.length > 1 ? 's' : '');
+            bar.classList.remove('d-none');
+        } else {
+            bar.classList.add('d-none');
+        }
+    }
+
+    /* ── Filtro pill-tabs ── */
+    const tabs  = document.querySelectorAll('.filter-tab');
+    const items = document.querySelectorAll('.programa-item');
+    const empty = document.getElementById('emptyFilter');
 
     function applyFilter(filter) {
         let visible = 0;
@@ -325,23 +343,20 @@ $mesNombre = [
             const matches = filter === 'todos' || item.dataset.estado === filter;
             if (matches) {
                 item.style.display = '';
-                // Reiniciar la animación de entrada en cada filtrado
                 item.classList.remove('animate-in');
-                void item.offsetWidth;        // forzar reflow para reproducir de nuevo
+                void item.offsetWidth;
                 item.classList.add('animate-in');
                 visible++;
             } else {
                 item.style.display = 'none';
-                // Desmarcar checkbox de tarjetas ocultas
                 const cb = item.querySelector('.programa-checkbox');
                 if (cb && cb.checked) {
                     cb.checked = false;
-                    const card = item.querySelector('.card');
-                    if (card) card.classList.remove('card-selected');
+                    item.querySelector('.card')?.classList.remove('card-selected');
                 }
             }
         });
-        empty.style.display = visible === 0 ? 'block' : 'none';
+        if (empty) empty.style.display = visible === 0 ? 'block' : 'none';
         updateBatchBar();
     }
 
@@ -353,108 +368,98 @@ $mesNombre = [
             applyFilter(tab.dataset.filter);
         });
     });
-})();
 
-/* ================================================================
-   SELECCIÓN EN LOTE
-================================================================ */
-const batchActions  = document.getElementById('batchActions');
-const batchCountEl  = document.getElementById('batchCount');
-const btnDeselAll   = document.getElementById('btnDeselAll');
-const btnElimLote   = document.getElementById('btnEliminarLote');
-const confirmCount  = document.getElementById('confirmLoteCount');
-const btnConfirm    = document.getElementById('btnConfirmEliminarLote');
-
-// El modal se crea de forma lazy: Bootstrap JS se carga en el footer,
-// DESPUÉS de este script, así que no podemos instanciarlo al nivel superior
-// (daría 'bootstrap is not defined' y rompería TODO el bloque JS).
-let _confirmModal = null;
-function getConfirmModal() {
-    if (!_confirmModal && window.bootstrap) {
-        _confirmModal = new bootstrap.Modal(document.getElementById('modalConfirmLote'));
+    // Filtro inicial: siempre mostrar todos
+    const filtroInicial = 'todos';
+    const tabInicial = document.querySelector(`.filter-tab[data-filter="${filtroInicial}"]`)
+                    || document.querySelector('.filter-tab[data-filter="todos"]');
+    if (tabInicial) {
+        tabInicial.classList.add('active');
+        tabInicial.setAttribute('aria-selected', 'true');
+        applyFilter(filtroInicial);
     }
-    return _confirmModal;
-}
 
-function getChecked() {
-    return [...document.querySelectorAll('.programa-checkbox:checked')];
-}
-
-function updateBatchBar() {
-    const checked = getChecked();
-    if (checked.length > 0) {
-        batchCountEl.textContent = checked.length + ' seleccionado' + (checked.length > 1 ? 's' : '');
-        batchActions.classList.remove('d-none');
-    } else {
-        batchActions.classList.add('d-none');
-        batchActions.style.display = '';
-    }
-}
-
-// Delegación: cualquier checkbox cambia → actualizar barra
-document.getElementById('programasGrid')?.addEventListener('change', e => {
-    if (e.target.classList.contains('programa-checkbox')) {
-        const card = e.target.closest('.programa-item');
-        // Resaltar visualmente la card seleccionada
-        card.querySelector('.card').classList.toggle('card-selected', e.target.checked);
-        updateBatchBar();
-    }
-});
-
-// Deseleccionar todos
-btnDeselAll?.addEventListener('click', () => {
-    document.querySelectorAll('.programa-checkbox:checked').forEach(cb => {
-        cb.checked = false;
-        cb.closest('.programa-item').querySelector('.card').classList.remove('card-selected');
-    });
-    updateBatchBar();
-});
-
-// Abrir modal de confirmación
-btnElimLote?.addEventListener('click', () => {
-    const n = getChecked().length;
-    if (n === 0) return;
-    confirmCount.textContent = n;
-    const modal = getConfirmModal();
-    if (modal) {
-        modal.show();
-    } else if (confirm('¿Eliminar ' + n + ' programa(s) y sus asignaciones?')) {
-        // Respaldo si Bootstrap no estuviera disponible
-        btnConfirm.click();
-    }
-});
-
-// Confirmar y ejecutar eliminación en lote
-btnConfirm?.addEventListener('click', function () {
-    const ids = getChecked().map(cb => cb.value);
-    if (ids.length === 0) return;
-
-    this.disabled = true;
-    this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Eliminando...';
-
-    $.post('../api/programas.php', {
-        action : 'delete_batch',
-        ids    : ids
-    }, function (response) {
-        if (response.success) {
-            window.location.href = 'entre-semana.php?msg=eliminado';
-        } else {
-            getConfirmModal()?.hide();
-            APP.showNotification(response.message, 'danger');
-            document.getElementById('btnConfirmEliminarLote').disabled = false;
-            document.getElementById('btnConfirmEliminarLote').innerHTML = '<i class="bi bi-trash"></i> Sí, eliminar';
+    /* ── Selección en lote ── */
+    document.getElementById('programasGrid')?.addEventListener('change', e => {
+        if (e.target.classList.contains('programa-checkbox')) {
+            e.target.closest('.programa-item')
+                    ?.querySelector('.card')
+                    ?.classList.toggle('card-selected', e.target.checked);
+            updateBatchBar();
         }
-    }).fail(function () {
-        getConfirmModal()?.hide();
-        APP.showNotification('Error al conectar con el servidor', 'danger');
     });
-});
 
-// Limpiar modal confirmación al cerrar
-document.getElementById('modalConfirmLote').addEventListener('hidden.bs.modal', function () {
-    const btn = document.getElementById('btnConfirmEliminarLote');
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-trash"></i> Sí, eliminar';
+    document.getElementById('btnDeselAll')?.addEventListener('click', () => {
+        document.querySelectorAll('.programa-checkbox:checked').forEach(cb => {
+            cb.checked = false;
+            cb.closest('.programa-item')?.querySelector('.card')?.classList.remove('card-selected');
+        });
+        updateBatchBar();
+    });
+
+    /* ── Eliminar en lote ── */
+    document.getElementById('btnEliminarLote')?.addEventListener('click', () => {
+        const n = getChecked().length;
+        if (!n) return;
+        document.getElementById('confirmLoteCount').textContent = n;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmLote')).show();
+    });
+
+    document.getElementById('btnConfirmEliminarLote')?.addEventListener('click', function () {
+        const ids = getChecked().map(cb => cb.value);
+        if (!ids.length) return;
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Eliminando...';
+        $.post('../api/programas.php', { action: 'delete_batch', ids }, function (res) {
+            if (res.success) {
+                window.location.href = 'entre-semana.php?msg=eliminado';
+            } else {
+                bootstrap.Modal.getInstance(document.getElementById('modalConfirmLote'))?.hide();
+                APP.showNotification(res.message, 'danger');
+            }
+        }).fail(() => {
+            bootstrap.Modal.getInstance(document.getElementById('modalConfirmLote'))?.hide();
+            APP.showNotification('Error al conectar con el servidor', 'danger');
+        });
+    });
+
+    document.getElementById('modalConfirmLote')?.addEventListener('hidden.bs.modal', () => {
+        const btn = document.getElementById('btnConfirmEliminarLote');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-trash"></i> Sí, eliminar'; }
+    });
+
+    /* ── Eliminar individual ── */
+    let _pendingId = null;
+
+    document.getElementById('programasGrid')?.addEventListener('click', e => {
+        const btn = e.target.closest('.btn-eliminar-programa');
+        if (!btn) return;
+        _pendingId = btn.dataset.id;
+        document.getElementById('confirmProgramaTitulo').textContent = btn.dataset.titulo;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modalConfirmPrograma')).show();
+    });
+
+    document.getElementById('btnConfirmPrograma')?.addEventListener('click', function () {
+        if (!_pendingId) return;
+        const id = _pendingId;
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Eliminando...';
+        $.post('../api/programas.php', { action: 'delete', id }, function (res) {
+            if (res.success) {
+                window.location.href = 'entre-semana.php?msg=eliminado';
+            } else {
+                bootstrap.Modal.getInstance(document.getElementById('modalConfirmPrograma'))?.hide();
+                APP.showNotification(res.message, 'danger');
+            }
+        });
+    });
+
+    document.getElementById('modalConfirmPrograma')?.addEventListener('hidden.bs.modal', () => {
+        _pendingId = null;
+        const btn = document.getElementById('btnConfirmPrograma');
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-trash me-1"></i>Sí, eliminar'; }
+    });
+
 });
 
 /* ================================================================
@@ -504,23 +509,28 @@ $('#modalExtraer').on('hidden.bs.modal', function () {
     $('#urlSemana').val('');
     $('#btnExtraerUrl').prop('disabled', false).html('<i class="bi bi-cloud-download"></i> Extraer');
 });
-
-/* ================================================================
-   ELIMINAR INDIVIDUAL
-================================================================ */
-$(document).on('click', '.btn-eliminar-programa', function () {
-    const id     = $(this).data('id');
-    const titulo = $(this).data('titulo');
-    if (confirm('¿Eliminar el programa "' + titulo + '"?\n\nSe eliminarán todas las asignaciones asociadas.')) {
-        $.post('../api/programas.php', { action: 'delete', id: id }, function (response) {
-            if (response.success) {
-                window.location.href = 'entre-semana.php?msg=eliminado';
-            } else {
-                APP.showNotification(response.message, 'danger');
-            }
-        });
-    }
-});
 </script>
+
+<!-- Modal confirmar eliminar programa individual -->
+<div class="modal fade" id="modalConfirmPrograma" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar programa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Eliminar el programa <strong id="confirmProgramaTitulo"></strong>?</p>
+                <p class="text-muted mb-0 small">Se eliminarán todas las asignaciones asociadas. Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmPrograma">
+                    <i class="bi bi-trash me-1"></i>Sí, eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
