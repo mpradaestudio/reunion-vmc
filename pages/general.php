@@ -356,6 +356,11 @@ if (isset($_GET['msg'])) {
                     <span class="small">
                         <i class="bi bi-calendar3 me-1 text-muted"></i>
                         <?php echo fmtRango($ev['fecha_inicio'], $ev['fecha_fin'], $meses); ?>
+                        <?php if (!empty($ev['notas'])): ?>
+                        <span class="badge bg-info-subtle text-info ms-1" style="font-size:.7rem;">
+                            <?php echo htmlspecialchars($ev['notas']); ?>
+                        </span>
+                        <?php endif; ?>
                     </span>
                     <button class="btn btn-link btn-sm text-danger p-0 ms-2 btn-eliminar-evento"
                             data-id="<?php echo $ev['id']; ?>"
@@ -407,6 +412,29 @@ if (isset($_GET['msg'])) {
                         <input type="date" class="form-control form-control-sm vmc-select-primary"
                                id="eventoFechaFin"
                                data-fp-mode="single">
+                    </div>
+
+                    <!-- Solo para Asamblea de Circuito -->
+                    <div id="eventoCircuitoOpciones" class="mb-1" style="display:none;">
+                        <label class="form-label fw-semibold small mb-1">Tipo de visita</label>
+                        <div class="d-flex flex-column gap-1">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio"
+                                       name="circuito_tipo" id="circuito_representante"
+                                       value="Con representante de la sucursal">
+                                <label class="form-check-label small" for="circuito_representante">
+                                    Con representante de la sucursal
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio"
+                                       name="circuito_tipo" id="circuito_superintendente"
+                                       value="Con superintendente de circuito">
+                                <label class="form-check-label small" for="circuito_superintendente">
+                                    Con superintendente de circuito
+                                </label>
+                            </div>
+                        </div>
                     </div>
 
                 </div>
@@ -695,12 +723,15 @@ function fmtRangoJS(ini, fin) {
 
 function buildEventoRow(ev) {
     const label = fmtRangoJS(ev.fecha_inicio, ev.fecha_fin);
+    const notaBadge = ev.notas
+        ? `<span class="badge bg-info-subtle text-info ms-1" style="font-size:.7rem;">${$('<span>').text(ev.notas).html()}</span>`
+        : '';
     return `
         <div class="d-flex justify-content-between align-items-center
                     border rounded px-2 py-1 mb-1 evento-row"
              id="evento-row-${ev.id}">
             <span class="small">
-                <i class="bi bi-calendar3 me-1 text-muted"></i>${label}
+                <i class="bi bi-calendar3 me-1 text-muted"></i>${label}${notaBadge}
             </span>
             <button class="btn btn-link btn-sm text-danger p-0 ms-2 btn-eliminar-evento"
                     data-id="${ev.id}" title="Eliminar">
@@ -729,6 +760,10 @@ $(document).on('click', '.btn-agregar-evento', function () {
 
     // Eventos de 1 día: ocultar fecha fin
     $('#eventoFechaFinWrap').toggle(!unDia);
+
+    // Opciones de circuito: solo para Asamblea de Circuito
+    $('input[name="circuito_tipo"]').prop('checked', false);
+    $('#eventoCircuitoOpciones').toggle(tipo === 'circuito');
 
     bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAgregarEvento')).show();
 });
@@ -783,7 +818,8 @@ $(document).on('submit', '#formAgregarEvento', function (e) {
     }
 
     apiPost('../api/eventos.php',
-        { action: 'create', tipo, fecha_inicio: fechaIni, fecha_fin: fechaFin },
+        { action: 'create', tipo, fecha_inicio: fechaIni, fecha_fin: fechaFin,
+          notas: tipo === 'circuito' ? ($('input[name="circuito_tipo"]:checked').val() || '') : '' },
         function (res) {
             $btn.prop('disabled', false);
             bootstrap.Modal.getInstance(document.getElementById('modalAgregarEvento'))?.hide();
