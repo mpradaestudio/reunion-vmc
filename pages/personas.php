@@ -29,10 +29,13 @@ try {
         SELECT p.id, p.nombre, p.apellido,
                CONCAT(p.nombre, ' ', p.apellido) AS nombre_completo,
                p.telefono, p.activo,
-               GROUP_CONCAT(DISTINCT pf.nombre ORDER BY pf.id SEPARATOR '|') AS perfiles
+               GROUP_CONCAT(DISTINCT pf.nombre ORDER BY pf.id SEPARATOR '|') AS perfiles,
+               GROUP_CONCAT(DISTINCT prv.nombre ORDER BY prv.orden SEPARATOR '|') AS privilegios
         FROM personas p
         LEFT JOIN persona_perfiles pp ON pp.persona_id = p.id
         LEFT JOIN perfiles pf ON pf.id = pp.perfil_id
+        LEFT JOIN persona_privilegios ppv ON ppv.persona_id = p.id
+        LEFT JOIN privilegios prv ON prv.id = ppv.privilegio_id
         $whereSql
         GROUP BY p.id, p.nombre, p.apellido, p.telefono, p.activo
         ORDER BY p.nombre, p.apellido
@@ -60,13 +63,35 @@ if (isset($_GET['msg'])) {
     }
 }
 
-// Obtener privilegios para el modal
+// Obtener privilegios para el modal y filtro
 $privilegiosModal = [];
 try {
-    $privilegiosModal = fetchAll("SELECT id, nombre FROM privilegios WHERE activo = 1 ORDER BY orden, nombre");
+    $privilegiosModal = fetchAll("SELECT id, nombre FROM privilegios ORDER BY orden, nombre");
 } catch (Exception $e) {
-    // Tabla aún no existe (migración pendiente)
     $privilegiosModal = [];
+}
+
+// Filtro por privilegio
+$filtroPrivilegio = (isset($_GET['privilegio_id']) && $_GET['privilegio_id'] !== '') ? (int)$_GET['privilegio_id'] : null;
+if ($filtroPrivilegio !== null) {
+    $where[]  = "EXISTS (SELECT 1 FROM persona_privilegios pv2 WHERE pv2.persona_id = p.id AND pv2.privilegio_id = ?)";
+    $params[] = $filtroPrivilegio;
+    // Reconstruir la query con el nuevo filtro
+    $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
+    try {
+        $personas = fetchAll("
+            SELECT p.id, p.nombre, p.apellido,
+                   CONCAT(p.nombre, ' ', p.apellido) AS nombre_completo,
+                   p.telefono, p.activo,
+                   GROUP_CONCAT(DISTINCT pf.nombre ORDER BY pf.id SEPARATOR '|') AS perfiles
+            FROM personas p
+            LEFT JOIN persona_perfiles pp ON pp.persona_id = p.id
+            LEFT JOIN perfiles pf ON pf.id = pp.perfil_id
+            $whereSql
+            GROUP BY p.id, p.nombre, p.apellido, p.telefono, p.activo
+            ORDER BY p.nombre, p.apellido
+        ", $params);
+    } catch (Exception $e) { }
 }
 $seccionesPartes = [
     'tesoros' => [
@@ -122,7 +147,7 @@ $seccionesPartes = [
         <div class="card">
             <div class="card-body">
                 <form method="GET" class="row g-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Perfil</label>
                         <select name="perfil_id" class="form-select" onchange="this.form.submit()">
                             <option value="">Todos los perfiles</option>
@@ -134,7 +159,19 @@ $seccionesPartes = [
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
+                        <label class="form-label">Privilegio</label>
+                        <select name="privilegio_id" class="form-select" onchange="this.form.submit()">
+                            <option value="">Todos los privilegios</option>
+                            <?php foreach ($privilegiosModal as $prv): ?>
+                                <option value="<?php echo $prv['id']; ?>"
+                                    <?php echo ($filtroPrivilegio === (int)$prv['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($prv['nombre']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label">Estado</label>
                         <select name="activo" class="form-select" onchange="this.form.submit()">
                             <option value="">Todos</option>
@@ -142,7 +179,7 @@ $seccionesPartes = [
                             <option value="0" <?php echo ($filtroActivo === 0) ? 'selected' : ''; ?>>Inactivos</option>
                         </select>
                     </div>
-                    <div class="col-md-4 d-flex align-items-end">
+                    <div class="col-md-3 d-flex align-items-end">
                         <a href="personas.php" class="btn btn-outline-secondary">
                             <i class="bi bi-x-circle"></i> Limpiar Filtros
                         </a>
@@ -174,7 +211,7 @@ $seccionesPartes = [
                                 </th>
                                 <th>Nombre</th>
                                 <th>Perfil(es)</th>
-                                <th>Teléfono</th>
+                                <th>Privilegios</th>
                                 <th>Estado</th>
                                 <th class="text-center">Acciones</th>
                             </tr>
@@ -199,8 +236,18 @@ $seccionesPartes = [
                                     }
                                     ?>
                                 </td>
-                                <td><?php echo htmlspecialchars($persona['telefono'] ?? '-'); ?></td>
                                 <td>
+                                    <?php
+                                    $listaPrivilegios = !empty($persona['privilegios']) ? explode('|', $persona['privilegios']) : [];
+                                    if ($listaPrivilegios) {
+                                        foreach ($listaPrivilegios as $pv) {
+                                            echo '<span class="badge bg-secondary me-1 mb-1">' . htmlspecialchars($pv) . '</span>';
+                                        }
+                                    } else {
+                                        echo '<span class="text-muted">—</span>';
+                                    }
+                                    ?>
+                                </td>
                                     <?php if ($persona['activo']): ?>
                                         <span class="badge bg-success">Activo</span>
                                     <?php else: ?>
@@ -304,8 +351,14 @@ $seccionesPartes = [
                     <!-- 4. Privilegios (inmediatamente después de Perfil) -->
                     <?php if (!empty($privilegiosModal)): ?>
                     <div class="mb-3">
-                        <label class="form-label"><i class="bi bi-shield-check"></i> Privilegios</label>
-                        <div class="d-flex flex-wrap gap-3 border rounded p-2">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <label class="form-label mb-0"><i class="bi bi-shield-check"></i> Privilegios</label>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="chkTodosPrivilegios">
+                                <label class="form-check-label small" for="chkTodosPrivilegios">Todos</label>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-3 border rounded p-2" id="wrapperPrivilegios">
                             <?php foreach ($privilegiosModal as $priv): ?>
                             <div class="form-check">
                                 <input class="form-check-input chk-privilegio" type="checkbox"
@@ -792,6 +845,17 @@ $('#modalConfirmEliminar').on('hidden.bs.modal', function () {
     _pendingDeleteId = null;
 });
 
+// ---- Toggle "Todos" privilegios en modal ----
+$(document).on('change', '#chkTodosPrivilegios', function () {
+    $('#wrapperPrivilegios .chk-privilegio').prop('checked', this.checked);
+});
+$(document).on('change', '.chk-privilegio', function () {
+    const total   = $('.chk-privilegio').length;
+    const checked = $('.chk-privilegio:checked').length;
+    $('#chkTodosPrivilegios').prop('indeterminate', checked > 0 && checked < total);
+    $('#chkTodosPrivilegios').prop('checked', checked === total);
+});
+
 // ---- Seleccionar todas las partes de una sección ----
 $(document).on('change', '.chk-todos', function () {
     const grupo = $(this).data('grupo');
@@ -890,6 +954,7 @@ $('#modalPersona').on('hidden.bs.modal', function () {
     $('#persona_action').val('create');
     $('.chk-todos').prop('checked', false);
     $('.chk-privilegio').prop('checked', false);
+    $('#chkTodosPrivilegios').prop('checked', false).prop('indeterminate', false);
     $('#modalPersonaTitulo').html('<i class="bi bi-person-plus"></i> Agregar Persona');
 });
 </script>
