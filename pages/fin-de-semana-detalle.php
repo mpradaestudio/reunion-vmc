@@ -137,6 +137,26 @@ try {
 // También personas para Orador (texto libre + selector combinado)
 $todasPersonas = fetchAll("SELECT id, CONCAT(nombre,' ',apellido) AS nombre_completo FROM personas WHERE activo = 1 ORDER BY nombre, apellido");
 
+// Personas con privilegio "Orador público" para el selector Local
+$oradoresLocales = [];
+try {
+    $oradoresLocales = fetchAll("
+        SELECT p.id, CONCAT(p.nombre,' ',p.apellido) AS nombre_completo
+        FROM personas p
+        INNER JOIN persona_privilegios ppv ON ppv.persona_id = p.id
+        INNER JOIN privilegios prv ON prv.id = ppv.privilegio_id
+        WHERE p.activo = 1
+          AND LOWER(prv.nombre) = 'orador público'
+        ORDER BY p.nombre, p.apellido
+    ");
+} catch (Exception $e) {
+    $oradoresLocales = $todasPersonas; // fallback
+}
+// Si no hay nadie con ese privilegio, mostrar todos (para no quedar vacío)
+if (empty($oradoresLocales)) {
+    $oradoresLocales = $todasPersonas;
+}
+
 // Fecha legible
 $fi  = new DateTime($semana['fecha_inicio']);
 $ff  = new DateTime($semana['fecha_fin']);
@@ -310,7 +330,7 @@ function optionsFds(array $lista, ?int $selId): string {
                 <div id="wrapper-orador" style="<?php echo empty($asignaciones['DP_Orador']['persona_id']) ? 'display:none;' : ''; ?>">
                     <select class="form-select fds-asig-select" data-rol="DP_Orador" id="sel_dp_orador"
                             style="width:100%;">
-                        <?php echo optionsFds($todasPersonas,
+                        <?php echo optionsFds($oradoresLocales,
                                              (int)($asignaciones['DP_Orador']['persona_id'] ?? 0)); ?>
                     </select>
                 </div>
