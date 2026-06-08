@@ -47,7 +47,7 @@ $mesNombre = [
 <!-- Cabecera: título + filtro + botón extraer (misma línea) -->
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <h1 class="h2 mb-0">
-        <i class="bi bi-calendar-week me-2"></i>Programas Semanales
+        <i class="bi bi-calendar-week me-2"></i>Reunión entre semana
     </h1>
 
     <div class="d-flex flex-wrap align-items-center gap-2">
