@@ -363,13 +363,29 @@ try {
         $seccionActual = '';
         foreach ($secciones as $seccion):
             // Obtener asignaciones de esta sección
-            $asignaciones = fetchAll("
-                SELECT ap.*, ap.nombre_libre, CONCAT(p.nombre, ' ', p.apellido) as nombre_completo
-                FROM asignaciones_partes ap
-                LEFT JOIN personas p ON ap.persona_id = p.id
-                WHERE ap.seccion_id = ?
-                ORDER BY ap.orden_presentador
-            ", [$seccion['id']]);
+            // nombre_libre se incluye solo si la columna ya existe (database_update_v13.sql)
+            try {
+                $asignaciones = fetchAll("
+                    SELECT ap.id, ap.seccion_id, ap.persona_id, ap.rol,
+                           ap.orden_presentador, ap.nombre_libre,
+                           CONCAT(p.nombre, ' ', p.apellido) AS nombre_completo
+                    FROM asignaciones_partes ap
+                    LEFT JOIN personas p ON ap.persona_id = p.id
+                    WHERE ap.seccion_id = ?
+                    ORDER BY ap.orden_presentador
+                ", [$seccion['id']]);
+            } catch (Exception $e) {
+                // Fallback si nombre_libre aún no existe en la BD
+                $asignaciones = fetchAll("
+                    SELECT ap.id, ap.seccion_id, ap.persona_id, ap.rol,
+                           ap.orden_presentador, NULL AS nombre_libre,
+                           CONCAT(p.nombre, ' ', p.apellido) AS nombre_completo
+                    FROM asignaciones_partes ap
+                    LEFT JOIN personas p ON ap.persona_id = p.id
+                    WHERE ap.seccion_id = ?
+                    ORDER BY ap.orden_presentador
+                ", [$seccion['id']]);
+            }
             
             // Agrupar asignaciones por orden
             $asignacionesPorOrden = [];
