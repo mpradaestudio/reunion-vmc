@@ -113,9 +113,12 @@ try {
         }
     }
 
-    redirect('personas.php?msg=' . $msg);
+    // Preservar filtros activos en el redirect
+    $filtros = isset($_POST['_filtros']) ? '&' . $_POST['_filtros'] : '';
+    redirect('personas.php?msg=' . $msg . $filtros);
 
 } catch (Exception $e) {
     error_log("Error al guardar persona: " . $e->getMessage());
-    redirect('personas.php?msg=error');
+    $filtros = isset($_POST['_filtros']) ? '&' . $_POST['_filtros'] : '';
+    redirect('personas.php?msg=error' . $filtros);
 }

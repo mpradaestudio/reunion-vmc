@@ -304,6 +304,7 @@ $seccionesPartes = [
             <form id="formPersona" method="POST" action="persona_guardar.php">
                 <input type="hidden" name="id" id="persona_id">
                 <input type="hidden" name="action" id="persona_action" value="create">
+                <input type="hidden" name="_filtros" id="persona_filtros">
 
                 <div class="modal-body" style="max-height: 65vh; overflow-y: auto;">
 
@@ -992,6 +993,18 @@ $('#modalPersona').on('hidden.bs.modal', function () {
     background-color: #fff;
     border-color: #adb5bd;
 }
+
+/* Filtro activo — borde y texto en color primario */
+.vmc-filter-active .select2-selection {
+    border-color: var(--vmc-primary) !important;
+}
+.vmc-filter-active .select2-selection__rendered {
+    color: var(--vmc-primary) !important;
+    font-weight: 600;
+}
+.vmc-filter-active .select2-selection__arrow b {
+    border-color: var(--vmc-primary) transparent transparent transparent;
+}
 </style>
 
 <!-- Select2 JS -->
@@ -1013,6 +1026,31 @@ $(document).ready(function () {
     // Enviar el formulario al cambiar cualquier select de filtro
     $('#filtroPerfil, #filtroPrivilegio, #filtroActivo').on('change', function () {
         document.getElementById('formFiltros').submit();
+    });
+
+    // Resaltar selects con filtro activo en azul
+    function resaltarFiltros() {
+        ['#filtroPerfil', '#filtroPrivilegio', '#filtroActivo'].forEach(function (sel) {
+            const $s = $(sel);
+            const hasValue = $s.val() !== '' && $s.val() !== null;
+            // Colorear el contenedor Select2 correspondiente
+            const $container = $s.next('.select2-container');
+            $container.toggleClass('vmc-filter-active', hasValue);
+        });
+    }
+    resaltarFiltros();
+    $('#filtroPerfil, #filtroPrivilegio, #filtroActivo').on('change', function () {
+        resaltarFiltros();
+    });
+
+    // Al abrir cualquier modal, inyectar filtros activos para preservarlos al guardar
+    $(document).on('show.bs.modal', '#modalPersona', function () {
+        const params = new URLSearchParams();
+        if ($('#filtroPerfil').val())    params.set('perfil_id',    $('#filtroPerfil').val());
+        if ($('#filtroPrivilegio').val()) params.set('privilegio_id', $('#filtroPrivilegio').val());
+        if ($('#filtroActivo').val() !== '' && $('#filtroActivo').val() !== null)
+            params.set('activo', $('#filtroActivo').val());
+        $('#persona_filtros').val(params.toString());
     });
 });
 </script>
