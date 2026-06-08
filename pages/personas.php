@@ -849,14 +849,31 @@ $('#modalConfirmEliminar').on('hidden.bs.modal', function () {
 });
 
 // ---- Toggle "Todos" privilegios en modal ----
-$(document).on('change', '#chkTodosPrivilegios', function () {
-    $('#wrapperPrivilegios .chk-privilegio').prop('checked', this.checked);
-});
-$(document).on('change', '.chk-privilegio', function () {
+function syncToggleTodos() {
     const total   = $('.chk-privilegio').length;
     const checked = $('.chk-privilegio:checked').length;
-    $('#chkTodosPrivilegios').prop('indeterminate', checked > 0 && checked < total);
-    $('#chkTodosPrivilegios').prop('checked', checked === total);
+    const $toggle = $('#chkTodosPrivilegios');
+
+    // Solo checked (azul) cuando TODOS están marcados
+    $toggle.prop('checked',       checked === total && total > 0);
+    $toggle.prop('indeterminate', false); // nunca indeterminate — Bootstrap lo pone azul igual
+
+    // Forzar fondo blanco cuando no están todos marcados
+    if (checked < total) {
+        $toggle[0].style.setProperty('background-color', '#fff', 'important');
+        $toggle[0].style.setProperty('border-color', '#adb5bd', 'important');
+    } else {
+        $toggle[0].style.removeProperty('background-color');
+        $toggle[0].style.removeProperty('border-color');
+    }
+}
+
+$(document).on('change', '#chkTodosPrivilegios', function () {
+    $('#wrapperPrivilegios .chk-privilegio').prop('checked', this.checked);
+    syncToggleTodos();
+});
+$(document).on('change', '.chk-privilegio', function () {
+    syncToggleTodos();
 });
 
 // ---- Seleccionar todas las partes de una sección ----
@@ -928,6 +945,7 @@ $('.btn-editar').on('click', function () {
                 $('#priv_' + pvid).prop('checked', true);
             });
         }
+        syncToggleTodos();
 
         $('#modalPersona').modal('show');
     });
@@ -958,6 +976,8 @@ $('#modalPersona').on('hidden.bs.modal', function () {
     $('.chk-todos').prop('checked', false);
     $('.chk-privilegio').prop('checked', false);
     $('#chkTodosPrivilegios').prop('checked', false).prop('indeterminate', false);
+    const t = document.getElementById('chkTodosPrivilegios');
+    if (t) { t.style.setProperty('background-color', '#fff', 'important'); t.style.setProperty('border-color', '#adb5bd', 'important'); }
     $('#modalPersonaTitulo').html('<i class="bi bi-person-plus"></i> Agregar Persona');
 });
 </script>
