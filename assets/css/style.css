@@ -1911,9 +1911,19 @@ button.sidebar-item {
     padding        : 2px 4px;
     cursor         : pointer;
 }
+.flatpickr-calendar .flatpickr-monthDropdown-months:hover,
+.flatpickr-calendar .flatpickr-monthDropdown-months:focus {
+    background     : rgba(255,255,255,.15) !important;
+    outline        : none;
+}
 .flatpickr-calendar .flatpickr-monthDropdown-months option {
     background     : #fff !important;
     color          : #1a1a2e !important;
+}
+.flatpickr-calendar .flatpickr-monthDropdown-months option:hover,
+.flatpickr-calendar .flatpickr-monthDropdown-months option:focus {
+    background     : var(--vmc-primary) !important;
+    color          : #fff !important;
 }
 .flatpickr-calendar .flatpickr-monthDropdown-months option:checked {
     background     : var(--vmc-primary) !important;
@@ -1922,6 +1932,11 @@ button.sidebar-item {
 [data-bs-theme="dark"] .flatpickr-calendar .flatpickr-monthDropdown-months option {
     background     : #2c3e50 !important;
     color          : #e0e0e0 !important;
+}
+[data-bs-theme="dark"] .flatpickr-calendar .flatpickr-monthDropdown-months option:hover,
+[data-bs-theme="dark"] .flatpickr-calendar .flatpickr-monthDropdown-months option:focus {
+    background     : var(--vmc-primary) !important;
+    color          : #fff !important;
 }
 [data-bs-theme="dark"] .flatpickr-calendar .flatpickr-monthDropdown-months option:checked {
     background     : var(--vmc-primary) !important;

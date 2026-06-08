@@ -325,6 +325,7 @@ if (isset($_GET['msg'])) {
             $lleno   = count($lista) >= $cfg['limite'];
         ?>
         <div class="card mb-3" id="card-evento-<?php echo $tipo; ?>"
+             data-tipo="<?php echo $tipo; ?>"
              data-limite="<?php echo $cfg['limite']; ?>">
             <div class="card-header d-flex justify-content-between align-items-center py-2">
                 <span class="fw-bold small">
@@ -719,12 +720,48 @@ $(document).on('click', '.btn-agregar-evento', function () {
     $('#eventoUnDia').val(unDia ? '1' : '0');
     $('#modalEventoTitulo').text(label);
     $('#eventoHint').text(hint);
-    $('#eventoFechaInicio, #eventoFechaFin').val('');
+
+    // Limpiar campos y Flatpickr
+    const fpIni = document.getElementById('eventoFechaInicio')._flatpickr;
+    const fpFin = document.getElementById('eventoFechaFin')._flatpickr;
+    if (fpIni) fpIni.clear(); else $('#eventoFechaInicio').val('');
+    if (fpFin) fpFin.clear(); else $('#eventoFechaFin').val('');
 
     // Eventos de 1 día: ocultar fecha fin
     $('#eventoFechaFinWrap').toggle(!unDia);
 
     bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAgregarEvento')).show();
+});
+
+// Auto-relleno de fecha fin según tipo de evento
+$('#eventoFechaInicio').on('change', function () {
+    const tipo  = $('#eventoTipo').val();
+    const unDia = $('#eventoUnDia').val() === '1';
+    if (unDia || !this.value) return;
+
+    const d = new Date(this.value + 'T12:00:00');
+    if (isNaN(d)) return;
+
+    let fechaFin = null;
+
+    if (tipo === 'regional') {
+        // 3 días consecutivos: inicio + 2
+        d.setDate(d.getDate() + 2);
+        fechaFin = d.toISOString().slice(0, 10);
+    } else if (tipo === 'visita') {
+        // Martes a domingo: buscar el domingo de esa semana
+        // getDay(): 0=dom,1=lun,2=mar,...,6=sab
+        const diaSemana = d.getDay(); // debe ser martes (2)
+        const diffDomingo = diaSemana === 0 ? 0 : 7 - diaSemana;
+        d.setDate(d.getDate() + diffDomingo);
+        fechaFin = d.toISOString().slice(0, 10);
+    }
+
+    if (fechaFin) {
+        const fpFin = document.getElementById('eventoFechaFin')._flatpickr;
+        if (fpFin) fpFin.setDate(fechaFin, true);
+        else $('#eventoFechaFin').val(fechaFin);
+    }
 });
 
 // Guardar evento
@@ -774,7 +811,7 @@ let _pendingEvento = null;
 $(document).on('click', '.btn-eliminar-evento', function () {
     const id    = $(this).data('id');
     const $row  = $(`#evento-row-${id}`);
-    const tipo  = $row.closest('.card').attr('id').replace('card-evento-', '');
+    const tipo  = $row.closest('.card').data('tipo') || '';
     const fecha = $row.find('span.small').text().trim();
     _pendingEvento = { id, tipo };
     $('#confirmEventoFecha').text(fecha);
