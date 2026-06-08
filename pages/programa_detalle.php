@@ -363,13 +363,29 @@ try {
         $seccionActual = '';
         foreach ($secciones as $seccion):
             // Obtener asignaciones de esta sección
-            $asignaciones = fetchAll("
-                SELECT ap.*, ap.nombre_libre, CONCAT(p.nombre, ' ', p.apellido) as nombre_completo
-                FROM asignaciones_partes ap
-                LEFT JOIN personas p ON ap.persona_id = p.id
-                WHERE ap.seccion_id = ?
-                ORDER BY ap.orden_presentador
-            ", [$seccion['id']]);
+            // nombre_libre se incluye solo si la columna ya existe (database_update_v13.sql)
+            try {
+                $asignaciones = fetchAll("
+                    SELECT ap.id, ap.seccion_id, ap.persona_id, ap.rol,
+                           ap.orden_presentador, ap.nombre_libre,
+                           CONCAT(p.nombre, ' ', p.apellido) AS nombre_completo
+                    FROM asignaciones_partes ap
+                    LEFT JOIN personas p ON ap.persona_id = p.id
+                    WHERE ap.seccion_id = ?
+                    ORDER BY ap.orden_presentador
+                ", [$seccion['id']]);
+            } catch (Exception $e) {
+                // Fallback si nombre_libre aún no existe en la BD
+                $asignaciones = fetchAll("
+                    SELECT ap.id, ap.seccion_id, ap.persona_id, ap.rol,
+                           ap.orden_presentador, NULL AS nombre_libre,
+                           CONCAT(p.nombre, ' ', p.apellido) AS nombre_completo
+                    FROM asignaciones_partes ap
+                    LEFT JOIN personas p ON ap.persona_id = p.id
+                    WHERE ap.seccion_id = ?
+                    ORDER BY ap.orden_presentador
+                ", [$seccion['id']]);
+            }
             
             // Agrupar asignaciones por orden
             $asignacionesPorOrden = [];
@@ -448,6 +464,22 @@ try {
                         $colClase = $dosPersonas ? 'col-6' : 'col-12';
                         $usarTextoLibre = $esVisitaCircuito && ($tipo === 'Conductor/Lector');
                         ?>
+                        <?php if ($usarTextoLibre): ?>
+                        <!-- Visita de Circuito: un solo input "Super de Circuito" -->
+                        <?php
+                        $asigVisita  = $asignacionesPorOrden[1] ?? null;
+                        $nombreLibre = $asigVisita['nombre_libre'] ?? '';
+                        $selNombre   = $asigVisita['nombre_completo'] ?? '';
+                        ?>
+                        <label class="form-label small mb-1">Super de Circuito:</label>
+                        <input type="text"
+                               class="form-control nombre-libre-visita"
+                               data-seccion-id="<?php echo $seccion['id']; ?>"
+                               data-orden="1"
+                               data-rol="<?php echo htmlspecialchars($tipo); ?>"
+                               value="<?php echo htmlspecialchars($nombreLibre ?: $selNombre); ?>"
+                               placeholder="Nombre del superintendente">
+                        <?php else: ?>
                         <div class="row g-2">
                         <?php
                         for ($i = 1; $i <= $numAsignaciones; $i++):
@@ -456,19 +488,9 @@ try {
                             $lista       = $cap ? personasPara($cap) : [];
                             $selId       = $asignacionActual['persona_id'] ?? null;
                             $selNombre   = $asignacionActual['nombre_completo'] ?? '';
-                            $nombreLibre = $asignacionActual['nombre_libre'] ?? '';
                         ?>
                             <div class="<?php echo $colClase; ?>">
                                 <label class="form-label small mb-1"><?php echo $etiquetas[$i - 1]; ?></label>
-                                <?php if ($usarTextoLibre): ?>
-                                <input type="text"
-                                       class="form-control nombre-libre-visita"
-                                       data-seccion-id="<?php echo $seccion['id']; ?>"
-                                       data-orden="<?php echo $i; ?>"
-                                       data-rol="<?php echo htmlspecialchars($tipo); ?>"
-                                       value="<?php echo htmlspecialchars($nombreLibre ?: $selNombre); ?>"
-                                       placeholder="<?php echo htmlspecialchars($etiquetas[$i-1]); ?> (nombre libre)">
-                                <?php else: ?>
                                 <select class="form-select asignar-parte"
                                         style="width:100%;"
                                         data-seccion-id="<?php echo $seccion['id']; ?>"
@@ -479,10 +501,10 @@ try {
                                 <?php if ($cap && empty($lista)): ?>
                                     <small class="text-muted">Nadie habilitado para esta parte</small>
                                 <?php endif; ?>
-                                <?php endif; ?>
                             </div>
                         <?php endfor; ?>
                         </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
