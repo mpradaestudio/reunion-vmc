@@ -99,7 +99,7 @@ if (!$programa) {
     redirect('entre-semana.php');
 }
 
-// Obtener secciones
+// Obtener secciones (incluye titulo_visita para semanas de visita de circuito)
 $secciones = fetchAll("
     SELECT * FROM programa_secciones 
     WHERE programa_id = ? 
@@ -210,6 +210,19 @@ $semanaSiguiente = fetchOne(
     "SELECT id FROM programas_semanales WHERE fecha_inicio > ? ORDER BY fecha_inicio ASC LIMIT 1",
     [$programa['fecha_inicio']]
 );
+
+// ── Detectar si esta semana cae dentro de una Visita de Circuito ─────────
+$esVisitaCircuito = false;
+$visitaActiva     = null;
+try {
+    $visitaActiva = fetchOne("
+        SELECT * FROM eventos_especiales
+        WHERE tipo = 'visita'
+          AND ? BETWEEN DATE_SUB(fecha_inicio, INTERVAL 1 DAY) AND fecha_fin
+        LIMIT 1
+    ", [$programa['fecha_inicio']]);
+    $esVisitaCircuito = !empty($visitaActiva);
+} catch (Exception $e) { }
 ?>
 
 <!-- ── Fila 1: Volver | ← semana anterior · siguiente → | Exportar PDF ── -->
@@ -315,7 +328,7 @@ $semanaSiguiente = fetchOne(
     <div class="col-12">
         <div class="card">
             <div class="card-body">
-                <div class="d-flex justify-content-around text-center">
+                <div class="d-flex justify-content-around text-center align-items-center">
                     <div>
                         <i class="bi bi-music-note"></i>
                         <strong>Canción inicial:</strong> <?php echo $programa['cancion_inicial']; ?>
@@ -324,9 +337,18 @@ $semanaSiguiente = fetchOne(
                         <i class="bi bi-music-note"></i>
                         <strong>Canción media:</strong> <?php echo $programa['cancion_media']; ?>
                     </div>
-                    <div>
+                    <div class="d-flex align-items-center gap-2">
                         <i class="bi bi-music-note"></i>
-                        <strong>Canción final:</strong> <?php echo $programa['cancion_final']; ?>
+                        <strong>Canción final:</strong>
+                        <?php if ($esVisitaCircuito): ?>
+                        <input type="text" id="cancionFinalVisita"
+                               class="form-control form-control-sm"
+                               style="width:100px;"
+                               placeholder="Nº canción"
+                               value="<?php echo htmlspecialchars($programa['cancion_final_visita'] ?? ''); ?>">
+                        <?php else: ?>
+                        <?php echo $programa['cancion_final']; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -342,7 +364,7 @@ $semanaSiguiente = fetchOne(
         foreach ($secciones as $seccion):
             // Obtener asignaciones de esta sección
             $asignaciones = fetchAll("
-                SELECT ap.*, CONCAT(p.nombre, ' ', p.apellido) as nombre_completo
+                SELECT ap.*, ap.nombre_libre, CONCAT(p.nombre, ' ', p.apellido) as nombre_completo
                 FROM asignaciones_partes ap
                 LEFT JOIN personas p ON ap.persona_id = p.id
                 WHERE ap.seccion_id = ?
@@ -383,22 +405,33 @@ $semanaSiguiente = fetchOne(
             <div class="list-group-item">
                 <div class="row align-items-center">
                     <div class="col-md-6">
-                        <strong><?php echo htmlspecialchars($seccion['titulo']); ?></strong>
+                        <?php
+                        $esConductorLector = ($seccion['tipo_asignacion'] === 'Conductor/Lector');
+                        $esTituloEditable  = $esVisitaCircuito && $esConductorLector;
+                        $tituloMostrado    = ($esTituloEditable && !empty($seccion['titulo_visita']))
+                                            ? $seccion['titulo_visita']
+                                            : $seccion['titulo'];
+                        ?>
+                        <?php if ($esTituloEditable): ?>
+                        <input type="text" class="form-control form-control-sm fw-bold titulo-visita-input"
+                               data-seccion-id="<?php echo $seccion['id']; ?>"
+                               value="<?php echo htmlspecialchars($tituloMostrado); ?>"
+                               placeholder="Título del estudio (visita de circuito)">
+                        <?php if ($seccion['duracion']): ?>
+                            <span class="badge bg-secondary ms-1 mt-1"><?php echo $seccion['duracion']; ?> min.</span>
+                        <?php endif; ?>
+                        <?php else: ?>
+                        <strong><?php echo htmlspecialchars($tituloMostrado); ?></strong>
                         <?php if ($seccion['duracion']): ?>
                             <span class="badge bg-secondary ms-2"><?php echo $seccion['duracion']; ?> min.</span>
                         <?php endif; ?>
+                        <?php endif; ?>
                         <?php
-                        // Mostrar subtipo_actividad según la sección:
-                        // - TESOROS: nunca (sería referencia bíblica, no subtipo)
-                        // - Estudio bíblico congregación: nunca (tipo ya visible en dropdowns)
-                        // - MAESTROS / VIDA: mostrar si existe
                         $mostrarSubtipo = false;
                         if (!empty($seccion['subtipo_actividad'])
                             && $seccion['seccion'] !== 'TESOROS DE LA BIBLIA'
                             && $seccion['tipo_asignacion'] !== 'Conductor/Lector'
-                        ) {
-                            $mostrarSubtipo = true;
-                        }
+                        ) { $mostrarSubtipo = true; }
                         ?>
                         <?php if ($mostrarSubtipo): ?>
                             <br><small class="text-muted"><?php echo htmlspecialchars($seccion['subtipo_actividad']); ?></small>
@@ -406,33 +439,36 @@ $semanaSiguiente = fetchOne(
                     </div>
                     <div class="col-md-6">
                         <?php
-                        // Determinar cuántas asignaciones se necesitan y las etiquetas
-                        $tipo = $seccion['tipo_asignacion'];
+                        $tipo        = $seccion['tipo_asignacion'];
                         $dosPersonas = in_array($tipo, ['Estudiante/Ayudante', 'Conductor/Lector']);
                         $numAsignaciones = $dosPersonas ? 2 : 1;
-
-                        // Etiquetas según el tipo de asignación
                         $etiquetas = ['Asignado:', 'Asignado:'];
-                        if ($tipo === 'Estudiante/Ayudante') {
-                            $etiquetas = ['Estudiante:', 'Ayudante:'];
-                        } elseif ($tipo === 'Conductor/Lector') {
-                            $etiquetas = ['Conductor:', 'Lector:'];
-                        }
-
-                        // 50/50 cuando son dos personas; 100% cuando es una
+                        if ($tipo === 'Estudiante/Ayudante') $etiquetas = ['Estudiante:', 'Ayudante:'];
+                        elseif ($tipo === 'Conductor/Lector') $etiquetas = ['Conductor:', 'Lector:'];
                         $colClase = $dosPersonas ? 'col-6' : 'col-12';
+                        $usarTextoLibre = $esVisitaCircuito && ($tipo === 'Conductor/Lector');
                         ?>
                         <div class="row g-2">
                         <?php
                         for ($i = 1; $i <= $numAsignaciones; $i++):
                             $asignacionActual = $asignacionesPorOrden[$i] ?? null;
-                            $cap       = capacidadRequerida($seccion['seccion'], $seccion['titulo'], $i);
-                            $lista     = $cap ? personasPara($cap) : [];
-                            $selId     = $asignacionActual['persona_id'] ?? null;
-                            $selNombre = $asignacionActual['nombre_completo'] ?? '';
+                            $cap         = capacidadRequerida($seccion['seccion'], $seccion['titulo'], $i);
+                            $lista       = $cap ? personasPara($cap) : [];
+                            $selId       = $asignacionActual['persona_id'] ?? null;
+                            $selNombre   = $asignacionActual['nombre_completo'] ?? '';
+                            $nombreLibre = $asignacionActual['nombre_libre'] ?? '';
                         ?>
                             <div class="<?php echo $colClase; ?>">
                                 <label class="form-label small mb-1"><?php echo $etiquetas[$i - 1]; ?></label>
+                                <?php if ($usarTextoLibre): ?>
+                                <input type="text"
+                                       class="form-control nombre-libre-visita"
+                                       data-seccion-id="<?php echo $seccion['id']; ?>"
+                                       data-orden="<?php echo $i; ?>"
+                                       data-rol="<?php echo htmlspecialchars($tipo); ?>"
+                                       value="<?php echo htmlspecialchars($nombreLibre ?: $selNombre); ?>"
+                                       placeholder="<?php echo htmlspecialchars($etiquetas[$i-1]); ?> (nombre libre)">
+                                <?php else: ?>
                                 <select class="form-select asignar-parte"
                                         style="width:100%;"
                                         data-seccion-id="<?php echo $seccion['id']; ?>"
@@ -442,6 +478,7 @@ $semanaSiguiente = fetchOne(
                                 </select>
                                 <?php if ($cap && empty($lista)): ?>
                                     <small class="text-muted">Nadie habilitado para esta parte</small>
+                                <?php endif; ?>
                                 <?php endif; ?>
                             </div>
                         <?php endfor; ?>
@@ -505,6 +542,50 @@ $('.asignar-parte').on('change', function () {
             else APP.showNotification(r.message, 'danger');
         });
     }
+});
+
+// ── Visita de Circuito: campos editables ─────────────────────
+
+// Canción final libre (debounce 600ms)
+let cancionFinalTimer;
+$(document).on('input', '#cancionFinalVisita', function () {
+    const val = $(this).val().trim();
+    clearTimeout(cancionFinalTimer);
+    cancionFinalTimer = setTimeout(() => {
+        $.post('../api/programas.php', {
+            action: 'save_cancion_final_visita', programa_id: programaId, cancion_final_visita: val
+        }, r => { if (!r.success) APP.showNotification(r.message, 'danger'); });
+    }, 600);
+});
+
+// Título personalizado del Estudio Bíblico (debounce 600ms)
+let tituloVisitaTimers = {};
+$(document).on('input', '.titulo-visita-input', function () {
+    const seccionId = $(this).data('seccion-id');
+    const val       = $(this).val().trim();
+    clearTimeout(tituloVisitaTimers[seccionId]);
+    tituloVisitaTimers[seccionId] = setTimeout(() => {
+        $.post('../api/programas.php', {
+            action: 'save_titulo_visita', seccion_id: seccionId, titulo_visita: val
+        }, r => { if (!r.success) APP.showNotification(r.message, 'danger'); });
+    }, 600);
+});
+
+// Nombre libre de Conductor/Lector (debounce 600ms)
+let nombreLibreTimers = {};
+$(document).on('input', '.nombre-libre-visita', function () {
+    const seccionId = $(this).data('seccion-id');
+    const orden     = $(this).data('orden');
+    const rol       = $(this).data('rol');
+    const val       = $(this).val().trim();
+    const key       = seccionId + '_' + orden;
+    clearTimeout(nombreLibreTimers[key]);
+    nombreLibreTimers[key] = setTimeout(() => {
+        $.post('../api/programas.php', {
+            action: 'save_nombre_libre_visita', seccion_id: seccionId,
+            orden, rol, nombre_libre: val
+        }, r => { if (!r.success) APP.showNotification(r.message, 'danger'); });
+    }, 600);
 });
 
 // ── Autollenado ──────────────────────────────────────────────

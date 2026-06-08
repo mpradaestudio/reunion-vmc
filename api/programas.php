@@ -345,6 +345,69 @@ if ($method === 'GET') {
     } elseif ($action === 'autofill' && !empty($datos['programa_id'])) {
         $resultado = $api->autofill((int)$datos['programa_id']);
 
+    } elseif ($action === 'save_titulo_visita') {
+        $seccionId    = (int)($datos['seccion_id'] ?? 0);
+        $tituloVisita = trim($datos['titulo_visita'] ?? '');
+        if (!$seccionId) {
+            $resultado = ['success' => false, 'message' => 'seccion_id requerido'];
+        } else {
+            try {
+                $pdo = getDBConnection();
+                $pdo->prepare("UPDATE programa_secciones SET titulo_visita = ? WHERE id = ?")
+                    ->execute([$tituloVisita ?: null, $seccionId]);
+                $resultado = ['success' => true, 'message' => 'Título guardado'];
+            } catch (Exception $e) {
+                $resultado = ['success' => false, 'message' => $e->getMessage()];
+            }
+        }
+
+    } elseif ($action === 'save_cancion_final_visita') {
+        $programaId    = (int)($datos['programa_id'] ?? 0);
+        $cancionVisita = trim($datos['cancion_final_visita'] ?? '');
+        if (!$programaId) {
+            $resultado = ['success' => false, 'message' => 'programa_id requerido'];
+        } else {
+            try {
+                $pdo = getDBConnection();
+                $pdo->prepare("UPDATE programas_semanales SET cancion_final_visita = ? WHERE id = ?")
+                    ->execute([$cancionVisita ?: null, $programaId]);
+                $resultado = ['success' => true, 'message' => 'Canción guardada'];
+            } catch (Exception $e) {
+                $resultado = ['success' => false, 'message' => $e->getMessage()];
+            }
+        }
+
+    } elseif ($action === 'save_nombre_libre_visita') {
+        $seccionId   = (int)($datos['seccion_id'] ?? 0);
+        $orden       = (int)($datos['orden'] ?? 1);
+        $nombreLibre = trim($datos['nombre_libre'] ?? '');
+        $rol         = $datos['rol'] ?? 'Conductor/Lector';
+        if (!$seccionId) {
+            $resultado = ['success' => false, 'message' => 'seccion_id requerido'];
+        } else {
+            try {
+                $pdo    = getDBConnection();
+                $existe = fetchOne(
+                    "SELECT id FROM asignaciones_partes WHERE seccion_id = ? AND orden_presentador = ?",
+                    [$seccionId, $orden]
+                );
+                if ($existe) {
+                    $pdo->prepare("UPDATE asignaciones_partes
+                                   SET persona_id = NULL, nombre_libre = ?, rol = ?
+                                   WHERE seccion_id = ? AND orden_presentador = ?")
+                        ->execute([$nombreLibre ?: null, $rol, $seccionId, $orden]);
+                } else {
+                    $pdo->prepare("INSERT INTO asignaciones_partes
+                                   (seccion_id, persona_id, nombre_libre, rol, orden_presentador)
+                                   VALUES (?, NULL, ?, ?, ?)")
+                        ->execute([$seccionId, $nombreLibre ?: null, $rol, $orden]);
+                }
+                $resultado = ['success' => true, 'message' => 'Nombre guardado'];
+            } catch (Exception $e) {
+                $resultado = ['success' => false, 'message' => $e->getMessage()];
+            }
+        }
+
     } else {
         $resultado = ['success' => false, 'message' => 'Acción no válida'];
     }
