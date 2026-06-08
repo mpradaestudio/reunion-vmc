@@ -223,8 +223,13 @@ try {
         LIMIT 1
     ", [$programa['fecha_inicio']]);
     if (!empty($visitaActiva)) {
-        $esVisitaCircuito    = true;
-        $superCircuitoNombre = $visitaActiva['notas'] ?? '';
+        $esVisitaCircuito = true;
+        // notas puede ser JSON (visita) o texto plano
+        $notasRaw = $visitaActiva['notas'] ?? '';
+        $notasData = json_decode($notasRaw, true);
+        $superCircuitoNombre = is_array($notasData)
+            ? ($notasData['nombre'] ?? '')
+            : $notasRaw;
     }
 } catch (Exception $e) { }
 ?>
