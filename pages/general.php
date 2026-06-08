@@ -350,23 +350,46 @@ if (isset($_GET['msg'])) {
                 </p>
                 <?php else: ?>
                 <?php foreach ($lista as $ev): ?>
-                <div class="d-flex justify-content-between align-items-center
-                            border rounded px-2 py-1 mb-1 evento-row"
+                <div class="border rounded px-2 py-1 mb-1 evento-row"
                      id="evento-row-<?php echo $ev['id']; ?>">
-                    <span class="small">
-                        <i class="bi bi-calendar3 me-1 text-muted"></i>
-                        <?php echo fmtRango($ev['fecha_inicio'], $ev['fecha_fin'], $meses); ?>
-                        <?php if (!empty($ev['notas'])): ?>
-                        <span class="badge bg-info-subtle text-info ms-1" style="font-size:.7rem;">
-                            <?php echo htmlspecialchars($ev['notas']); ?>
+                    <!-- Fila fecha + eliminar -->
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small">
+                            <i class="bi bi-calendar3 me-1 text-muted"></i>
+                            <?php echo fmtRango($ev['fecha_inicio'], $ev['fecha_fin'], $meses); ?>
+                            <?php if (!empty($ev['notas']) && $tipo !== 'visita'): ?>
+                            <span class="badge bg-info-subtle text-info ms-1" style="font-size:.7rem;">
+                                <?php echo htmlspecialchars($ev['notas']); ?>
+                            </span>
+                            <?php endif; ?>
                         </span>
-                        <?php endif; ?>
-                    </span>
-                    <button class="btn btn-link btn-sm text-danger p-0 ms-2 btn-eliminar-evento"
-                            data-id="<?php echo $ev['id']; ?>"
-                            title="Eliminar">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
+                        <button class="btn btn-link btn-sm text-danger p-0 ms-2 btn-eliminar-evento"
+                                data-id="<?php echo $ev['id']; ?>"
+                                title="Eliminar">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <?php if ($tipo === 'visita'): ?>
+                    <!-- Input Super de Circuito + checkbox Sustituto -->
+                    <div class="mt-1 input-group input-group-sm">
+                        <input type="text"
+                               class="form-control super-circuito-input"
+                               data-evento-id="<?php echo $ev['id']; ?>"
+                               data-nombre-original="<?php echo htmlspecialchars($ev['notas'] ?? ''); ?>"
+                               value="<?php echo htmlspecialchars($ev['notas'] ?? ''); ?>"
+                               placeholder="Nombre del superintendente">
+                        <div class="input-group-text gap-1">
+                            <input class="form-check-input mt-0 chk-sustituto"
+                                   type="checkbox"
+                                   id="chkSustituto_<?php echo $ev['id']; ?>"
+                                   data-evento-id="<?php echo $ev['id']; ?>">
+                            <label class="form-check-label small"
+                                   for="chkSustituto_<?php echo $ev['id']; ?>">
+                                Sustituto
+                            </label>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 <?php endforeach; ?>
                 <?php endif; ?>
@@ -840,6 +863,46 @@ $(document).on('submit', '#formAgregarEvento', function (e) {
         },
         function () { $btn.prop('disabled', false); }
     );
+});
+
+// ── Super de Circuito: guardar nombre con debounce ───────────
+let superCircuitoTimers = {};
+$(document).on('input', '.super-circuito-input', function () {
+    const eventoId = $(this).data('evento-id');
+    const val      = $(this).val().trim();
+    clearTimeout(superCircuitoTimers[eventoId]);
+    superCircuitoTimers[eventoId] = setTimeout(() => {
+        apiPost('../api/eventos.php',
+            { action: 'update_notas', id: eventoId, notas: val },
+            () => {},
+            () => APP.showNotification('Error al guardar el nombre', 'danger')
+        );
+    }, 600);
+});
+
+// ── Checkbox Sustituto ───────────────────────────────────────
+$(document).on('change', '.chk-sustituto', function () {
+    const eventoId = $(this).data('evento-id');
+    const $input   = $(`.super-circuito-input[data-evento-id="${eventoId}"]`);
+
+    if (this.checked) {
+        // Guardar el nombre original antes de borrar
+        $input.data('nombre-original', $input.val());
+        $input.val('').focus();
+        // Limpiar en BD también
+        apiPost('../api/eventos.php',
+            { action: 'update_notas', id: eventoId, notas: '' },
+            () => {}
+        );
+    } else {
+        // Restaurar nombre original
+        const original = $input.data('nombre-original') || '';
+        $input.val(original);
+        apiPost('../api/eventos.php',
+            { action: 'update_notas', id: eventoId, notas: original },
+            () => {}
+        );
+    }
 });
 
 // Eliminar evento

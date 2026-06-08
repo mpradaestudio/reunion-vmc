@@ -145,4 +145,20 @@ if ($action === 'delete') {
     }
 }
 
+/* ── update_notas ───────────────────────────────────────────── */
+if ($action === 'update_notas') {
+    $id    = (int)($datos['id'] ?? 0);
+    $notas = trim($datos['notas'] ?? '');
+    if (!$id) jsonResponse(['success' => false, 'message' => 'ID no válido']);
+
+    try {
+        $pdo = getDBConnection();
+        $pdo->prepare("UPDATE eventos_especiales SET notas = ? WHERE id = ?")
+            ->execute([$notas ?: null, $id]);
+        jsonResponse(['success' => true, 'message' => 'Nombre guardado']);
+    } catch (Exception $e) {
+        jsonResponse(['success' => false, 'message' => 'Error al guardar']);
+    }
+}
+
 jsonResponse(['success' => false, 'message' => 'Acción no válida']);

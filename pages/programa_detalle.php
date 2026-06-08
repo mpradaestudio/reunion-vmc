@@ -212,8 +212,9 @@ $semanaSiguiente = fetchOne(
 );
 
 // ── Detectar si esta semana cae dentro de una Visita de Circuito ─────────
-$esVisitaCircuito = false;
-$visitaActiva     = null;
+$esVisitaCircuito    = false;
+$visitaActiva        = null;
+$superCircuitoNombre = '';
 try {
     $visitaActiva = fetchOne("
         SELECT * FROM eventos_especiales
@@ -221,7 +222,10 @@ try {
           AND ? BETWEEN DATE_SUB(fecha_inicio, INTERVAL 1 DAY) AND fecha_fin
         LIMIT 1
     ", [$programa['fecha_inicio']]);
-    $esVisitaCircuito = !empty($visitaActiva);
+    if (!empty($visitaActiva)) {
+        $esVisitaCircuito    = true;
+        $superCircuitoNombre = $visitaActiva['notas'] ?? '';
+    }
 } catch (Exception $e) { }
 ?>
 
@@ -470,6 +474,8 @@ try {
                         $asigVisita  = $asignacionesPorOrden[1] ?? null;
                         $nombreLibre = $asigVisita['nombre_libre'] ?? '';
                         $selNombre   = $asigVisita['nombre_completo'] ?? '';
+                        // Pre-rellenar desde eventos_especiales.notas si no hay asignación guardada
+                        $valorInicial = $nombreLibre ?: ($selNombre ?: $superCircuitoNombre);
                         ?>
                         <label class="form-label small mb-1">Super de Circuito:</label>
                         <input type="text"
@@ -477,7 +483,7 @@ try {
                                data-seccion-id="<?php echo $seccion['id']; ?>"
                                data-orden="1"
                                data-rol="<?php echo htmlspecialchars($tipo); ?>"
-                               value="<?php echo htmlspecialchars($nombreLibre ?: $selNombre); ?>"
+                               value="<?php echo htmlspecialchars($valorInicial); ?>"
                                placeholder="Nombre del superintendente">
                         <?php else: ?>
                         <div class="row g-2">
