@@ -46,7 +46,7 @@ $msg = $_GET['msg'] ?? '';
 <!-- Cabecera -->
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
     <h1 class="h2 mb-0">
-        <i class="bi bi-calendar2-week me-2"></i>Reunión fin de Semana
+        <i class="bi bi-calendar2-week me-2"></i>Reunión fin de semana
     </h1>
     <?php if ($tableExists && !empty($semanas)): ?>
     <div class="d-flex flex-wrap align-items-center gap-2">
