@@ -185,15 +185,17 @@ $msg = $_GET['msg'] ?? '';
     </div>
     <?php endforeach; ?>
 </div>
-<!-- Barra de acciones en lote -->
-<div class="d-flex justify-content-center mt-4 d-none" id="batchActions">
-    <div class="batch-actions">
-        <span class="batch-count" id="batchCount">0 seleccionados</span>
-        <button class="btn btn-sm btn-outline-secondary" id="btnDeselAll">
-            <i class="bi bi-x-circle"></i> Deseleccionar todo
+<!-- Barra flotante de acciones en lote -->
+<div class="bulk-bar" id="batchActions" style="display:none;">
+    <span class="bulk-bar-count">
+        <strong id="batchCount">0</strong> seleccionado(s)
+    </span>
+    <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-light" id="btnDeselAll">
+            <i class="bi bi-x-circle me-1"></i>Deseleccionar
         </button>
         <button class="btn btn-sm btn-danger" id="btnEliminarLote">
-            <i class="bi bi-trash"></i> Eliminar seleccionados
+            <i class="bi bi-trash me-1"></i>Eliminar
         </button>
     </div>
 </div>
@@ -404,10 +406,10 @@ function updateBatchBar() {
     if (!bar) return;
     if (checked.length > 0) {
         document.getElementById('batchCount').textContent =
-            checked.length + ' seleccionada' + (checked.length > 1 ? 's' : '');
-        bar.classList.remove('d-none');
+            checked.length + ' seleccionado' + (checked.length > 1 ? 's' : '');
+        $(bar).fadeIn(150);
     } else {
-        bar.classList.add('d-none');
+        $(bar).fadeOut(150);
     }
 }
 

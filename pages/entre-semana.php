@@ -220,15 +220,17 @@ $mesNombre = [
     <p class="mt-3 text-muted">No hay programas con ese filtro.</p>
 </div>
 
-<!-- Barra de acciones en lote — centrada, debajo de todos los boxes -->
-<div class="d-flex justify-content-center mt-4 d-none" id="batchActions">
-    <div class="batch-actions">
-        <span class="batch-count" id="batchCount">0 seleccionados</span>
-        <button class="btn btn-sm btn-outline-secondary" id="btnDeselAll">
-            <i class="bi bi-x-circle"></i> Deseleccionar todo
+<!-- Barra flotante de acciones en lote -->
+<div class="bulk-bar" id="batchActions" style="display:none;">
+    <span class="bulk-bar-count">
+        <strong id="batchCount">0</strong> seleccionado(s)
+    </span>
+    <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-light" id="btnDeselAll">
+            <i class="bi bi-x-circle me-1"></i>Deseleccionar
         </button>
         <button class="btn btn-sm btn-danger" id="btnEliminarLote">
-            <i class="bi bi-trash"></i> Eliminar seleccionados
+            <i class="bi bi-trash me-1"></i>Eliminar
         </button>
     </div>
 </div>
@@ -353,9 +355,9 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!bar) return;
         if (checked.length > 0) {
             countEl.textContent = checked.length + ' seleccionado' + (checked.length > 1 ? 's' : '');
-            bar.classList.remove('d-none');
+            $(bar).fadeIn(150);
         } else {
-            bar.classList.add('d-none');
+            $(bar).fadeOut(150);
         }
     }
 
