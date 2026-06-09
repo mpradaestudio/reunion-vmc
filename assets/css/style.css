@@ -2066,3 +2066,9 @@ button.sidebar-item {
     border-color     : var(--vmc-border-strong);
     background-color : var(--vmc-surface-2);
 }
+
+
+/* card-title h5 con clases mb-0 pe-2: peso 500 (entre-semana y fin-de-semana) */
+h5.card-title.mb-0.pe-2 {
+    font-weight: 500;
+}
