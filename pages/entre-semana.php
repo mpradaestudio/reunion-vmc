@@ -565,22 +565,19 @@ $('#btnFdsSobreescribir').on('click', function () {
         return;
     }
     const $btn = $(this).prop('disabled', true)
-        .html('<span class="spinner-border spinner-border-sm me-1"></span>Sobreescribiendo...');
+        .html('<span class="spinner-border spinner-border-sm me-1"></span>Reseteando...');
 
-    // Eliminar la semana FDS existente y recrearla vacía con las mismas fechas
-    $.post('../api/programas_fds.php', { action: 'delete', id: _fdsId }, function () {
-        $.post('../api/programas_fds.php', {
-            action      : 'create',
-            fecha_inicio: _fdsExtraidoFechaInicio,
-            fecha_fin   : _fdsExtraidoFechaFin
-        }, function () {
+    // Resetear la semana FDS existente: vaciar campos y eliminar asignaciones
+    $.post('../api/programas_fds.php', { action: 'reset', id: _fdsId }, function (res) {
+        if (res.success) {
             window.location.href = 'entre-semana.php?msg=extraido_con_fds';
-        }).fail(function () {
-            window.location.href = 'entre-semana.php?msg=extraido';
-        });
+        } else {
+            $btn.prop('disabled', false).html('<i class="bi bi-arrow-clockwise"></i> Sobreescribir');
+            APP.showNotification(res.message || 'Error al resetear', 'danger');
+        }
     }).fail(function () {
         $btn.prop('disabled', false).html('<i class="bi bi-arrow-clockwise"></i> Sobreescribir');
-        APP.showNotification('Error al sobreescribir', 'danger');
+        APP.showNotification('Error al conectar', 'danger');
     });
 });
 

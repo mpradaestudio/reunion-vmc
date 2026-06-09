@@ -109,6 +109,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // ── Resetear semana FDS (vaciar campos, eliminar asignaciones) ───────
+    if ($action === 'reset') {
+        $id = (int)($_POST['id'] ?? 0);
+        if (!$id) jsonResponse(['success' => false, 'message' => 'ID no válido']);
+        $pdo->prepare("DELETE FROM asignaciones_fds WHERE programa_fds_id = ?")->execute([$id]);
+        $pdo->prepare("
+            UPDATE programas_fds
+            SET dp_tema = '', dp_cancion = '', dp_bosquejo_id = NULL, notas = ''
+            WHERE id = ?
+        ")->execute([$id]);
+        jsonResponse(['success' => true, 'message' => 'Semana reseteada']);
+    }
+
     // ── Eliminar semana ───────────────────────────────────────────
     if ($action === 'delete') {
         $id = (int)($_POST['id'] ?? 0);

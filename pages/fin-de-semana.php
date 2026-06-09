@@ -322,6 +322,31 @@ $(document).on('submit', '#formNuevaSemana', function (e) {
 });
 $(document).on('hidden.bs.modal', '#modalNuevaSemana', () => $('#formNuevaSemana')[0].reset());
 
+/* ── Inicializar Flatpickr al abrir el modal ─────────────────── */
+$(document).on('shown.bs.modal', '#modalNuevaSemana', function () {
+    const elIni = document.getElementById('fds_fecha_inicio');
+    const elFin = document.getElementById('fds_fecha_fin');
+    if (typeof flatpickr === 'undefined') return;
+
+    // Inicializar solo si no están ya inicializados
+    if (!elIni._flatpickr) {
+        flatpickr(elIni, {
+            locale    : 'es',
+            dateFormat: 'Y-m-d',
+            altInput  : true,
+            altFormat : 'j M Y',
+        });
+    }
+    if (!elFin._flatpickr) {
+        flatpickr(elFin, {
+            locale    : 'es',
+            dateFormat: 'Y-m-d',
+            altInput  : true,
+            altFormat : 'j M Y',
+        });
+    }
+});
+
 /* ── Auto-completar fecha fin ───────────────────────────────── */
 $('#fds_fecha_inicio').on('change', function () {
     const d = new Date(this.value + 'T12:00:00');
