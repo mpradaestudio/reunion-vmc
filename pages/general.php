@@ -411,7 +411,7 @@ if (isset($_GET['msg'])) {
 </div><!-- /row -->
 
 <!-- ── Modal: Agregar Evento ────────────────────────────────── -->
-<div class="modal fade" id="modalAgregarEvento" tabindex="-1">
+<div class="modal fade" id="modalAgregarEvento" tabindex="-1" data-bs-focus="false">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
             <div class="modal-header py-2">
