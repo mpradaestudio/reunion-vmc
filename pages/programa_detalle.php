@@ -274,9 +274,18 @@ try {
     </a>
 </div>
 
-<!-- ── Fila 2: Título de la semana + botón Autollenado ── -->
+<!-- ── Fila 2: Título de la semana + referencia bíblica + botón Autollenado ── -->
 <div class="d-flex justify-content-between align-items-center mb-4 gap-2">
-    <h1 class="h2 mb-0"><?php echo htmlspecialchars($programa['titulo_semana']); ?></h1>
+    <div>
+        <h1 class="h2 mb-0">
+            <?php echo htmlspecialchars($programa['titulo_semana']); ?>
+            <?php if (!empty($programa['referencia_biblica'])): ?>
+            <span class="text-muted fw-normal"> | <?php echo htmlspecialchars(
+                mb_convert_case($programa['referencia_biblica'], MB_CASE_TITLE, 'UTF-8')
+            ); ?></span>
+            <?php endif; ?>
+        </h1>
+    </div>
     <button class="btn btn-outline-primary" id="btnAutollenado">
         <i class="bi bi-magic me-1"></i> Autollenado
     </button>
