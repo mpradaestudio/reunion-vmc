@@ -136,11 +136,11 @@ $proximosProgramas = fetchAll("
                         <div class="col-md-4 col-sm-6">
                             <div class="card programa-card <?php echo $claseEstado; ?> h-100 no-hover">
                                 <div class="card-body">
-                                    <!-- Título (ya incluye el rango de fechas) -->
-                                    <div class="d-flex justify-content-between align-items-start mb-3">
-                                        <h6 class="card-title fw-bold mb-0 pe-2">
+                                    <!-- Título -->
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-0 pe-2">
                                             <?php echo htmlspecialchars($programa['titulo_semana']); ?>
-                                        </h6>
+                                        </h5>
                                         <div class="d-flex align-items-center gap-2 flex-shrink-0">
                                             <?php echo $badgeHtml; ?>
                                             <?php if (!empty($programa['url_fuente'])): ?>
