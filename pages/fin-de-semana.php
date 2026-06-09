@@ -249,7 +249,7 @@ $msg = $_GET['msg'] ?? '';
 </div>
 
 <!-- Modal: Reunión fin de semana -->
-<div class="modal fade" id="modalNuevaSemana" tabindex="-1">
+<div class="modal fade" id="modalNuevaSemana" tabindex="-1" data-bs-focus="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
