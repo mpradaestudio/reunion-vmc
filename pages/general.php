@@ -351,7 +351,8 @@ if (isset($_GET['msg'])) {
                 <?php else: ?>
                 <?php foreach ($lista as $ev): ?>
                 <div class="border rounded px-2 py-1 mb-1 evento-row"
-                     id="evento-row-<?php echo $ev['id']; ?>">
+                     id="evento-row-<?php echo $ev['id']; ?>"
+                     data-fecha="<?php echo $ev['fecha_inicio']; ?>">
                     <!-- Fila fecha + eliminar -->
                     <div class="d-flex justify-content-between align-items-center">
                         <span class="small">
@@ -424,24 +425,30 @@ if (isset($_GET['msg'])) {
                 <div class="modal-body">
                     <p class="text-muted small mb-3" id="eventoHint"></p>
 
-                    <div class="mb-3">
-                        <label for="eventoFechaInicio" class="form-label fw-semibold small">
-                            Fecha inicio
-                        </label>
-                        <input type="date" class="form-control form-control-sm vmc-select-primary"
-                               id="eventoFechaInicio"
-                               data-fp-mode="single"
-                               data-fp-linked="eventoFechaFin"
-                               required>
+                    <!-- Input título — solo para Asamblea Regional -->
+                    <div id="eventoTituloWrap" class="mb-3" style="display:none;">
+                        <label for="eventoTitulo" class="form-label fw-semibold small">Título de la Asamblea</label>
+                        <input type="text" class="form-control form-control-sm"
+                               id="eventoTitulo"
+                               placeholder="Ej: Cumplamos nuestro ministerio con plenitud">
                     </div>
 
-                    <div id="eventoFechaFinWrap" class="mb-3">
-                        <label for="eventoFechaFin" class="form-label fw-semibold small">
-                            Fecha fin
-                        </label>
-                        <input type="date" class="form-control form-control-sm vmc-select-primary"
-                               id="eventoFechaFin"
-                               data-fp-mode="single">
+                    <!-- Fechas en mismo row -->
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label for="eventoFechaInicio" class="form-label fw-semibold small">Fecha inicio</label>
+                            <input type="date" class="form-control form-control-sm vmc-select-primary"
+                                   id="eventoFechaInicio"
+                                   data-fp-mode="single"
+                                   data-fp-linked="eventoFechaFin"
+                                   required>
+                        </div>
+                        <div id="eventoFechaFinWrap" class="col">
+                            <label for="eventoFechaFin" class="form-label fw-semibold small">Fecha fin</label>
+                            <input type="date" class="form-control form-control-sm vmc-select-primary"
+                                   id="eventoFechaFin"
+                                   data-fp-mode="single">
+                        </div>
                     </div>
 
                     <!-- Solo para Asamblea de Circuito -->
@@ -795,7 +802,8 @@ function buildEventoRow(ev) {
 
     return `
         <div class="border rounded px-2 py-1 mb-1 evento-row"
-             id="evento-row-${ev.id}">
+             id="evento-row-${ev.id}"
+             data-fecha="${ev.fecha_inicio || ''}">
             <div class="d-flex justify-content-between align-items-center">
                 <span class="small">
                     <i class="bi bi-calendar3 me-1 text-muted"></i>${label}${notaBadge}
@@ -836,8 +844,12 @@ $(document).on('click', '.btn-agregar-evento', function () {
         }
     }
 
-    // Eventos de 1 día: ocultar fecha fin
+    // Eventos de 1 día: ocultar columna fecha fin
     $('#eventoFechaFinWrap').toggle(!unDia);
+
+    // Título: solo para Asamblea Regional
+    $('#eventoTitulo').val('');
+    $('#eventoTituloWrap').toggle(tipo === 'regional');
 
     // Opciones de circuito: solo para Asamblea de Circuito
     $('input[name="circuito_tipo"]').prop('checked', false);
@@ -897,17 +909,30 @@ $(document).on('submit', '#formAgregarEvento', function (e) {
 
     apiPost('../api/eventos.php',
         { action: 'create', tipo, fecha_inicio: fechaIni, fecha_fin: fechaFin,
-          notas: tipo === 'circuito' ? ($('input[name="circuito_tipo"]:checked').val() || '') : '' },
+          notas: tipo === 'circuito' ? ($('input[name="circuito_tipo"]:checked').val() || '')
+               : tipo === 'regional' ? ($.trim($('#eventoTitulo').val()) || '')
+               : '' },
         function (res) {
             $btn.prop('disabled', false);
             bootstrap.Modal.getInstance(document.getElementById('modalAgregarEvento'))?.hide();
-            $('#eventoFechaInicio, #eventoFechaFin').val('');
+            $('#eventoFechaInicio, #eventoFechaFin, #eventoTitulo').val('');
 
             const $lista = $(`#eventos-lista-${tipo}`);
             $lista.find('.msg-empty-evento').remove();
-            $lista.append(buildEventoRow(res.data));
 
-            // Ocultar botón "+" si se llegó al límite (contar filas actuales)
+            // Insertar ordenado por fecha ascendente
+            const newDate = res.data.fecha_inicio;
+            let insertado = false;
+            $lista.find('.evento-row').each(function () {
+                const rowFecha = $(this).data('fecha') || '';
+                if (!insertado && newDate < rowFecha) {
+                    $(this).before(buildEventoRow(res.data));
+                    insertado = true;
+                }
+            });
+            if (!insertado) $lista.append(buildEventoRow(res.data));
+
+            // Ocultar botón "+" si se llegó al límite
             const $card  = $(`#card-evento-${tipo}`);
             const limite = parseInt($card.data('limite') || 99);
             if ($lista.find('.evento-row').length >= limite) {
