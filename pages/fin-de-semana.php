@@ -148,7 +148,7 @@ $msg = $_GET['msg'] ?? '';
 
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h5 class="card-title mb-0 pe-2 fw-bold"><?php echo $fechaLabel; ?></h5>
+                    <h5 class="card-title mb-0 pe-2"><?php echo $fechaLabel; ?></h5>
                     <?php echo $badgeHtml; ?>
                 </div>
 

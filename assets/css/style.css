@@ -2023,3 +2023,46 @@ button.sidebar-item {
 [data-bs-theme="dark"] .flatpickr-input {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%239bb6e6' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM2 2a1 1 0 0 0-1 1v1h14V3a1 1 0 0 0-1-1H2zm13 3H1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5z'/%3E%3C/svg%3E");
 }
+
+
+/* ============================================================
+   46. CONSISTENCIA GLOBAL — Tipografía y controles
+   ============================================================ */
+
+/* card-title: peso normal en todas las páginas
+   (los headers de sección con bg primario mantienen fw-bold inline) */
+.card-title {
+    font-weight : 400;
+    color       : var(--vmc-text);
+}
+
+/* Checkboxes y radios — estado inactivo */
+.form-check-input {
+    border-color     : var(--vmc-border-strong);
+    background-color : var(--vmc-surface);
+    transition       : background-color 120ms ease, border-color 120ms ease;
+}
+
+/* Checkboxes y radios — estado activo: azul del proyecto */
+.form-check-input:checked {
+    background-color : var(--vmc-primary) !important;
+    border-color     : var(--vmc-primary) !important;
+}
+
+/* Indeterminate (bulk-edit toggles) */
+.form-check-input:indeterminate {
+    background-color : var(--vmc-primary);
+    border-color     : var(--vmc-primary);
+}
+
+/* Focus ring azul consistente */
+.form-check-input:focus {
+    border-color : var(--vmc-primary);
+    box-shadow   : 0 0 0 3px rgba(var(--bs-primary-rgb), 0.15);
+}
+
+/* Dark mode: borde visible en inactivo */
+[data-bs-theme="dark"] .form-check-input {
+    border-color     : var(--vmc-border-strong);
+    background-color : var(--vmc-surface-2);
+}
