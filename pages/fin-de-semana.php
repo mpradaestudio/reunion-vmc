@@ -248,13 +248,13 @@ $msg = $_GET['msg'] ?? '';
     </div>
 </div>
 
-<!-- Modal: Nueva Semana -->
+<!-- Modal: Reunión fin de semana -->
 <div class="modal fade" id="modalNuevaSemana" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="bi bi-calendar2-week"></i> Nueva Semana Fin de Semana
+                    <i class="bi bi-calendar2-week"></i> Reunión fin de semana
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -263,29 +263,13 @@ $msg = $_GET['msg'] ?? '';
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Fecha inicio *</label>
-                            <input type="date" class="form-control" id="fds_fecha_inicio"
-                                   name="fecha_inicio"
-                                   data-fp-mode="single"
-                                   data-fp-linked="fds_fecha_fin"
-                                   required>
+                            <input type="text" class="form-control" id="fds_fecha_inicio"
+                                   name="fecha_inicio" placeholder="Selecciona una fecha" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Fecha fin *</label>
-                            <input type="date" class="form-control" id="fds_fecha_fin"
-                                   name="fecha_fin"
-                                   data-fp-mode="single"
-                                   required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Tema del discurso</label>
-                            <input type="text" class="form-control" id="fds_tema"
-                                   name="dp_tema" placeholder="Ej: Cómo tomar buenas decisiones"
-                                   maxlength="255">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Canción</label>
-                            <input type="text" class="form-control" id="fds_cancion"
-                                   name="dp_cancion" placeholder="Ej: 52" maxlength="20">
+                            <input type="text" class="form-control" id="fds_fecha_fin"
+                                   name="fecha_fin" placeholder="Se completa automáticamente">
                         </div>
                         <div class="col-12">
                             <label class="form-label">Notas</label>
@@ -320,45 +304,47 @@ $(document).on('submit', '#formNuevaSemana', function (e) {
         error() { $btn.prop('disabled', false); APP.showNotification('Error al conectar', 'danger'); }
     });
 });
-$(document).on('hidden.bs.modal', '#modalNuevaSemana', () => $('#formNuevaSemana')[0].reset());
-
-/* ── Inicializar Flatpickr al abrir el modal ─────────────────── */
-$(document).on('shown.bs.modal', '#modalNuevaSemana', function () {
+$(document).on('hidden.bs.modal', '#modalNuevaSemana', () => {
+    $('#formNuevaSemana')[0].reset();
+    // Destruir instancias Flatpickr al cerrar para forzar reinicio limpio
     const elIni = document.getElementById('fds_fecha_inicio');
     const elFin = document.getElementById('fds_fecha_fin');
-    if (typeof flatpickr === 'undefined') return;
-
-    // Inicializar solo si no están ya inicializados
-    if (!elIni._flatpickr) {
-        flatpickr(elIni, {
-            locale    : 'es',
-            dateFormat: 'Y-m-d',
-            altInput  : true,
-            altFormat : 'j M Y',
-        });
-    }
-    if (!elFin._flatpickr) {
-        flatpickr(elFin, {
-            locale    : 'es',
-            dateFormat: 'Y-m-d',
-            altInput  : true,
-            altFormat : 'j M Y',
-        });
-    }
+    if (elIni._flatpickr) { elIni._flatpickr.destroy(); }
+    if (elFin._flatpickr) { elFin._flatpickr.destroy(); }
 });
 
-/* ── Auto-completar fecha fin ───────────────────────────────── */
-$('#fds_fecha_inicio').on('change', function () {
-    const d = new Date(this.value + 'T12:00:00');
-    if (isNaN(d)) return;
-    // Calcular el domingo de esa semana (o el mismo día si ya es domingo)
-    const diff = d.getDay() === 0 ? 0 : 7 - d.getDay();
-    d.setDate(d.getDate() + diff);
-    const isoFin = d.toISOString().slice(0, 10);
-    // Siempre actualizar fecha_fin al domingo correspondiente
-    const fpFin = document.getElementById('fds_fecha_fin')._flatpickr;
-    if (fpFin) fpFin.setDate(isoFin, true);
-    else $('#fds_fecha_fin').val(isoFin);
+/* ── Inicializar Flatpickr al abrir el modal — siempre fresco ── */
+$(document).on('shown.bs.modal', '#modalNuevaSemana', function () {
+    if (typeof flatpickr === 'undefined') return;
+
+    const elIni = document.getElementById('fds_fecha_inicio');
+    const elFin = document.getElementById('fds_fecha_fin');
+
+    // Destruir instancia previa si existe (del init global de main.js)
+    if (elIni._flatpickr) elIni._flatpickr.destroy();
+    if (elFin._flatpickr) elFin._flatpickr.destroy();
+
+    const fpBase = {
+        locale    : 'es',
+        dateFormat: 'Y-m-d',
+        altInput  : true,
+        altFormat : 'j M Y',
+        allowInput: false,
+    };
+
+    // Inicializar fecha fin primero (sin onChange)
+    const fpFin = flatpickr(elFin, fpBase);
+
+    // Inicializar fecha inicio con onChange que auto-completa el domingo
+    flatpickr(elIni, Object.assign({}, fpBase, {
+        onChange: function (selectedDates) {
+            if (!selectedDates.length) return;
+            const d = new Date(selectedDates[0]);
+            const diff = d.getDay() === 0 ? 0 : 7 - d.getDay();
+            d.setDate(d.getDate() + diff);
+            fpFin.setDate(d, true);
+        }
+    }));
 });
 
 /* ── Modales de confirmación (lazy) ────────────────────────── */
