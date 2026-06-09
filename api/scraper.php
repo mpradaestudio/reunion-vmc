@@ -668,12 +668,18 @@ class JWOrgScraper {
 
         $this->registrarHistorial($url, 1, 'exitoso');
 
+        // ── Crear automáticamente la semana en fin-de-semana ────────
+        $fdsStatus = $this->crearSemanaFds($datos['fecha_inicio'], $datos['fecha_fin']);
+
         return [
-            'success'      => true,
-            'message'      => 'Semana extraída: ' . $datos['titulo'],
-            'titulo'       => $datos['titulo'],
-            'fecha_inicio' => $datos['fecha_inicio'],
-            'partes'       => count($datos['secciones']),
+            'success'       => true,
+            'message'       => 'Semana extraída: ' . $datos['titulo'],
+            'titulo'        => $datos['titulo'],
+            'fecha_inicio'  => $datos['fecha_inicio'],
+            'partes'        => count($datos['secciones']),
+            'fds_creada'    => $fdsStatus['creada'],
+            'fds_ya_existe' => $fdsStatus['ya_existe'],
+            'fds_id'        => $fdsStatus['id'],
         ];
     }
 
@@ -738,6 +744,30 @@ class JWOrgScraper {
         } catch (Exception $e) {
             error_log("Error al guardar programa: " . $e->getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Crea la semana en programas_fds si no existe.
+     * Devuelve: creada=true|false, ya_existe=true|false, id=int
+     */
+    private function crearSemanaFds(string $fechaInicio, string $fechaFin): array {
+        try {
+            $existe = fetchOne(
+                "SELECT id FROM programas_fds WHERE fecha_inicio = ?",
+                [$fechaInicio]
+            );
+            if ($existe) {
+                return ['creada' => false, 'ya_existe' => true, 'id' => (int)$existe['id']];
+            }
+            $this->pdo->prepare("
+                INSERT INTO programas_fds (fecha_inicio, fecha_fin, dp_tema, dp_cancion, notas)
+                VALUES (?, ?, '', '', '')
+            ")->execute([$fechaInicio, $fechaFin]);
+            return ['creada' => true, 'ya_existe' => false, 'id' => (int)$this->pdo->lastInsertId()];
+        } catch (Exception $e) {
+            error_log("crearSemanaFds: " . $e->getMessage());
+            return ['creada' => false, 'ya_existe' => false, 'id' => 0];
         }
     }
 

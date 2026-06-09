@@ -33,6 +33,7 @@ $tipoMensaje = 'success';
 if (isset($_GET['msg'])) {
     switch ($_GET['msg']) {
         case 'extraido':  $mensaje = 'Programa extraído exitosamente'; break;
+        case 'extraido_con_fds': $mensaje = 'Programa extraído y semana de Fin de Semana creada exitosamente'; break;
         case 'eliminado': $mensaje = 'Programa(s) eliminado(s) exitosamente'; break;
         case 'error':     $mensaje = 'Ocurrió un error al procesar la solicitud'; $tipoMensaje = 'danger'; break;
     }
@@ -283,6 +284,32 @@ $mesNombre = [
     </div>
 </div>
 
+<!-- ── Modal: FDS ya existe — sobreescribir u omitir ────────────── -->
+<div class="modal fade" id="modalFdsExiste" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-calendar2-week me-2"></i>Semana ya existe en Fin de Semana
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>La semana <strong id="fdsExisteFecha"></strong> ya existe en <strong>Reunión fin de Semana</strong>.</p>
+                <p class="text-muted mb-0 small">¿Qué deseas hacer?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="btnFdsOmitir">
+                    <i class="bi bi-skip-forward"></i> Omitir
+                </button>
+                <button type="button" class="btn btn-warning" id="btnFdsSobreescribir">
+                    <i class="bi bi-arrow-clockwise"></i> Sobreescribir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ── Modal confirmación eliminación en lote ───────────────────────── -->
 <div class="modal fade" id="modalConfirmLote" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -465,6 +492,11 @@ document.addEventListener('DOMContentLoaded', function () {
 /* ================================================================
    EXTRAER PROGRAMA
 ================================================================ */
+let _fdsId = null;
+let _fdsExtraidoTitulo = '';
+let _fdsExtraidoFechaInicio = '';
+let _fdsExtraidoFechaFin = '';
+
 $('#btnExtraerUrl').on('click', function () {
     const url = $('#urlSemana').val().trim();
     if (!url) {
@@ -483,11 +515,27 @@ $('#btnExtraerUrl').on('click', function () {
         timeout  : 60000,
         success  : function (response) {
             if (response.success) {
+                _fdsId                  = response.fds_id       || null;
+                _fdsExtraidoTitulo      = response.titulo        || '';
+                _fdsExtraidoFechaInicio = response.fecha_inicio  || '';
+                _fdsExtraidoFechaFin    = response.fecha_fin     || '';
+
                 $('#extraerEstado').html(
                     '<div class="alert alert-success mb-0"><i class="bi bi-check-circle"></i> ' +
-                    response.message + ' (' + response.partes + ' partes). Actualizando...</div>'
+                    response.message + ' (' + response.partes + ' partes).</div>'
                 );
-                setTimeout(() => { window.location.href = 'entre-semana.php?msg=extraido'; }, 1200);
+                btn.prop('disabled', false).html('<i class="bi bi-cloud-download"></i> Extraer');
+
+                if (response.fds_ya_existe) {
+                    // Cerrar modal extraer y mostrar modal de confirmación FDS
+                    bootstrap.Modal.getInstance(document.getElementById('modalExtraer'))?.hide();
+                    $('#fdsExisteFecha').text(_fdsExtraidoTitulo);
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalFdsExiste')).show();
+                } else {
+                    // Semana FDS creada automáticamente — redirigir
+                    const msg = response.fds_creada ? 'extraido_con_fds' : 'extraido';
+                    setTimeout(() => { window.location.href = 'entre-semana.php?msg=' + msg; }, 1200);
+                }
             } else {
                 $('#extraerEstado').html(
                     '<div class="alert alert-danger mb-0"><i class="bi bi-exclamation-circle"></i> ' +
@@ -501,6 +549,38 @@ $('#btnExtraerUrl').on('click', function () {
             $('#extraerEstado').html('<div class="alert alert-danger mb-0">' + msg + '</div>');
             btn.prop('disabled', false).html('<i class="bi bi-cloud-download"></i> Extraer');
         }
+    });
+});
+
+// ── Modal FDS: omitir ────────────────────────────────────────
+$('#btnFdsOmitir').on('click', function () {
+    bootstrap.Modal.getInstance(document.getElementById('modalFdsExiste'))?.hide();
+    window.location.href = 'entre-semana.php?msg=extraido';
+});
+
+// ── Modal FDS: sobreescribir ─────────────────────────────────
+$('#btnFdsSobreescribir').on('click', function () {
+    if (!_fdsId) {
+        window.location.href = 'entre-semana.php?msg=extraido';
+        return;
+    }
+    const $btn = $(this).prop('disabled', true)
+        .html('<span class="spinner-border spinner-border-sm me-1"></span>Sobreescribiendo...');
+
+    // Eliminar la semana FDS existente y recrearla vacía con las mismas fechas
+    $.post('../api/programas_fds.php', { action: 'delete', id: _fdsId }, function () {
+        $.post('../api/programas_fds.php', {
+            action      : 'create',
+            fecha_inicio: _fdsExtraidoFechaInicio,
+            fecha_fin   : _fdsExtraidoFechaFin
+        }, function () {
+            window.location.href = 'entre-semana.php?msg=extraido_con_fds';
+        }).fail(function () {
+            window.location.href = 'entre-semana.php?msg=extraido';
+        });
+    }).fail(function () {
+        $btn.prop('disabled', false).html('<i class="bi bi-arrow-clockwise"></i> Sobreescribir');
+        APP.showNotification('Error al sobreescribir', 'danger');
     });
 });
 
