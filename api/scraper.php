@@ -172,6 +172,10 @@ class JWOrgScraper {
         $titulo      = $this->extraerTitulo($html);
         $fechas      = $this->extraerFechas($url, $titulo);
         $referencia  = $this->extraerReferencia($titulo);
+        // Si el título no traía la referencia (sin "|"), buscarla en el HTML
+        if ($referencia === '') {
+            $referencia = $this->extraerLecturaBiblica($html);
+        }
         $canciones   = $this->extraerCanciones($html);
         $partes      = $this->extraerPartesNumeradas($html);
 
@@ -321,6 +325,40 @@ class JWOrgScraper {
         // Respaldo: buscar patrón Libro + capítulos al final
         if (preg_match('/([1-3]?\s?[A-ZÁÉÍÓÚ][a-zñáéíóú]+)\s+\d+(?:[:\-]\d+)?(?:-\d+)?\s*$/u', $titulo, $m)) {
             return trim($m[0]);
+        }
+        return '';
+    }
+
+    /**
+     * Extrae la lectura bíblica semanal desde el HTML cuando no está en el título.
+     * En jw.org aparece como una línea prominente (ej. "JEREMÍAS 4-6") entre la
+     * fecha de la semana y la primera "Canción".
+     */
+    private function extraerLecturaBiblica($html) {
+        $lineas = $this->htmlALineas($html);
+        $total  = count($lineas);
+
+        // Localizar la línea de fecha de la semana
+        $startIdx = -1;
+        for ($i = 0; $i < $total; $i++) {
+            if (preg_match('/\d{1,2}\s*(?:-|a)\s*\d{1,2}\s+de\s+[a-zñáéíóú]+/iu', $lineas[$i])) {
+                $startIdx = $i;
+                break;
+            }
+        }
+        if ($startIdx === -1) $startIdx = 0;
+
+        for ($i = $startIdx + 1; $i < $total; $i++) {
+            $linea = $lineas[$i];
+            // Detener al llegar a la primera canción o a un encabezado de sección
+            if (preg_match('/^Canci[oó]n\s+\d/iu', $linea)) break;
+            if ($this->detectarSeccion($linea) !== null) break;
+
+            // Patrón: (prefijo numérico opcional) Libro + capítulo(s), línea corta
+            if (mb_strlen($linea, 'UTF-8') <= 40 &&
+                preg_match('/^(?:[1-3]\s)?\p{Lu}[\p{L}.\s]{1,28}\s\d{1,3}(?:[:\-]\d{1,3})*$/u', $linea)) {
+                return trim($linea);
+            }
         }
         return '';
     }
