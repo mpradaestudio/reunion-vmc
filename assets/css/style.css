@@ -2036,10 +2036,10 @@ button.sidebar-item {
     color       : var(--vmc-text);
 }
 
-/* Checkboxes y radios — estado inactivo */
+/* Checkboxes y radios — estado inactivo: blanco con borde gris */
 .form-check-input {
-    border-color     : var(--vmc-border-strong);
-    background-color : var(--vmc-surface);
+    border-color     : #adb5bd !important;
+    background-color : #fff !important;
     transition       : background-color 120ms ease, border-color 120ms ease;
 }
 
