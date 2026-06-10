@@ -331,19 +331,16 @@ class JWOrgScraper {
 
     /**
      * Extrae la lectura bíblica semanal desde el HTML cuando no está en el título.
-     * Busca la primera referencia "Libro capítulo(s)" usando la lista de libros
-     * de la Biblia — la lectura semanal aparece cerca del inicio del programa.
+     * La lectura siempre precede a "TESOROS DE LA BIBLIA"; se toma la última
+     * referencia "Libro capítulo(s)" en el texto previo a esa sección.
      */
     private function extraerLecturaBiblica($html) {
         $texto = $this->htmlATextoPlano($html);
 
-        // Recortar al ámbito del programa (desde la fecha hasta MAESTROS) para
-        // evitar coincidencias en navegación o secciones posteriores.
-        if (preg_match('/\d{1,2}\s*(?:-|a|al)\s*\d{1,2}\s+de\s+[a-zñáéíóú]+/iu', $texto, $mIni, PREG_OFFSET_CAPTURE)) {
-            $texto = substr($texto, $mIni[0][1]);
-        }
-        $cortePos = mb_stripos($texto, 'SEAMOS MEJORES MAESTROS');
-        if ($cortePos === false) $cortePos = mb_stripos($texto, 'NUESTRA VIDA CRISTIANA');
+        // Ámbito: todo el texto ANTES de "TESOROS DE LA BIBLIA". La lectura
+        // semanal siempre precede a esa sección. Robusto incluso cuando la
+        // semana abarca dos meses (ej. "29 de junio a 5 de julio").
+        $cortePos = mb_stripos($texto, 'TESOROS DE LA BIBLIA');
         if ($cortePos !== false) {
             $texto = mb_substr($texto, 0, $cortePos, 'UTF-8');
         }
@@ -358,9 +355,12 @@ class JWOrgScraper {
                 . '2\s?Tesalonicenses|1\s?Timoteo|2\s?Timoteo|Tito|Filem[oó]n|Hebreos|Santiago|'
                 . '1\s?Pedro|2\s?Pedro|1\s?Juan|2\s?Juan|3\s?Juan|Judas|Apocalipsis)';
 
-        // Libro + capítulo(s), admite rangos: "Jeremías 4-6", "1 Reyes 1", "Salmos 1-3"
-        if (preg_match('/' . $libros . '\s+\d+(?:[:\-]\d+)*(?:\s*-\s*\d+(?:[:\-]\d+)*)?/ui', $texto, $m)) {
-            return trim(preg_replace('/\s+/', ' ', $m[0]));
+        // Buscar TODAS las referencias y devolver la última (la más cercana a
+        // TESOROS DE LA BIBLIA = la lectura semanal).
+        if (preg_match_all('/' . $libros . '\s+\d+(?:[:\-]\d+)*(?:\s*-\s*\d+(?:[:\-]\d+)*)?/ui', $texto, $matches)
+            && !empty($matches[0])) {
+            $ultima = end($matches[0]);
+            return trim(preg_replace('/\s+/', ' ', $ultima));
         }
         return '';
     }
