@@ -331,34 +331,36 @@ class JWOrgScraper {
 
     /**
      * Extrae la lectura bíblica semanal desde el HTML cuando no está en el título.
-     * En jw.org aparece como una línea prominente (ej. "JEREMÍAS 4-6") entre la
-     * fecha de la semana y la primera "Canción".
+     * Busca la primera referencia "Libro capítulo(s)" usando la lista de libros
+     * de la Biblia — la lectura semanal aparece cerca del inicio del programa.
      */
     private function extraerLecturaBiblica($html) {
-        $lineas = $this->htmlALineas($html);
-        $total  = count($lineas);
+        $texto = $this->htmlATextoPlano($html);
 
-        // Localizar la línea de fecha de la semana
-        $startIdx = -1;
-        for ($i = 0; $i < $total; $i++) {
-            if (preg_match('/\d{1,2}\s*(?:-|a)\s*\d{1,2}\s+de\s+[a-zñáéíóú]+/iu', $lineas[$i])) {
-                $startIdx = $i;
-                break;
-            }
+        // Recortar al ámbito del programa (desde la fecha hasta MAESTROS) para
+        // evitar coincidencias en navegación o secciones posteriores.
+        if (preg_match('/\d{1,2}\s*(?:-|a|al)\s*\d{1,2}\s+de\s+[a-zñáéíóú]+/iu', $texto, $mIni, PREG_OFFSET_CAPTURE)) {
+            $texto = substr($texto, $mIni[0][1]);
         }
-        if ($startIdx === -1) $startIdx = 0;
+        $cortePos = mb_stripos($texto, 'SEAMOS MEJORES MAESTROS');
+        if ($cortePos === false) $cortePos = mb_stripos($texto, 'NUESTRA VIDA CRISTIANA');
+        if ($cortePos !== false) {
+            $texto = mb_substr($texto, 0, $cortePos, 'UTF-8');
+        }
 
-        for ($i = $startIdx + 1; $i < $total; $i++) {
-            $linea = $lineas[$i];
-            // Detener al llegar a la primera canción o a un encabezado de sección
-            if (preg_match('/^Canci[oó]n\s+\d/iu', $linea)) break;
-            if ($this->detectarSeccion($linea) !== null) break;
+        $libros = '(?:G[eé]nesis|[EÉ]xodo|Lev[ií]tico|N[uú]meros|Deuteronomio|Josu[eé]|Jueces|Rut|'
+                . '1\s?Samuel|2\s?Samuel|1\s?Reyes|2\s?Reyes|1\s?Cr[oó]nicas|2\s?Cr[oó]nicas|Esdras|'
+                . 'Nehem[ií]as|Ester|Job|Salmos?|Proverbios|Eclesiast[eé]s|'
+                . '(?:El\s)?Cantar de los Cantares|Isa[ií]as|Jerem[ií]as|Lamentaciones|Ezequiel|Daniel|'
+                . 'Oseas|Joel|Am[oó]s|Abd[ií]as|Jon[aá]s|Miqueas|Nah[uú]m|Habacuc|Sofon[ií]as|Ageo|'
+                . 'Zacar[ií]as|Malaqu[ií]as|Mateo|Marcos|Lucas|Juan|Hechos|Romanos|1\s?Corintios|'
+                . '2\s?Corintios|G[aá]latas|Efesios|Filipenses|Colosenses|1\s?Tesalonicenses|'
+                . '2\s?Tesalonicenses|1\s?Timoteo|2\s?Timoteo|Tito|Filem[oó]n|Hebreos|Santiago|'
+                . '1\s?Pedro|2\s?Pedro|1\s?Juan|2\s?Juan|3\s?Juan|Judas|Apocalipsis)';
 
-            // Patrón: (prefijo numérico opcional) Libro + capítulo(s), línea corta
-            if (mb_strlen($linea, 'UTF-8') <= 40 &&
-                preg_match('/^(?:[1-3]\s)?\p{Lu}[\p{L}.\s]{1,28}\s\d{1,3}(?:[:\-]\d{1,3})*$/u', $linea)) {
-                return trim($linea);
-            }
+        // Libro + capítulo(s), admite rangos: "Jeremías 4-6", "1 Reyes 1", "Salmos 1-3"
+        if (preg_match('/' . $libros . '\s+\d+(?:[:\-]\d+)*(?:\s*-\s*\d+(?:[:\-]\d+)*)?/ui', $texto, $m)) {
+            return trim(preg_replace('/\s+/', ' ', $m[0]));
         }
         return '';
     }
